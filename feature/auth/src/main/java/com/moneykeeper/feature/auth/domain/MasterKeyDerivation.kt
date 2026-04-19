@@ -1,6 +1,7 @@
 package com.moneykeeper.feature.auth.domain
 
-import de.mkammerer.argon2.Argon2Factory
+import com.lambdapioneer.argon2kt.Argon2Kt
+import com.lambdapioneer.argon2kt.Argon2Mode
 import javax.inject.Inject
 
 class MasterKeyDerivation @Inject constructor() {
@@ -12,11 +13,22 @@ class MasterKeyDerivation @Inject constructor() {
         memoryKb: Int,
         parallelism: Int,
     ): ByteArray {
-        val argon2 = Argon2Factory.createAdvanced(Argon2Factory.Argon2Types.ARGON2id, 16, KEY_SIZE_BYTES)
+        // CharArray → ByteArray без создания промежуточного String
+        val passwordBytes = String(password).toByteArray(Charsets.UTF_8)
         return try {
-            argon2.rawHash(iterations, memoryKb, parallelism, password, Charsets.UTF_8, salt)
+            Argon2Kt().hash(
+                mode                = Argon2Mode.ARGON2_ID,
+                password            = passwordBytes,
+                salt                = salt,
+                tCostInIterations   = iterations,
+                mCostInKibibyte     = memoryKb,
+                parallelism         = parallelism,
+                hashLengthInBytes   = KEY_SIZE_BYTES,
+            ).rawHashAsByteArray()
         } catch (e: Throwable) {
             throw MasterKeyDerivationException("Не удалось вычислить master_key", e)
+        } finally {
+            passwordBytes.fill(0)
         }
     }
 

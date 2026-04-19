@@ -37,7 +37,6 @@ dependencies {
     // Шифрование / безопасность (§2.10)
     implementation(libs.sqlcipher.android)
     implementation(libs.security.crypto)
-    implementation(libs.argon2.jvm)
 
     testImplementation(libs.junit)
     testImplementation(libs.coroutines.test)

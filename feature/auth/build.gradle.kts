@@ -36,10 +36,13 @@ dependencies {
     implementation(libs.lifecycle.runtime.compose)
     implementation(libs.coroutines.android)
 
-    implementation(libs.argon2.jvm)
+    implementation(libs.argon2kt)
     implementation(libs.biometric)
     implementation(libs.security.crypto)
 
     testImplementation(libs.junit)
     testImplementation(libs.coroutines.test)
+
+    androidTestImplementation(libs.androidx.test.junit)
+    androidTestImplementation(libs.androidx.test.runner)
 }

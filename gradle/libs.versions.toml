@@ -20,7 +20,7 @@ datastore               = "1.2.1"
 # androidx.biometric 1.1.0 stable. 1.2.0-alpha* и 1.4.0-alpha* доступны, но alpha в auth-пути
 # не используем — BIOMETRIC_STRONG доступен уже с 1.1.0.
 biometric               = "1.1.0"
-argon2-jvm              = "2.12"
+argon2kt                = "1.5.0"
 sqlcipher               = "4.14.1"
 # androidx.security:security-crypto 1.1.0 stable вышел. Google замедлил активное развитие
 # (библиотека считается на maintenance-режиме) — см. заметку в §2.10. Но для v1 её
@@ -83,7 +83,7 @@ vico-compose-m3              = { group = "com.patrykandpatrick.vico", name = "co
 
 # Security / auth
 biometric                    = { group = "androidx.biometric", name = "biometric", version.ref = "biometric" }
-argon2-jvm                   = { group = "de.mkammerer", name = "argon2-jvm", version.ref = "argon2-jvm" }
+argon2kt                     = { group = "com.lambdapioneer.argon2kt", name = "argon2kt", version.ref = "argon2kt" }
 sqlcipher-android            = { group = "net.zetetic", name = "sqlcipher-android", version.ref = "sqlcipher" }
 security-crypto              = { group = "androidx.security", name = "security-crypto", version.ref = "security-crypto" }
 
