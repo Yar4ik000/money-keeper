@@ -1,0 +1,32 @@
+*.iml
+.gradle
+/local.properties
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+plans
+# Секреты и локальные настройки
+*.jks
+*.keystore
+secrets.properties
+
+# Временные файлы сборки (они огромные и ИИ они не нужны)
+.gradle/
+.idea/
+build/
+app/build/
+*.apk
+*.aab
+
+# Локальные данные AI-ассистента (память, логи) — не для репозитория
+.claude/
+.kotlin/

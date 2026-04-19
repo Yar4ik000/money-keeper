@@ -1,0 +1,13 @@
+# Секреты и локальные настройки
+local.properties
+*.jks
+*.keystore
+secrets.properties
+
+# Временные файлы сборки (они огромные и ИИ они не нужны)
+.gradle/
+.idea/
+build/
+app/build/
+*.apk
+*.aab
