@@ -36,7 +36,7 @@ dependencies {
     implementation(libs.lifecycle.runtime.compose)
     implementation(libs.coroutines.android)
 
-    implementation(libs.argon2kt)
+    implementation(libs.bouncycastle)
     implementation(libs.biometric)
     implementation(libs.security.crypto)
 

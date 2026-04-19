@@ -35,8 +35,11 @@
 # --- SQLCipher (net.zetetic) -----------------------------------
 -keep class net.zetetic.database.** { *; }
 
-# --- Argon2 JNI binding ----------------------------------------
--keep class de.mkammerer.argon2.** { *; }
+# --- BouncyCastle Argon2id (чистая Java KDF, §3) ---------------
+-keep class org.bouncycastle.crypto.generators.Argon2BytesGenerator { *; }
+-keep class org.bouncycastle.crypto.params.Argon2Parameters { *; }
+-keep class org.bouncycastle.crypto.params.Argon2Parameters$Builder { *; }
+-dontwarn org.bouncycastle.**
 
 # --- AndroidX Security (EncryptedSharedPreferences) ------------
 -keep class androidx.security.crypto.** { *; }
