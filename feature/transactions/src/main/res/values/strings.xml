@@ -17,8 +17,17 @@
     <!-- Numeric keyboard -->
     <string name="keyboard_ok">OK</string>
 
-    <!-- Category picker -->
+    <!-- Account types (for AccountPicker subtitle) -->
+    <string name="account_type_card">Карта</string>
+    <string name="account_type_cash">Наличные</string>
+    <string name="account_type_deposit">Вклад</string>
+    <string name="account_type_savings">Сбережения</string>
+    <string name="account_type_investment">Инвестиции</string>
+    <string name="account_type_other">Другое</string>
+
+    <!-- Account / Category picker -->
     <string name="account_picker_title">Выберите счёт</string>
+    <string name="account_picker_search">Поиск счёта…</string>
     <string name="category_picker_title">Выберите категорию</string>
 
     <!-- Recurring rule sheet -->

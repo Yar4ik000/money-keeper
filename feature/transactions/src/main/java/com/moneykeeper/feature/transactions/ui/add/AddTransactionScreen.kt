@@ -308,6 +308,7 @@ fun AddTransactionScreen(
             initial = uiState.date,
             onConfirm = { onDateChange(it); showDatePicker = false },
             onDismiss = { showDatePicker = false },
+            maxDate = java.time.LocalDate.now(),
         )
     }
     if (showRecurringSheet) {
