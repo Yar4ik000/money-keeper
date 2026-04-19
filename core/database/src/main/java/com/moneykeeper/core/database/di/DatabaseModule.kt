@@ -8,6 +8,7 @@ import com.moneykeeper.core.database.dao.CategoryDao
 import com.moneykeeper.core.database.dao.DepositDao
 import com.moneykeeper.core.database.dao.RecurringRuleDao
 import com.moneykeeper.core.database.dao.TransactionDao
+import androidx.room.withTransaction
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -32,4 +33,10 @@ object DatabaseModule {
     @Provides fun provideTransactionDao(db: AppDatabase): TransactionDao = db.transactionDao()
     @Provides fun provideRecurringRuleDao(db: AppDatabase): RecurringRuleDao = db.recurringRuleDao()
     @Provides fun provideBudgetDao(db: AppDatabase): BudgetDao = db.budgetDao()
+
+    @Provides
+    fun provideTransactionRunner(db: AppDatabase): com.moneykeeper.core.domain.repository.TransactionRunner =
+        object : com.moneykeeper.core.domain.repository.TransactionRunner {
+            override suspend fun <T> run(block: suspend () -> T): T = db.withTransaction(block)
+        }
 }

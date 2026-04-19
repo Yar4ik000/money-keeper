@@ -29,4 +29,10 @@ sealed class Screen(val route: String) {
     data object EditAccount : Screen("accounts/{accountId}/edit") {
         fun buildRoute(id: Long): String = "accounts/$id/edit"
     }
+
+    data object EditTransaction : Screen("transactions/{transactionId}/edit") {
+        fun buildRoute(id: Long): String = "transactions/$id/edit"
+    }
+
+    data object Categories : Screen("transactions/categories")
 }

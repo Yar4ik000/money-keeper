@@ -24,6 +24,7 @@ interface TransactionRepository {
     fun observeMonthlyTrend(currency: String, months: Int): Flow<List<MonthlyBarEntry>>
 
     suspend fun getById(id: Long): Transaction?
+    suspend fun getByIds(ids: Set<Long>): List<Transaction>
     suspend fun save(transaction: Transaction): Long
     suspend fun delete(id: Long)
     suspend fun deleteByIds(ids: Set<Long>)

@@ -1,0 +1,62 @@
+<resources>
+    <!-- Transaction types -->
+    <string name="tx_type_income">Доход</string>
+    <string name="tx_type_expense">Расход</string>
+    <string name="tx_type_transfer">Перевод</string>
+    <string name="tx_type_savings">Накопления</string>
+
+    <!-- Add / Edit transaction form fields -->
+    <string name="tx_account">Счёт</string>
+    <string name="tx_to_account">Счёт назначения</string>
+    <string name="tx_category">Категория</string>
+    <string name="tx_date">Дата</string>
+    <string name="tx_note">Заметка</string>
+    <string name="tx_recurring">Повторяющаяся операция</string>
+    <string name="tx_save">Сохранить</string>
+
+    <!-- Numeric keyboard -->
+    <string name="keyboard_ok">OK</string>
+
+    <!-- Category picker -->
+    <string name="account_picker_title">Выберите счёт</string>
+    <string name="category_picker_title">Выберите категорию</string>
+
+    <!-- Recurring rule sheet -->
+    <string name="recurring_title">Повтор</string>
+    <string name="recurring_frequency">Частота</string>
+    <string name="recurring_interval">Интервал</string>
+    <string name="recurring_end_date">Дата окончания</string>
+    <string name="recurring_no_end">Без конца</string>
+    <string name="recurring_confirm">Применить</string>
+    <string name="recurring_configure">Настроить расписание…</string>
+    <string name="recurring_freq_daily">Ежедневно</string>
+    <string name="recurring_freq_weekly">Еженедельно</string>
+    <string name="recurring_freq_monthly">Ежемесячно</string>
+    <string name="recurring_freq_yearly">Ежегодно</string>
+
+    <!-- Categories screen -->
+    <string name="categories_title">Категории</string>
+    <string name="categories_add">Добавить категорию</string>
+    <string name="categories_empty">Категорий нет</string>
+    <string name="category_subcategory_label">Подкатегория</string>
+
+    <!-- Edit category form -->
+    <string name="edit_category_title">Категория</string>
+    <string name="edit_category_name">Название</string>
+    <string name="edit_category_type">Тип</string>
+    <string name="edit_category_color">Цвет</string>
+    <string name="edit_category_parent">Родительская категория</string>
+    <string name="edit_category_no_parent">Нет (корневая)</string>
+    <string name="edit_category_save">Сохранить</string>
+
+    <!-- Date picker dialog buttons -->
+    <string name="dialog_ok">OK</string>
+    <string name="dialog_cancel">Отмена</string>
+
+    <!-- Validation errors -->
+    <string name="error_tx_amount_required">Введите сумму больше нуля</string>
+    <string name="error_tx_account_required">Выберите счёт</string>
+    <string name="error_tx_category_required">Выберите категорию</string>
+    <string name="error_tx_to_account_required">Выберите счёт назначения</string>
+    <string name="error_category_name_empty">Введите название категории</string>
+</resources>

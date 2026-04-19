@@ -396,6 +396,89 @@ Live-превью в `DepositSection` считается через `derivedStat
 
 ---
 
+## §5 — Transaction Management (`:feature:transactions`)
+
+### Структура пакетов
+
+```
+feature/transactions/src/main/java/com/moneykeeper/feature/transactions/
+├── navigation/
+│   └── TransactionsNavigation.kt    — transactionsGraph() (5 routes)
+├── domain/
+│   └── TransactionSaver.kt          — UseCase: атомарный save/replace/delete/deleteMany
+└── ui/
+    ├── add/
+    │   ├── AddTransactionScreen.kt  — stateless composable + AddTransactionRoute wrapper
+    │   ├── AddTransactionViewModel.kt
+    │   ├── AddTransactionUiState.kt — AddTxError / KeyboardKey sealed types
+    │   └── DatePickerHelper.kt      — LocalDatePickerDialog (переиспользуется RecurringRuleSheet)
+    ├── edit/
+    │   ├── EditTransactionScreen.kt — EditTransactionRoute reuses AddTransactionScreen
+    │   └── EditTransactionViewModel.kt
+    ├── categories/
+    │   ├── CategoriesScreen.kt      — SwipeToDismissBox + FAB
+    │   ├── CategoriesViewModel.kt
+    │   ├── EditCategoryScreen.kt
+    │   ├── EditCategoryUiState.kt
+    │   └── EditCategoryViewModel.kt
+    └── components/
+        ├── NumericKeyboard.kt       — onKey(KeyboardKey) + onOk()
+        ├── TransactionTypeSelector.kt — FilterChip row (INCOME/EXPENSE/TRANSFER/SAVINGS)
+        ├── CategoryPicker.kt        — ModalBottomSheet с expandable деревом, filter по типу
+        ├── AccountPicker.kt         — ModalBottomSheet со списком счетов
+        └── RecurringRuleSheet.kt    — ModalBottomSheet: частота, интервал, дата конца
+```
+
+### TransactionSaver — атомарность через TransactionRunner
+
+`TransactionSaver` использует `TransactionRunner` (interface в `core:domain`) вместо прямой зависимости на `AppDatabase`. Это позволяет тестировать `TransactionSaver` в JVM-тестах с `FakeTransactionRunner { block() }`, не поднимая Room.
+
+```
+TransactionRunner (core:domain) ← реализация в DatabaseModule (core:database)
+    │                                  db.withTransaction { block() }
+    ▼
+TransactionSaver (feature:transactions)
+    ├── save(tx, rule?) → insert + applyBalanceEffect
+    ├── replace(old, new, rule?) → reverseBalance(old) + upsert + applyBalance(new)
+    ├── delete(tx) → delete + reverseBalance
+    └── deleteMany(ids) → getByIds → аккумулировать per-account дельты → deleteByIds → adjustBalances
+```
+
+Баланс-эффект по типу:
+- `INCOME` → `+amount` на `accountId`
+- `EXPENSE`, `SAVINGS` → `-amount` на `accountId`
+- `TRANSFER` → `-amount` на `accountId`, `+amount` на `toAccountId`
+
+### Stateless composable для переиспользования в Edit
+
+`AddTransactionScreen(uiState, onTypeChange, onKeyPress, ...)` — чисто stateless.
+`AddTransactionRoute` и `EditTransactionRoute` оборачивают соответствующие ViewModel и вызывают одну и ту же composable. Это соблюдает Compose-паттерн "lift state up".
+
+### CategoryPicker — дерево категорий
+
+Фильтрация по `CategoryType`:
+- `INCOME` → `CategoryType.INCOME`
+- `EXPENSE`, `SAVINGS` → `CategoryType.EXPENSE`
+- `TRANSFER` → `CategoryType.TRANSFER`
+
+Раскрытие дочерних: `expandedId` local state — клик по родителю с детьми раскрывает/сворачивает. Кнопка `+` переходит в `CategoriesScreen` для добавления.
+
+### Навигация (5 routes)
+
+| Route | Экран |
+|-------|-------|
+| `transactions/add?accountId={accountId}` | Новая транзакция (accountId опционален) |
+| `transactions/{transactionId}/edit` | Редактировать транзакцию |
+| `transactions/categories` | Список категорий |
+| `transactions/categories/add` | Новая категория |
+| `transactions/categories/{categoryId}/edit` | Редактировать категорию |
+
+### RecurringRule.lastGeneratedDate — источник истины
+
+`lastGeneratedDate` — единственное поле, определяющее до какой даты уже сгенерированы транзакции. Генератор (`GenerateRecurringTransactionsUseCase`, реализуется в §8) читает его внутри `withTransaction` после перезахвата лока, что защищает от гонки двух параллельных вызовов (Worker + startup). Подробнее — в §8.
+
+---
+
 ## Соглашения по коду
 
 - **Все строки** в `strings.xml`. Никаких захардкоженных русских слов в `.kt`.

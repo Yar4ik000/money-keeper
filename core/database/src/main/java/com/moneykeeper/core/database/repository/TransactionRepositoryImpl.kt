@@ -107,5 +107,8 @@ class TransactionRepositoryImpl(
         txDao.getById(id)?.let { txDao.delete(it) }
     }
 
+    override suspend fun getByIds(ids: Set<Long>): List<Transaction> =
+        txDao.getByIds(ids.toList()).map { it.toDomain() }
+
     override suspend fun deleteByIds(ids: Set<Long>) = txDao.deleteByIds(ids.toList())
 }
