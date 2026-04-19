@@ -24,3 +24,13 @@ dependencyResolutionManagement {
 
 rootProject.name = "MoneyKeeper"
 include(":app")
+include(":core:database")
+include(":core:domain")
+include(":core:ui")
+include(":feature:accounts")
+include(":feature:transactions")
+include(":feature:dashboard")
+include(":feature:analytics")
+include(":feature:forecast")
+include(":feature:settings")
+include(":feature:auth")

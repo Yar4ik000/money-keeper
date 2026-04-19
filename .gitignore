@@ -18,6 +18,7 @@ plans
 *.jks
 *.keystore
 secrets.properties
+CLAUDE.md
 
 # Временные файлы сборки (они огромные и ИИ они не нужны)
 .gradle/

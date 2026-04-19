@@ -1,0 +1,9 @@
+<resources>
+    <!-- «N дней / дня / день» — для виджета «Заканчивающиеся вклады» и уведомлений (§5, §8.3). -->
+    <plurals name="days_left">
+        <item quantity="one">%d день</item>
+        <item quantity="few">%d дня</item>
+        <item quantity="many">%d дней</item>
+        <item quantity="other">%d дня</item>
+    </plurals>
+</resources>
