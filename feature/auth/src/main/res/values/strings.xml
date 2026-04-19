@@ -1,0 +1,46 @@
+<resources>
+    <!-- SetupPasswordScreen -->
+    <string name="setup_title">Создайте пароль</string>
+    <string name="setup_subtitle">Этот пароль защищает все ваши данные. Без него восстановить данные из резервной копии невозможно.</string>
+    <string name="setup_password_label">Пароль</string>
+    <string name="setup_confirm_label">Повторите пароль</string>
+    <string name="setup_understand_checkbox">Я понимаю, что без этого пароля не смогу восстановить данные из резервной копии</string>
+    <string name="setup_button_create">Создать</string>
+    <string name="setup_error_mismatch">Пароли не совпадают</string>
+    <string name="setup_error_too_short">Пароль должен быть не менее 6 символов</string>
+    <string name="setup_error_unknown">Что-то пошло не так. Попробуйте ещё раз.</string>
+
+    <!-- UnlockScreen -->
+    <string name="unlock_title">Введите пароль</string>
+    <string name="unlock_password_label">Пароль</string>
+    <string name="unlock_button">Войти</string>
+    <string name="unlock_button_biometric">Войти отпечатком пальца</string>
+    <string name="unlock_error_wrong_password">Неверный пароль</string>
+    <string name="unlock_error_biometric_stale">Биометрия устарела. Войдите паролем и настройте биометрию заново.</string>
+
+    <!-- ChangePasswordScreen -->
+    <string name="change_title">Сменить пароль</string>
+    <string name="change_old_label">Текущий пароль</string>
+    <string name="change_new_label">Новый пароль</string>
+    <string name="change_confirm_label">Повторите новый пароль</string>
+    <string name="change_button">Сменить пароль</string>
+    <string name="change_error_wrong_old">Неверный текущий пароль</string>
+    <string name="change_error_corrupted">Ошибка чтения ключей. Данные повреждены.</string>
+    <string name="change_backup_warning_title">Старые резервные копии</string>
+    <string name="change_backup_warning_body">Резервные копии, созданные до смены пароля, по-прежнему расшифровываются старым паролем. Запомните его, если они вам нужны.</string>
+    <string name="change_backup_warning_ok">Понятно</string>
+
+    <!-- DataCorruptedScreen -->
+    <string name="corrupted_title">Данные повреждены</string>
+    <string name="corrupted_wipe_button">Сбросить приложение</string>
+    <string name="corrupted_wipe_confirm_title">Сбросить приложение?</string>
+    <string name="corrupted_wipe_confirm_body">Все данные и пароль будут удалены без возможности восстановления. Продолжить?</string>
+    <string name="corrupted_wipe_confirm_yes">Удалить всё</string>
+    <string name="corrupted_wipe_confirm_cancel">Отмена</string>
+
+    <!-- BiometricPrompt -->
+    <string name="biometric_enroll_title">Подтвердите биометрию</string>
+    <string name="biometric_unlock_title">Войдите в Money Keeper</string>
+    <string name="biometric_cancel">Использовать пароль</string>
+    <string name="biometric_use_password">Использовать пароль</string>
+</resources>

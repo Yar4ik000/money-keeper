@@ -85,6 +85,33 @@ class DatabaseKeyStorage @Inject constructor(
 
     fun wipe() = prefs.edit().clear().apply()
 
+    // --- Biometric wrap (§3.7) ---
+
+    fun writeBiometricWrap(ciphertext: ByteArray, iv: ByteArray) {
+        prefs.edit()
+            .putString(KEY_BIO_WRAPPED_KEY, Base64.encodeToString(ciphertext, Base64.NO_WRAP))
+            .putString(KEY_BIO_WRAP_IV,     Base64.encodeToString(iv, Base64.NO_WRAP))
+            .apply()
+    }
+
+    fun readBiometricWrap(): EncryptedDbKey? {
+        val ct = prefs.getString(KEY_BIO_WRAPPED_KEY, null) ?: return null
+        val iv = prefs.getString(KEY_BIO_WRAP_IV, null) ?: return null
+        return EncryptedDbKey(
+            ciphertext = Base64.decode(ct, Base64.NO_WRAP),
+            iv         = Base64.decode(iv, Base64.NO_WRAP),
+        )
+    }
+
+    fun deleteBiometricWrap() {
+        prefs.edit()
+            .remove(KEY_BIO_WRAPPED_KEY)
+            .remove(KEY_BIO_WRAP_IV)
+            .apply()
+    }
+
+    fun hasBiometricWrap(): Boolean = prefs.contains(KEY_BIO_WRAPPED_KEY)
+
     data class EncryptedDbKey(val ciphertext: ByteArray, val iv: ByteArray)
 
     data class KdfParams(val iterations: Int, val memoryKb: Int, val parallelism: Int) {
@@ -107,5 +134,7 @@ class DatabaseKeyStorage @Inject constructor(
         const val KEY_KDF_MEMORY       = "kdf_mem_v1"
         const val KEY_KDF_PARALLELISM  = "kdf_parallel_v1"
         const val SALT_SIZE            = 16
+        const val KEY_BIO_WRAPPED_KEY  = "bio_wrapped_master_key_v1"
+        const val KEY_BIO_WRAP_IV      = "bio_wrap_iv_v1"
     }
 }

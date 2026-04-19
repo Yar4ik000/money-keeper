@@ -19,6 +19,7 @@ android {
 dependencies {
     implementation(project(":core:domain"))
     implementation(project(":core:ui"))
+    implementation(project(":core:database"))
 
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)
@@ -34,4 +35,11 @@ dependencies {
     implementation(libs.lifecycle.viewmodel.compose)
     implementation(libs.lifecycle.runtime.compose)
     implementation(libs.coroutines.android)
+
+    implementation(libs.argon2.jvm)
+    implementation(libs.biometric)
+    implementation(libs.security.crypto)
+
+    testImplementation(libs.junit)
+    testImplementation(libs.coroutines.test)
 }
