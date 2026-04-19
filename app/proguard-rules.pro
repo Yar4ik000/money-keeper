@@ -43,3 +43,10 @@
 
 # --- Kotlin metadata (для Compose/Coroutines reflection) -------
 -keep class kotlin.Metadata { *; }
+
+# --- Google ErrorProne annotations (compile-time только, не нужны в рантайме) ---
+# security-crypto → Tink → errorprone; эти аннотации не существуют в APK.
+-dontwarn com.google.errorprone.annotations.CanIgnoreReturnValue
+-dontwarn com.google.errorprone.annotations.CheckReturnValue
+-dontwarn com.google.errorprone.annotations.Immutable
+-dontwarn com.google.errorprone.annotations.RestrictedApi

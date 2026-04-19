@@ -20,6 +20,9 @@ dependencyResolutionManagement {
         google()
         mavenCentral()
     }
+    // Каталог `libs` из `gradle/libs.versions.toml` импортируется Gradle 9 автоматически —
+    // явный `versionCatalogs { create("libs") { from(...) } }` приводит к «from called twice».
+    // План §1.2 приводит его для полноты, но на текущей версии Gradle он лишний.
 }
 
 rootProject.name = "MoneyKeeper"

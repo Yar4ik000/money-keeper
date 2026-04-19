@@ -25,7 +25,7 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
-            <!-- Приватная URI-схема для deep-link из уведомлений (§8.10) -->
+            <!-- Приватная URI-схема для deep-link из уведомлений (§9.10) -->
             <intent-filter android:autoVerify="false">
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
@@ -34,7 +34,7 @@
             </intent-filter>
         </activity>
 
-        <!-- Отключаем дефолтный WorkManager initializer — Configuration приходит через Hilt (§8.7) -->
+        <!-- Отключаем дефолтный WorkManager initializer — Configuration приходит через Hilt (§9.7) -->
         <provider
             android:name="androidx.startup.InitializationProvider"
             android:authorities="${applicationId}.androidx-startup"
