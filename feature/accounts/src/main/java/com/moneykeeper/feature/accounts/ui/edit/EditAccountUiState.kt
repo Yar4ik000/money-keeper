@@ -1,0 +1,46 @@
+package com.moneykeeper.feature.accounts.ui.edit
+
+import com.moneykeeper.core.domain.error.DomainError
+import com.moneykeeper.core.domain.model.AccountType
+import com.moneykeeper.core.domain.model.CapPeriod
+import com.moneykeeper.core.domain.model.Deposit
+import java.math.BigDecimal
+import java.time.LocalDate
+
+data class EditAccountUiState(
+    val name: String = "",
+    val type: AccountType = AccountType.CARD,
+    val currency: String = "RUB",
+    val colorHex: String = "#4CAF50",
+    val iconName: String = "AccountBalance",
+    val initialBalance: BigDecimal = BigDecimal.ZERO,
+    val deposit: Deposit? = null,
+    val createdAt: LocalDate? = null,
+    val saved: Boolean = false,
+    val error: EditAccountError? = null,
+)
+
+sealed interface EditAccountError {
+    data object NameEmpty : EditAccountError
+    data object DepositParamsMissing : EditAccountError
+    data object DepositAmountInvalid : EditAccountError
+    data object DepositRateInvalid : EditAccountError
+    data object DepositDateInvalid : EditAccountError
+    data class Domain(val error: DomainError) : EditAccountError
+}
+
+/** Дефолтный вклад при переключении типа на DEPOSIT. */
+fun defaultDeposit(accountId: Long = 0L): Deposit = Deposit(
+    id = 0L,
+    accountId = accountId,
+    initialAmount = BigDecimal.ZERO,
+    interestRate = BigDecimal("10.0"),
+    startDate = LocalDate.now(),
+    endDate = LocalDate.now().plusYears(1),
+    isCapitalized = false,
+    capitalizationPeriod = CapPeriod.MONTHLY,
+    notifyDaysBefore = 7,
+    autoRenew = false,
+    payoutAccountId = null,
+    isActive = true,
+)

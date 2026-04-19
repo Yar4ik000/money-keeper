@@ -36,7 +36,7 @@ class DatabaseProvider @Inject constructor(
     fun initialize(dbKey: ByteArray) {
         if (db != null) return
 
-        // SQLCipher 4.3+ загружает нативную библиотеку автоматически — loadLibs() удалён
+        System.loadLibrary("sqlcipher")
         val factory = net.zetetic.database.sqlcipher.SupportOpenHelperFactory(dbKey)
 
         db = Room.databaseBuilder(context, AppDatabase::class.java, AppDatabase.DB_NAME)

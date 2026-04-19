@@ -300,6 +300,102 @@ feature/auth/src/main/java/com/moneykeeper/feature/auth/
 
 ---
 
+## §4 — Account Management (`:feature:accounts`)
+
+### Структура пакетов
+
+```
+feature/accounts/src/main/java/com/moneykeeper/feature/accounts/
+├── navigation/
+│   └── AccountsNavigation.kt    — accountsGraph() extension на NavGraphBuilder
+├── domain/
+│   └── DepositCalculator.kt     — simpleInterest / compoundInterest / projectedBalance
+└── ui/
+    ├── list/
+    │   ├── AccountsScreen.kt    — LazyColumn с группировкой по типу, прогресс-бар вкладов
+    │   ├── AccountsViewModel.kt — combine() трёх потоков (accounts, totals, deposits)
+    │   └── AccountsUiState.kt
+    ├── edit/
+    │   ├── EditAccountScreen.kt — форма: имя, тип-чипы, валюта, цвет, баланс
+    │   ├── EditAccountViewModel.kt
+    │   ├── EditAccountUiState.kt
+    │   └── DepositSection.kt    — вложенная секция вклада с live-прогнозом (derivedStateOf)
+    ├── detail/
+    │   ├── AccountDetailScreen.kt
+    │   └── AccountDetailViewModel.kt
+    └── transfer/
+        ├── TransferScreen.kt
+        └── TransferViewModel.kt
+```
+
+### Инвариант DEPOSIT-счёта
+
+`account.balance` DEPOSIT-счёта всегда равен `deposit.initialAmount`. Поле «Начальный
+баланс» скрыто в форме — `EditAccountViewModel.save()` форсит `balance = deposit.initialAmount`
+перед записью. Для не-DEPOSIT существующего счёта баланс перечитывается из БД перед
+сохранением, чтобы не затереть изменения от фоновых воркеров.
+
+### DepositCalculator
+
+Чистый `object` без Android-зависимостей. Алгоритм:
+
+- **Простые проценты**: `A = P × r × days / 365`, знаменатель всегда 365.
+- **Сложные проценты**: итерация по календарным периодам через `plusMonths`/`plusYears`
+  (не через фиксированное число дней), капитализация на каждом полном периоде, хвост —
+  простые проценты без капитализации.
+- `projectedBalance(deposit, atDate)` — обрезает `atDate` до `endDate`, вычисляет нарастающим итогом.
+
+Live-превью в `DepositSection` считается через `derivedStateOf` прямо в Composable — без
+отдельного ViewModel.
+
+### Навигация
+
+`accountsGraph(navController)` регистрирует 4 destination в `NavHost`:
+
+| Route | Экран |
+|-------|-------|
+| `accounts` | Список счетов |
+| `accounts/{accountId}` | Детали счёта |
+| `accounts/{accountId}/edit` | Форма создания/редактирования (`-1` = новый) |
+| `accounts/transfer` | Перевод между счетами |
+
+### Переводы
+
+`TransferViewModel.transfer()` последовательно:
+1. Создаёт `Transaction(type=TRANSFER, accountId=from, toAccountId=to)`
+2. `accountRepo.adjustBalance(fromId, -amount)`
+3. `accountRepo.adjustBalance(toId, +amount)`
+
+### Валидация формы
+
+`EditAccountViewModel.save()` проверяет все обязательные поля перед записью:
+
+| Ошибка | Условие | Отображение |
+|--------|---------|-------------|
+| `NameEmpty` | `name.isBlank()` | `supportingText` под полем «Название» |
+| `DepositAmountInvalid` | `initialAmount ≤ 0` | `supportingText` под «Суммой вклада» |
+| `DepositRateInvalid` | `interestRate ≤ 0` | `supportingText` под «Ставкой» |
+| `DepositDateInvalid` | `endDate ≤ startDate` | `supportingText` под «Датой окончания» |
+| `DepositParamsMissing` | `deposit == null` при типе DEPOSIT | Snackbar |
+| `Domain` | ошибка из репозитория | Snackbar |
+
+Поле-специфичные ошибки (`NameEmpty`, `Deposit*`) очищаются автоматически: `onNameChange`
+и `onDepositChange` всегда сбрасывают `state.error = null`. Snackbar-ошибки обрабатываются
+в `LaunchedEffect(state.error)` в `EditAccountScreen`.
+
+`DepositSection` получает `error: EditAccountError?` как явный параметр (не читает ViewModel
+напрямую) — это позволяет тестировать секцию в изоляции с `createComposeRule()`.
+
+### SQLCipher — loadLibrary()
+
+`DatabaseProvider.initialize()` вызывает `System.loadLibrary("sqlcipher")` перед
+созданием `SupportOpenHelperFactory`. Это обязательно: в `net.zetetic:sqlcipher-android`
+4.5+ метод `SQLiteDatabase.loadLibs()` удалён, а нативная `.so` не загружается
+автоматически до первого вызова `nativeOpen`. Вызов идемпотентен — повторная загрузка
+уже подгруженной библиотеки — no-op.
+
+---
+
 ## Соглашения по коду
 
 - **Все строки** в `strings.xml`. Никаких захардкоженных русских слов в `.kt`.

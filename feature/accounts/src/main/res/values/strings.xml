@@ -1,0 +1,76 @@
+<resources>
+    <!-- Account types -->
+    <string name="account_type_card">Карта</string>
+    <string name="account_type_cash">Наличные</string>
+    <string name="account_type_deposit">Вклад</string>
+    <string name="account_type_savings">Сбережения</string>
+    <string name="account_type_investment">Инвестиции</string>
+    <string name="account_type_other">Другое</string>
+
+    <!-- Accounts list screen -->
+    <string name="accounts_title">Счета</string>
+    <string name="accounts_total_balance">Общий баланс</string>
+    <string name="accounts_add">Добавить счёт</string>
+    <string name="accounts_archive">Архивировать</string>
+
+    <!-- Section headers (by account type) -->
+    <string name="accounts_section_cards">Карты</string>
+    <string name="accounts_section_cash">Наличные</string>
+    <string name="accounts_section_deposits">Вклады</string>
+    <string name="accounts_section_savings">Сбережения</string>
+    <string name="accounts_section_investments">Инвестиции</string>
+    <string name="accounts_section_other">Прочее</string>
+
+    <!-- Account detail screen -->
+    <string name="account_detail_title">Детали счёта</string>
+    <string name="account_detail_edit">Редактировать</string>
+    <string name="account_detail_transfer">Перевод</string>
+    <string name="account_detail_transactions">Операции</string>
+    <string name="account_detail_no_transactions">Операций нет</string>
+
+    <!-- Edit account form -->
+    <string name="edit_account_new_title">Новый счёт</string>
+    <string name="edit_account_edit_title">Редактировать счёт</string>
+    <string name="edit_account_name">Название</string>
+    <string name="edit_account_type">Тип счёта</string>
+    <string name="edit_account_currency">Валюта</string>
+    <string name="edit_account_color">Цвет</string>
+    <string name="edit_account_initial_balance">Начальный баланс</string>
+    <string name="edit_account_save">Сохранить</string>
+
+    <!-- Deposit section -->
+    <string name="deposit_params_title">Параметры вклада</string>
+    <string name="deposit_amount">Сумма вклада</string>
+    <string name="deposit_rate">Ставка, % годовых</string>
+    <string name="deposit_start_date">Дата начала</string>
+    <string name="deposit_end_date">Дата окончания</string>
+    <string name="deposit_capitalization_label">Начислять проценты на проценты</string>
+    <string name="deposit_cap_period">Период капитализации</string>
+    <string name="deposit_cap_monthly">Ежемесячно</string>
+    <string name="deposit_cap_quarterly">Ежеквартально</string>
+    <string name="deposit_cap_yearly">Ежегодно</string>
+    <string name="deposit_notify_days">Уведомить за (дней)</string>
+    <string name="deposit_forecast_title">Прогноз</string>
+    <string name="deposit_forecast_total">Итого к получению</string>
+    <string name="deposit_forecast_interest">Начисленные проценты</string>
+    <!-- %1$s — дата, %2$d — дней до конца -->
+    <string name="deposit_days_left">до %1$s · %2$d дн.</string>
+
+    <!-- Transfer screen -->
+    <string name="transfer_title">Перевод</string>
+    <string name="transfer_from">Откуда</string>
+    <string name="transfer_to">Куда</string>
+    <string name="transfer_amount">Сумма</string>
+    <string name="transfer_date">Дата</string>
+    <string name="transfer_note">Заметка</string>
+    <string name="transfer_execute">Перевести</string>
+
+    <!-- Errors -->
+    <string name="error_name_empty">Введите название счёта</string>
+    <string name="error_deposit_params_missing">Заполните параметры вклада</string>
+    <string name="error_deposit_amount_invalid">Введите сумму вклада больше нуля</string>
+    <string name="error_deposit_rate_invalid">Введите ставку больше нуля</string>
+    <string name="error_deposit_date_invalid">Дата окончания должна быть позже даты начала</string>
+    <string name="error_transfer_same_account">Нельзя переводить на тот же счёт</string>
+    <string name="error_transfer_invalid_amount">Введите сумму больше нуля</string>
+</resources>

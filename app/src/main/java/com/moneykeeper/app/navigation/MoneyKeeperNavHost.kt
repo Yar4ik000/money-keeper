@@ -32,27 +32,35 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.moneykeeper.app.R
+import com.moneykeeper.feature.accounts.navigation.accountsGraph
 
-/**
- * Скелет §1.9: Scaffold c нижней панелью и FAB, NavHost с composable-заглушками для
- * запланированных маршрутов из [Screen]. Реальные экраны придут из feature-модулей по
- * мере §3–§9. Auth-гейтинг (§1.8/§10) пока не встроен — `MainActivity` компонует этот
- * NavHost безусловно, до реализации `:feature:auth`.
- */
+/** Маршруты, на которых показывается глобальный FAB «Новая операция». На вкладке Счета
+ *  есть собственный FAB («Добавить счёт»), на всех sub-экранах FAB не нужен. */
+private val GLOBAL_FAB_ROUTES = setOf(
+    Screen.Dashboard.route,
+    Screen.Analytics.route,
+    Screen.Forecast.route,
+)
+
 @Composable
 fun MoneyKeeperNavHost(
     navController: NavHostController = rememberNavController(),
 ) {
+    val backStackEntry by navController.currentBackStackEntryAsState()
+    val showGlobalFab = backStackEntry?.destination?.route in GLOBAL_FAB_ROUTES
+
     Scaffold(
         bottomBar = { MoneyKeeperBottomBar(navController) },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = { navController.navigate(Screen.AddTransaction.buildRoute()) },
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Add,
-                    contentDescription = stringResource(R.string.nav_add_transaction),
-                )
+            if (showGlobalFab) {
+                FloatingActionButton(
+                    onClick = { navController.navigate(Screen.AddTransaction.buildRoute()) },
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Add,
+                        contentDescription = stringResource(R.string.nav_add_transaction),
+                    )
+                }
             }
         },
     ) { padding ->
@@ -61,10 +69,10 @@ fun MoneyKeeperNavHost(
             startDestination = Screen.Dashboard.route,
             modifier = Modifier.padding(padding),
         ) {
-            composable(Screen.Dashboard.route) { StubScreen(R.string.nav_dashboard) }
-            composable(Screen.Accounts.route)  { StubScreen(R.string.nav_accounts) }
-            composable(Screen.Analytics.route) { StubScreen(R.string.nav_analytics) }
-            composable(Screen.Forecast.route)  { StubScreen(R.string.nav_forecast) }
+            composable(Screen.Dashboard.route)    { StubScreen(R.string.nav_dashboard) }
+            accountsGraph(navController)
+            composable(Screen.Analytics.route)   { StubScreen(R.string.nav_analytics) }
+            composable(Screen.Forecast.route)    { StubScreen(R.string.nav_forecast) }
             composable(
                 route = Screen.AddTransaction.route,
                 arguments = listOf(
@@ -105,11 +113,13 @@ private fun MoneyKeeperBottomBar(navController: NavHostController) {
                 selected = selected,
                 onClick = {
                     navController.navigate(item.screen.route) {
+                        // popUpTo без saveState/restoreState: при flat-графе (без nested
+                        // графов на таб) saveState/restoreState сохраняет в «accounts»-стек
+                        // всё, включая sub-экраны других табов, и восстанавливает не тот экран.
                         popUpTo(navController.graph.findStartDestination().id) {
-                            saveState = true
+                            inclusive = false
                         }
                         launchSingleTop = true
-                        restoreState = true
                     }
                 },
                 icon = { Icon(item.icon, contentDescription = null) },
