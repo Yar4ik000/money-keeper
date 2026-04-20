@@ -41,7 +41,7 @@ data class DepositEntity(
     val endDate: LocalDate,
     val isCapitalized: Boolean,
     val capitalizationPeriod: CapPeriod?,
-    val notifyDaysBefore: Int = 7,
+    val notifyDaysBefore: List<Int> = listOf(7),
     val autoRenew: Boolean = false,
     val payoutAccountId: Long?,
     val isActive: Boolean = true,

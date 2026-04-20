@@ -479,6 +479,63 @@ TransactionSaver (feature:transactions)
 
 ---
 
+## §6 — Dashboard
+
+### Структура файлов
+
+```
+feature/dashboard/
+├── navigation/DashboardNavigation.kt   — dashboardGraph(navController)
+└── ui/
+    ├── DashboardUiState.kt             — DashboardUiState, DepositWithDaysLeft
+    ├── DashboardViewModel.kt           — combine(5 flows)
+    ├── DashboardScreen.kt              — DashboardRoute + DashboardScreen (stateless)
+    └── components/
+        ├── TotalBalanceCard.kt         — мульти-валютный баланс
+        ├── AccountsCarousel.kt         — горизонтальный LazyRow
+        ├── MonthlySummaryCard.kt       — доходы/расходы + LinearProgressIndicator
+        ├── ExpiringDepositsWidget.kt   — вклады < 30 дней до окончания
+        └── RecentTransactionsList.kt   — TransactionListItem + RecentTransactionsHeader
+```
+
+### Ключевые решения
+
+**DepositCalculator перенесён в `core:domain`.**  
+Ранее он жил в `feature:accounts`. Поскольку его использует и `feature:dashboard`, он перемещён в `core/domain/src/main/java/com/moneykeeper/core/domain/calculator/DepositCalculator.kt`. Это единственное место для расчёта простых и сложных процентов.
+
+**Утилиты форматирования в `core:ui`.**  
+`CurrencyFormatter.kt` — `BigDecimal.formatAsCurrency(currency)` с маппингом валюта→локаль. `ColorUtils.kt` — `parseHexColor(hex)` для перевода `#RRGGBB` строки в Compose `Color`. Оба доступны всем feature-модулям.
+
+**DashboardViewModel — combine(5 flows).**  
+Объединяет `observeActiveAccounts()`, `observeTotalsByCurrency()`, `observePeriodSummary(from, to)`, `observeRecent(10)`, `observeExpiringSoon(30)` в единый `StateFlow<DashboardUiState>` через `stateIn(WhileSubscribed(5s))`. Сортировка `MultiCurrencyTotal.entries` — defaultCurrency первой.
+
+**TotalBalanceCard — стратегия C (no conversion).**  
+Каждая валюта — отдельная строка. Первая строка (defaultCurrency) — `headlineLarge`, остальные — `titleMedium`. Красный цвет при отрицательном балансе.
+
+**DashboardScreen имеет собственный FAB.**  
+Глобальный FAB в `MoneyKeeperNavHost` отключён для маршрута `dashboard` (убран из `GLOBAL_FAB_ROUTES`). Сам `DashboardScreen` передаёт `onAddTransaction(null)` в `transactionsGraph`.
+
+### Инварианты
+
+- `ExpiringDepositsWidget` виден только когда `state.expiringDeposits.isNotEmpty()`.
+- `TransactionListItem` использует первую букву названия категории как fallback-иконку (иконковая система — §7+).
+- `currentMonthName()` форматирует через `AppLocale.current()` (не хардкод `ru`).
+
+### Instrumented тесты (8 сценариев, `DashboardScreenTest.kt`)
+
+| Тест | Что проверяет |
+|------|---------------|
+| `totalBalanceCard_showsZeroWhenNoAccounts` | `0,00 ₽` при пустом MultiCurrencyTotal |
+| `totalBalanceCard_showsBalanceForSingleCurrency` | `150 000,00 ₽` |
+| `accountsCarousel_showsAccountName` | имя счёта в карусели |
+| `monthlySummaryCard_showsEmptyMessage_whenNoSummary` | строка «За этот месяц операций нет» |
+| `monthlySummaryCard_showsIncomeAndExpense` | метки «Доходы» / «Расходы» |
+| `expiringDepositsWidget_notShown_whenEmpty` | виджет скрыт |
+| `expiringDepositsWidget_shown_whenHasDeposits` | виджет + имя вклада видны |
+| `recentTransactions_showsCategoryName` | имя категории в списке операций |
+
+---
+
 ## Соглашения по коду
 
 - **Все строки** в `strings.xml`. Никаких захардкоженных русских слов в `.kt`.

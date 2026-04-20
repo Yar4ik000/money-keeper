@@ -191,6 +191,7 @@ fun EditAccountScreen(
                     deposit = state.deposit ?: defaultDeposit(),
                     onChange = viewModel::onDepositChange,
                     error = state.error,
+                    isNewDeposit = accountId == null,
                 )
             }
 

@@ -1,6 +1,7 @@
 package com.moneykeeper.feature.accounts.domain
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.moneykeeper.core.domain.calculator.DepositCalculator
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -58,7 +59,7 @@ class DepositCalculatorInstrumentedTest {
             endDate = LocalDate.of(2026, 6, 1),
             isCapitalized = false,
             capitalizationPeriod = null,
-            notifyDaysBefore = 7,
+            notifyDaysBefore = listOf(7),
             autoRenew = false,
             payoutAccountId = null,
             isActive = true,
@@ -80,7 +81,7 @@ class DepositCalculatorInstrumentedTest {
             endDate = end,
             isCapitalized = false,
             capitalizationPeriod = null,
-            notifyDaysBefore = 7,
+            notifyDaysBefore = listOf(7),
             autoRenew = false,
             payoutAccountId = null,
             isActive = true,

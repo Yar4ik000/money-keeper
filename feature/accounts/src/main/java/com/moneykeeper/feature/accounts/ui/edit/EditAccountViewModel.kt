@@ -98,6 +98,10 @@ class EditAccountViewModel @Inject constructor(
                     _uiState.update { it.copy(error = EditAccountError.DepositDateInvalid) }
                     return@launch
                 }
+                if (accountId == null && deposit.endDate.isBefore(LocalDate.now())) {
+                    _uiState.update { it.copy(error = EditAccountError.DepositEndDatePast) }
+                    return@launch
+                }
                 deposit.initialAmount
             }
             else -> if (accountId != null) {

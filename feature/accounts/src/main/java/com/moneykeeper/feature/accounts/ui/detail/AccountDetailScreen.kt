@@ -50,7 +50,7 @@ import com.moneykeeper.core.domain.model.TransactionType
 import com.moneykeeper.core.domain.model.TransactionWithMeta
 import com.moneykeeper.core.ui.locale.AppLocale
 import com.moneykeeper.feature.accounts.R
-import com.moneykeeper.feature.accounts.domain.DepositCalculator
+import com.moneykeeper.core.domain.calculator.DepositCalculator
 import com.moneykeeper.feature.accounts.ui.list.formatAmount
 import com.moneykeeper.feature.accounts.ui.list.parseColor
 import java.math.BigDecimal

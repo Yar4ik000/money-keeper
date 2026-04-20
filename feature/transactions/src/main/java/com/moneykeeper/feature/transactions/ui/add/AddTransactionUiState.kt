@@ -28,7 +28,6 @@ data class AddTransactionUiState(
 sealed interface AddTxError {
     data object AmountRequired : AddTxError
     data object AccountRequired : AddTxError
-    data object CategoryRequired : AddTxError
     data object ToAccountRequired : AddTxError
 }
 

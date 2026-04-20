@@ -31,12 +31,12 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.moneykeeper.app.R
 import com.moneykeeper.feature.accounts.navigation.accountsGraph
+import com.moneykeeper.feature.dashboard.navigation.dashboardGraph
 import com.moneykeeper.feature.transactions.navigation.transactionsGraph
 
-/** Маршруты, на которых показывается глобальный FAB «Новая операция». На вкладке Счета
- *  есть собственный FAB («Добавить счёт»), на всех sub-экранах FAB не нужен. */
+/** Маршруты, на которых показывается глобальный FAB «Новая операция».
+ *  Dashboard имеет собственный FAB, Analytics и Forecast — пока заглушки. */
 private val GLOBAL_FAB_ROUTES = setOf(
-    Screen.Dashboard.route,
     Screen.Analytics.route,
     Screen.Forecast.route,
 )
@@ -68,7 +68,7 @@ fun MoneyKeeperNavHost(
             startDestination = Screen.Dashboard.route,
             modifier = Modifier.padding(padding),
         ) {
-            composable(Screen.Dashboard.route)    { StubScreen(R.string.nav_dashboard) }
+            dashboardGraph(navController)
             accountsGraph(navController)
             transactionsGraph(navController)
             composable(Screen.Analytics.route)   { StubScreen(R.string.nav_analytics) }

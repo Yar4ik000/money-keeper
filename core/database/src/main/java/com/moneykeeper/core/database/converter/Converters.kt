@@ -42,4 +42,10 @@ class Converters {
 
     @TypeConverter fun fromBudgetPeriod(v: BudgetPeriod): String = v.name
     @TypeConverter fun toBudgetPeriod(s: String): BudgetPeriod = BudgetPeriod.valueOf(s)
+
+    // List<Int> <-> "1,3,7" (used for notifyDaysBefore in deposits)
+    @TypeConverter fun fromIntList(list: List<Int>): String = list.joinToString(",")
+    @TypeConverter fun toIntList(s: String): List<Int> =
+        if (s.isBlank()) emptyList()
+        else s.split(",").mapNotNull { it.trim().toIntOrNull() }
 }

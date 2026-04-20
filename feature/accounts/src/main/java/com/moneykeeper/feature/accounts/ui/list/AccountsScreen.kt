@@ -56,7 +56,6 @@ import com.moneykeeper.core.domain.model.Deposit
 import com.moneykeeper.core.domain.money.MultiCurrencyTotal
 import com.moneykeeper.core.ui.locale.AppLocale
 import com.moneykeeper.feature.accounts.R
-import com.moneykeeper.feature.accounts.domain.DepositCalculator
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.text.NumberFormat

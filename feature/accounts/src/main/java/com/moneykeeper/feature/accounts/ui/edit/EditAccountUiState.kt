@@ -26,6 +26,7 @@ sealed interface EditAccountError {
     data object DepositAmountInvalid : EditAccountError
     data object DepositRateInvalid : EditAccountError
     data object DepositDateInvalid : EditAccountError
+    data object DepositEndDatePast : EditAccountError
     data class Domain(val error: DomainError) : EditAccountError
 }
 
@@ -39,7 +40,7 @@ fun defaultDeposit(accountId: Long = 0L): Deposit = Deposit(
     endDate = LocalDate.now().plusYears(1),
     isCapitalized = false,
     capitalizationPeriod = CapPeriod.MONTHLY,
-    notifyDaysBefore = 7,
+    notifyDaysBefore = listOf(7),
     autoRenew = false,
     payoutAccountId = null,
     isActive = true,

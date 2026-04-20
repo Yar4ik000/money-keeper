@@ -4,6 +4,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -17,10 +19,12 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -33,6 +37,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -42,21 +47,25 @@ import com.moneykeeper.core.domain.model.CapPeriod
 import com.moneykeeper.core.domain.model.Deposit
 import com.moneykeeper.core.ui.locale.AppLocale
 import com.moneykeeper.feature.accounts.R
-import com.moneykeeper.feature.accounts.domain.DepositCalculator
+import com.moneykeeper.core.domain.calculator.DepositCalculator
 import com.moneykeeper.feature.accounts.ui.list.formatAmount
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
-@OptIn(ExperimentalMaterial3Api::class)
+private val NOTIFY_OPTIONS = listOf(1, 3, 7, 14, 30)
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun DepositSection(
     deposit: Deposit,
     onChange: (Deposit) -> Unit,
     error: EditAccountError? = null,
+    isNewDeposit: Boolean = false,
 ) {
     val dateFormatter = remember { DateTimeFormatter.ofPattern("dd.MM.yyyy").withLocale(AppLocale.current()) }
 
@@ -132,15 +141,21 @@ fun DepositSection(
 
         // End date
         Box {
+            val endDateError = error is EditAccountError.DepositDateInvalid ||
+                error is EditAccountError.DepositEndDatePast
             OutlinedTextField(
                 value = deposit.endDate.format(dateFormatter),
                 onValueChange = {},
                 readOnly = true,
                 label = { Text(stringResource(R.string.deposit_end_date)) },
-                isError = error is EditAccountError.DepositDateInvalid,
-                supportingText = if (error is EditAccountError.DepositDateInvalid) {
-                    { Text(stringResource(R.string.error_deposit_date_invalid)) }
-                } else null,
+                isError = endDateError,
+                supportingText = when (error) {
+                    is EditAccountError.DepositDateInvalid ->
+                        { { Text(stringResource(R.string.error_deposit_date_invalid)) } }
+                    is EditAccountError.DepositEndDatePast ->
+                        { { Text(stringResource(R.string.error_deposit_end_date_past)) } }
+                    else -> null
+                },
                 modifier = Modifier.fillMaxWidth(),
             )
             Box(Modifier.matchParentSize().clickable { showEndDatePicker = true })
@@ -188,16 +203,28 @@ fun DepositSection(
             }
         }
 
-        OutlinedTextField(
-            value = deposit.notifyDaysBefore.toString(),
-            onValueChange = { v ->
-                v.toIntOrNull()?.let { onChange(deposit.copy(notifyDaysBefore = it)) }
-            },
-            label = { Text(stringResource(R.string.deposit_notify_days)) },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            modifier = Modifier.fillMaxWidth(),
+        Text(
+            text = stringResource(R.string.deposit_notify_days_label),
+            style = MaterialTheme.typography.labelLarge,
         )
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            NOTIFY_OPTIONS.forEach { days ->
+                val selected = days in deposit.notifyDaysBefore
+                FilterChip(
+                    selected = selected,
+                    onClick = {
+                        val updated = if (selected)
+                            deposit.notifyDaysBefore - days
+                        else
+                            (deposit.notifyDaysBefore + days).sorted()
+                        onChange(deposit.copy(notifyDaysBefore = updated))
+                    },
+                    label = {
+                        Text(pluralStringResource(R.plurals.notify_days, days, days))
+                    },
+                )
+            }
+        }
 
         // Forecast preview card
         HorizontalDivider()
@@ -227,6 +254,7 @@ fun DepositSection(
                 showEndDatePicker = false
             },
             onDismiss = { showEndDatePicker = false },
+            minDate = if (isNewDeposit) LocalDate.now() else null,
         )
     }
 }
@@ -260,9 +288,22 @@ private fun LocalDatePickerDialog(
     initial: LocalDate,
     onConfirm: (LocalDate) -> Unit,
     onDismiss: () -> Unit,
+    minDate: LocalDate? = null,
 ) {
     val epochMilli = initial.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
-    val pickerState = rememberDatePickerState(initialSelectedDateMillis = epochMilli)
+    val minUtcMillis = minDate?.atStartOfDay(ZoneOffset.UTC)?.toInstant()?.toEpochMilli()
+    val selectableDates = if (minUtcMillis != null) {
+        object : SelectableDates {
+            override fun isSelectableDate(utcTimeMillis: Long) = utcTimeMillis >= minUtcMillis
+            override fun isSelectableYear(year: Int) = year >= minDate!!.year
+        }
+    } else {
+        object : SelectableDates {}
+    }
+    val pickerState = rememberDatePickerState(
+        initialSelectedDateMillis = epochMilli,
+        selectableDates = selectableDates,
+    )
 
     DatePickerDialog(
         onDismissRequest = onDismiss,

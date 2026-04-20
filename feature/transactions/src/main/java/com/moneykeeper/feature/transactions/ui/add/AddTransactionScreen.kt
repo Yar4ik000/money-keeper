@@ -107,7 +107,6 @@ fun AddTransactionScreen(
     val errorMsg = when (uiState.error) {
         is AddTxError.AmountRequired -> stringResource(R.string.error_tx_amount_required)
         is AddTxError.AccountRequired -> stringResource(R.string.error_tx_account_required)
-        is AddTxError.CategoryRequired -> stringResource(R.string.error_tx_category_required)
         is AddTxError.ToAccountRequired -> stringResource(R.string.error_tx_to_account_required)
         null -> null
     }
@@ -212,7 +211,7 @@ fun AddTransactionScreen(
             if (uiState.type != TransactionType.TRANSFER) {
                 Box {
                     OutlinedTextField(
-                        value = uiState.selectedCategory?.name ?: "",
+                        value = uiState.selectedCategory?.name ?: stringResource(R.string.tx_category_none),
                         onValueChange = {},
                         readOnly = true,
                         label = { Text(stringResource(R.string.tx_category)) },

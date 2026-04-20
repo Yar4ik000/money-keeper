@@ -1,4 +1,4 @@
-package com.moneykeeper.feature.accounts.domain
+package com.moneykeeper.core.domain.calculator
 
 import com.moneykeeper.core.domain.model.CapPeriod
 import com.moneykeeper.core.domain.model.Deposit
@@ -16,10 +16,6 @@ object DepositCalculator {
     private val YEAR_DAYS = BigDecimal(365)
     private val HUNDRED = BigDecimal(100)
 
-    /**
-     * Простые проценты за [startDate, endDate): A = P * r * days / 365.
-     * Возвращает начисленные проценты (не principal + interest).
-     */
     fun simpleInterest(
         principal: BigDecimal,
         ratePercent: BigDecimal,
@@ -36,11 +32,6 @@ object DepositCalculator {
             .setScale(RESULT_SCALE, RoundingMode.HALF_EVEN)
     }
 
-    /**
-     * Сложные проценты с периодической капитализацией по фактическому календарю.
-     * Капитализационные периоды отсчитываются через plusMonths/plusYears, не через
-     * фиксированное число дней — это даёт точный банковский результат.
-     */
     fun compoundInterest(
         principal: BigDecimal,
         ratePercent: BigDecimal,
@@ -69,7 +60,6 @@ object DepositCalculator {
         return balance.subtract(principal, MC).setScale(RESULT_SCALE, RoundingMode.HALF_EVEN)
     }
 
-    /** Прогноз суммы (principal + начисленные проценты) на произвольную дату. */
     fun projectedBalance(deposit: Deposit, atDate: LocalDate): BigDecimal {
         val effectiveEnd = if (atDate.isBefore(deposit.endDate)) atDate else deposit.endDate
         val interest = if (deposit.isCapitalized)

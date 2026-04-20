@@ -1,5 +1,6 @@
 package com.moneykeeper.feature.accounts.domain
 
+import com.moneykeeper.core.domain.calculator.DepositCalculator
 import com.moneykeeper.core.domain.model.CapPeriod
 import com.moneykeeper.core.domain.model.Deposit
 import org.junit.Assert.assertEquals
@@ -83,7 +84,7 @@ class DepositCalculatorTest {
             endDate = LocalDate.of(2027, 1, 1),
             isCapitalized = false,
             capitalizationPeriod = CapPeriod.MONTHLY,
-            notifyDaysBefore = 7, autoRenew = false, payoutAccountId = null, isActive = true,
+            notifyDaysBefore = listOf(7), autoRenew = false, payoutAccountId = null, isActive = true,
         )
         val atEnd    = DepositCalculator.projectedBalance(deposit, LocalDate.of(2027, 1, 1))
         val afterEnd = DepositCalculator.projectedBalance(deposit, LocalDate.of(2027, 6, 1))

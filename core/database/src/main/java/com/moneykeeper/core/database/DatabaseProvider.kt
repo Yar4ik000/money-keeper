@@ -42,6 +42,7 @@ class DatabaseProvider @Inject constructor(
         db = Room.databaseBuilder(context, AppDatabase::class.java, AppDatabase.DB_NAME)
             .openHelperFactory(factory)
             .addMigrations(*AppDatabase.MIGRATIONS)
+            .fallbackToDestructiveMigration(dropAllTables = true)
             .addCallback(PrepopulateCallback(context))
             .build()
         _state.value = State.Initialized

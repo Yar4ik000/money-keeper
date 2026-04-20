@@ -44,7 +44,7 @@ abstract class AppDatabase : RoomDatabase() {
 
     companion object {
         const val DB_NAME = "money_keeper.db"
-        const val VERSION = 1
+        const val VERSION = 2
 
         // Ручные миграции — когда AutoMigration не справляется (переименование колонок, преобразование данных)
         val MIGRATIONS: Array<Migration> = arrayOf()

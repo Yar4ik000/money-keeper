@@ -1,0 +1,16 @@
+<resources>
+    <!-- Dashboard screen -->
+    <string name="app_name_dashboard">Money Keeper</string>
+    <string name="dashboard_total_balance">Общий баланс</string>
+    <string name="dashboard_accounts_section">Счета</string>
+    <string name="dashboard_add_account">Добавить счёт</string>
+    <string name="dashboard_add_transaction">Новая операция</string>
+    <string name="dashboard_settings">Настройки</string>
+    <string name="dashboard_income">Доходы</string>
+    <string name="dashboard_expense">Расходы</string>
+    <string name="dashboard_month_empty">За этот месяц операций нет</string>
+    <string name="dashboard_expiring_deposits">Заканчивающиеся вклады</string>
+    <string name="dashboard_recent_transactions">Последние операции</string>
+    <string name="dashboard_see_all">Все</string>
+    <string name="dashboard_category_none">Прочее</string>
+</resources>

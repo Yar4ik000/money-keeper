@@ -104,10 +104,6 @@ class AddTransactionViewModel @Inject constructor(
             _uiState.update { it.copy(error = AddTxError.AccountRequired) }
             return@launch
         }
-        if (s.type != TransactionType.TRANSFER && s.selectedCategory == null) {
-            _uiState.update { it.copy(error = AddTxError.CategoryRequired) }
-            return@launch
-        }
         if (s.type == TransactionType.TRANSFER && s.selectedToAccount == null) {
             _uiState.update { it.copy(error = AddTxError.ToAccountRequired) }
             return@launch

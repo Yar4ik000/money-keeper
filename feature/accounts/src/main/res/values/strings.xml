@@ -71,6 +71,8 @@
     <string name="error_deposit_amount_invalid">Введите сумму вклада больше нуля</string>
     <string name="error_deposit_rate_invalid">Введите ставку больше нуля</string>
     <string name="error_deposit_date_invalid">Дата окончания должна быть позже даты начала</string>
+    <string name="error_deposit_end_date_past">Дата окончания нового вклада не может быть в прошлом</string>
+    <string name="deposit_notify_days_label">Уведомить за (дней)</string>
     <string name="error_transfer_same_account">Нельзя переводить на тот же счёт</string>
     <string name="error_transfer_invalid_amount">Введите сумму больше нуля</string>
 </resources>

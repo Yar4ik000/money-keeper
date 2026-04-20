@@ -7,6 +7,7 @@
 
     <!-- Add / Edit transaction form fields -->
     <string name="tx_account">Счёт</string>
+    <string name="tx_category_none">Прочее</string>
     <string name="tx_to_account">Счёт назначения</string>
     <string name="tx_category">Категория</string>
     <string name="tx_date">Дата</string>
