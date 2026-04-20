@@ -76,6 +76,12 @@ class AnalyticsQueryTest {
     @After
     fun tearDown() = db.close()
 
+    // SQLite SUM on TEXT columns returns INTEGER for whole numbers (e.g. "800" not "800.00"),
+    // so BigDecimal.equals() (which checks scale) fails. Use compareTo instead.
+    private fun assertAmount(expected: BigDecimal, actual: BigDecimal) =
+        assertTrue("Expected ${expected.toPlainString()} but got ${actual.toPlainString()}",
+            expected.compareTo(actual) == 0)
+
     private suspend fun insertTx(
         accountId: Long = rubAccountId,
         amount: BigDecimal,
@@ -108,10 +114,10 @@ class AnalyticsQueryTest {
 
         assertEquals(2, result.size)
         val food = result.first { it.categoryId == foodCategoryId }
-        assertEquals(BigDecimal("800.00"), food.total)
+        assertAmount(BigDecimal("800"), food.total)
         assertEquals(2, food.count)
         val transport = result.first { it.categoryId == transportCategoryId }
-        assertEquals(BigDecimal("200.00"), transport.total)
+        assertAmount(BigDecimal("200"), transport.total)
     }
 
     @Test
@@ -125,13 +131,13 @@ class AnalyticsQueryTest {
             currency = "RUB", from = "2026-04-01", to = "2026-04-30", type = "EXPENSE",
         ).first()
         assertEquals(1, rub.size)
-        assertEquals(BigDecimal("1000.00"), rub[0].total)
+        assertAmount(BigDecimal("1000"), rub[0].total)
 
         val usd = txDao.observeByCategory(
             currency = "USD", from = "2026-04-01", to = "2026-04-30", type = "EXPENSE",
         ).first()
         assertEquals(1, usd.size)
-        assertEquals(BigDecimal("50.00"), usd[0].total)
+        assertAmount(BigDecimal("50"), usd[0].total)
     }
 
     @Test
@@ -147,7 +153,7 @@ class AnalyticsQueryTest {
 
         assertEquals(1, result.size)
         assertEquals(0L, result[0].categoryId)
-        assertEquals(BigDecimal("500.00"), result[0].total)
+        assertAmount(BigDecimal("500"), result[0].total)
         assertEquals(2, result[0].count)
     }
 
@@ -193,10 +199,10 @@ class AnalyticsQueryTest {
 
         assertEquals(2, result.size)
         val card = result.first { it.accountId == rubAccountId }
-        assertEquals(BigDecimal("1000.00"), card.total)
+        assertAmount(BigDecimal("1000"), card.total)
         assertEquals(2, card.count)
         val cash = result.first { it.accountId == secondRubId }
-        assertEquals(BigDecimal("200.00"), cash.total)
+        assertAmount(BigDecimal("200"), cash.total)
     }
 
     @Test
@@ -235,14 +241,14 @@ class AnalyticsQueryTest {
 
         assertEquals(3, result.size)
         val feb = result.first { it.yearMonth == "2026-02" }
-        assertEquals(BigDecimal("1000.00"), feb.income)
-        assertEquals(BigDecimal("400.00"), feb.expense)
+        assertAmount(BigDecimal("1000"), feb.income)
+        assertAmount(BigDecimal("400"), feb.expense)
         val mar = result.first { it.yearMonth == "2026-03" }
-        assertEquals(BigDecimal("0"), mar.income)
-        assertEquals(BigDecimal("600.00"), mar.expense)
+        assertAmount(BigDecimal("0"), mar.income)
+        assertAmount(BigDecimal("600"), mar.expense)
         val apr = result.first { it.yearMonth == "2026-04" }
-        assertEquals(BigDecimal("0"), apr.income)
-        assertEquals(BigDecimal("300.00"), apr.expense)
+        assertAmount(BigDecimal("0"), apr.income)
+        assertAmount(BigDecimal("300"), apr.expense)
     }
 
     @Test
@@ -260,7 +266,7 @@ class AnalyticsQueryTest {
 
         assertEquals(1, result.size)
         assertEquals("2026-03", result[0].yearMonth)
-        assertEquals(BigDecimal("500.00"), result[0].expense)
+        assertAmount(BigDecimal("500"), result[0].expense)
     }
 
     // ─── observePeriodSummary ─────────────────────────────────────────────────
@@ -278,11 +284,11 @@ class AnalyticsQueryTest {
 
         assertEquals(2, result.size)
         val rub = result.first { it.currency == "RUB" }
-        assertEquals(BigDecimal("5000.00"), rub.income)
-        assertEquals(BigDecimal("1500.00"), rub.expense)
+        assertAmount(BigDecimal("5000"), rub.income)
+        assertAmount(BigDecimal("1500"), rub.expense)
         val usd = result.first { it.currency == "USD" }
-        assertEquals(BigDecimal("200.00"), usd.income)
-        assertEquals(BigDecimal("0"), usd.expense)
+        assertAmount(BigDecimal("200"), usd.income)
+        assertAmount(BigDecimal("0"), usd.expense)
     }
 
     @Test
