@@ -746,6 +746,25 @@ UnlockController.notifyUnlocked() после databaseProvider.initialize()
 
 **UI:** `BackupScreen` с тремя SAF-лаунчерами (CSV, backup, restore), диалог ввода пароля для restore, финальный диалог «Перезапустить».
 
+### Настройки безопасности (Смена пароля и биометрия)
+
+Доступны через **Настройки → Безопасность**. Реализованы в двух модулях:
+
+**`ChangePasswordScreen` / `ChangePasswordViewModel`** (`:feature:auth`):
+- Три поля: текущий пароль, новый, подтверждение нового.
+- Проверка старого пароля: Argon2id → сравнение с `MasterKeyHolder.require()`. Нельзя обойти фактом «я и так Unlocked».
+- После успешной смены: `db_key` пере-шифровывается новым `master_key`, биометрия автоматически отключается, показывается диалог «Старые бэкапы расшифровываются предыдущим паролем».
+- Навигация: маршрут `settings/change_password` зарегистрирован в `MoneyKeeperNavHost` (`:app`), а не в `SettingsNavigation` — это позволяет `:feature:settings` не иметь прямой зависимости на `ChangePasswordScreen`.
+
+**`SecurityViewModel`** (`:feature:settings`):
+- Инжектирует `BiometricEnrollment` из `:feature:auth` (единственное место, где `:feature:settings` зависит от `:feature:auth`).
+- Экспонирует `isBiometricAvailable: Boolean` (константа, проверяется при создании) и `isBiometricEnrolled: StateFlow<Boolean>`.
+- `enrollBiometric(activity)` запускает `BiometricEnrollment.enroll()` в `viewModelScope`, обновляет `isBiometricEnrolled` по результату.
+- `disableBiometric()` — немедленное отключение без биометрического подтверждения.
+- Ошибки (не зарегистрирован отпечаток в системе, устройство не поддерживает `BIOMETRIC_STRONG`) — `enrollError: StateFlow<String?>`, отображается через `SnackbarHost` в `SettingsScreen`.
+
+Switch биометрии показывается только если `BiometricEnrollment.isAvailable()` вернул `true`.
+
 ### Бюджеты
 
 `BudgetsViewModel` объединяет `BudgetRepository.observeAll()`, `CategoryRepository.observeByType(EXPENSE)`, `TransactionRepository.observeByCategory(...)` через Kotlin `combine`. Экран: `LazyColumn` карточек с `LinearProgressIndicator` (красный при > 100%), FAB для добавления нового бюджета (AlertDialog с выбором категории, суммой и периодом MONTHLY/WEEKLY).
