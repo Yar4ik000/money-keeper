@@ -271,12 +271,14 @@ fun DepositSection(
             }
         }
 
-        HorizontalDivider()
-        ForecastCard(
-            total = projectedTotal,
-            interest = projectedInterest,
-            currency = "RUB",
-        )
+        if (!isSavings) {
+            HorizontalDivider()
+            ForecastCard(
+                total = projectedTotal,
+                interest = projectedInterest,
+                currency = "RUB",
+            )
+        }
     }
 
     if (showStartDatePicker) {

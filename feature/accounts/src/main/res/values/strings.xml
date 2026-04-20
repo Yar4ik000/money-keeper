@@ -3,7 +3,7 @@
     <string name="account_type_card">Карта</string>
     <string name="account_type_cash">Наличные</string>
     <string name="account_type_deposit">Вклад</string>
-    <string name="account_type_savings">Сбережения</string>
+    <string name="account_type_savings">Накопительный счёт</string>
     <string name="account_type_investment">Инвестиции</string>
     <string name="account_type_other">Другое</string>
 
@@ -17,7 +17,7 @@
     <string name="accounts_section_cards">Карты</string>
     <string name="accounts_section_cash">Наличные</string>
     <string name="accounts_section_deposits">Вклады</string>
-    <string name="accounts_section_savings">Сбережения</string>
+    <string name="accounts_section_savings">Накопительные счета</string>
     <string name="accounts_section_investments">Инвестиции</string>
     <string name="accounts_section_other">Прочее</string>
 
