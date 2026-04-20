@@ -70,7 +70,7 @@ class ChangePasswordViewModel @Inject constructor(
                 biometricEnrollment.disable()
             }
 
-            _uiState.update { it.copy(isLoading = false, done = true) }
+            _uiState.update { it.copy(isLoading = false, showOldBackupWarning = true) }
         } catch (e: Exception) {
             _uiState.update { it.copy(isLoading = false, error = ChangeError.Unknown(e.message)) }
         } finally {
@@ -79,7 +79,7 @@ class ChangePasswordViewModel @Inject constructor(
     }
 
     fun clearError() = _uiState.update { it.copy(error = null) }
-    fun dismissOldBackupDialog() = _uiState.update { it.copy(showOldBackupWarning = false) }
+    fun dismissOldBackupDialog() = _uiState.update { it.copy(showOldBackupWarning = false, done = true) }
 }
 
 data class ChangeUiState(

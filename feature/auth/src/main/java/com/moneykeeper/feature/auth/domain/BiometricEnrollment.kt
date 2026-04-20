@@ -32,6 +32,8 @@ class BiometricEnrollment @Inject constructor(
 ) {
     fun isEnrolled(): Boolean = keyStorage.hasBiometricWrap()
 
+    fun isAvailable(): Boolean = isBiometricStrongAvailable()
+
     suspend fun enroll(activity: FragmentActivity): EnrollResult {
         if (!isBiometricStrongAvailable()) return EnrollResult.Unavailable
         if (!isEnrolledInSystem()) return EnrollResult.NotEnrolledInSystem

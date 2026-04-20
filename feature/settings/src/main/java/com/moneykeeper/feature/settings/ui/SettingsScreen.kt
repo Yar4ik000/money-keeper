@@ -13,7 +13,9 @@ import androidx.compose.material.icons.outlined.AccessTime
 import androidx.compose.material.icons.outlined.AccountBalance
 import androidx.compose.material.icons.outlined.Backup
 import androidx.compose.material.icons.outlined.CurrencyExchange
+import androidx.compose.material.icons.outlined.Fingerprint
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Repeat
@@ -32,7 +34,10 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberTimePickerState
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -41,9 +46,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
+import androidx.fragment.app.FragmentActivity
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.moneykeeper.feature.settings.R
+import com.moneykeeper.feature.settings.ui.security.SecurityViewModel
 
 private val SUPPORTED_CURRENCIES = listOf("RUB", "USD", "EUR", "GBP", "CNY", "BYN", "KZT")
 
@@ -53,10 +60,22 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onCategories: () -> Unit,
     onBackup: () -> Unit,
+    onChangePassword: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel(),
+    securityViewModel: SecurityViewModel = hiltViewModel(),
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
+    val isBiometricEnrolled by securityViewModel.isBiometricEnrolled.collectAsStateWithLifecycle()
+    val enrollError by securityViewModel.enrollError.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(enrollError) {
+        enrollError?.let {
+            snackbarHostState.showSnackbar(it)
+            securityViewModel.clearEnrollError()
+        }
+    }
 
     var showTimePicker by remember { mutableStateOf(false) }
     var showThemeDialog by remember { mutableStateOf(false) }
@@ -82,6 +101,7 @@ fun SettingsScreen(
                 },
             )
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { padding ->
         Column(
             modifier = Modifier
@@ -152,6 +172,34 @@ fun SettingsScreen(
                 supportingContent = { Text(stringResource(R.string.settings_categories_subtitle)) },
                 modifier = Modifier.clickable(onClick = onCategories),
             )
+
+            HorizontalDivider()
+            SectionHeader(stringResource(R.string.settings_section_security))
+
+            ListItem(
+                leadingContent = { Icon(Icons.Outlined.Lock, contentDescription = null) },
+                headlineContent = { Text(stringResource(R.string.settings_change_password)) },
+                supportingContent = { Text(stringResource(R.string.settings_change_password_subtitle)) },
+                modifier = Modifier.clickable(onClick = onChangePassword),
+            )
+
+            if (securityViewModel.isBiometricAvailable) {
+                val activity = context as? FragmentActivity
+                ListItem(
+                    leadingContent = { Icon(Icons.Outlined.Fingerprint, contentDescription = null) },
+                    headlineContent = { Text(stringResource(R.string.settings_biometric)) },
+                    supportingContent = { Text(stringResource(R.string.settings_biometric_subtitle)) },
+                    trailingContent = {
+                        Switch(
+                            checked = isBiometricEnrolled,
+                            onCheckedChange = { enabled ->
+                                if (enabled && activity != null) securityViewModel.enrollBiometric(activity)
+                                else securityViewModel.disableBiometric()
+                            },
+                        )
+                    },
+                )
+            }
 
             HorizontalDivider()
             SectionHeader(stringResource(R.string.settings_section_backup))

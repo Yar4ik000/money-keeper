@@ -21,11 +21,13 @@ import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.moneykeeper.app.R
 import com.moneykeeper.feature.accounts.navigation.accountsGraph
 import com.moneykeeper.feature.analytics.navigation.analyticsGraph
+import com.moneykeeper.feature.auth.ui.change.ChangePasswordScreen
 import com.moneykeeper.feature.dashboard.navigation.dashboardGraph
 import com.moneykeeper.feature.forecast.navigation.forecastGraph
 import com.moneykeeper.feature.settings.navigation.budgetsGraph
@@ -51,6 +53,12 @@ fun MoneyKeeperNavHost(
             settingsGraph(navController)
             forecastGraph(navController)
             budgetsGraph(navController)
+            composable(Screen.ChangePassword.route) {
+                ChangePasswordScreen(
+                    onBack = { navController.popBackStack() },
+                    onChanged = { navController.popBackStack() },
+                )
+            }
         }
     }
 }
