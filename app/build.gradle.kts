@@ -1,9 +1,19 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     // Kotlin встроен в AGP 9.0+ — см. https://kotl.in/gradle/agp-built-in-kotlin
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
+}
+
+// Читаем секреты на этапе конфигурации.
+// Если keystore.properties отсутствует — signingConfig.release не создаётся,
+// и assembleRelease упадёт с понятной ошибкой "Keystore file not set".
+val keystoreProps = Properties().apply {
+    val f = rootProject.file("keystore.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
 }
 
 android {
@@ -14,7 +24,7 @@ android {
         applicationId = "com.moneykeeper.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
+        versionCode = 100
         versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -22,6 +32,17 @@ android {
 
     buildFeatures {
         compose = true
+    }
+
+    signingConfigs {
+        if (keystoreProps.isNotEmpty()) {
+            create("release") {
+                storeFile = file(keystoreProps.getProperty("storeFile"))
+                storePassword = keystoreProps.getProperty("storePassword")
+                keyAlias = keystoreProps.getProperty("keyAlias")
+                keyPassword = keystoreProps.getProperty("keyPassword")
+            }
+        }
     }
 
     buildTypes {
@@ -32,6 +53,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.findByName("release")
         }
     }
     compileOptions {

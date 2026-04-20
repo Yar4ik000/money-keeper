@@ -1,0 +1,96 @@
+# Чек-лист релиза MoneyKeeper
+
+Ставь галочки перед каждой раздачей APK друзьям. Один пропущенный пункт = потеря данных
+у пользователя или невозможность установить обновление.
+
+---
+
+## Перед сборкой
+
+- [ ] **`AppDatabase.VERSION` поднят?**
+  Если изменён хоть один `@Entity` (добавлено/удалено/переименовано поле, изменён тип,
+  индекс или FK) — поднять обязательно.
+
+- [ ] **Миграция добавлена?**
+  Для каждого bump VERSION нужен либо `AutoMigration(from=N-1, to=N)` в аннотации
+  `@Database`, либо ручной `Migration(N-1, N)` в `AppDatabase.MIGRATIONS`.
+
+- [ ] **`MigrationsTest` зелёный?**
+  ```
+  ./gradlew :core:database:connectedAndroidTest
+  ```
+  Запустить на реальном устройстве или эмуляторе.
+
+- [ ] **Все unit-тесты зелёные?**
+  ```
+  ./gradlew test
+  ```
+
+- [ ] **Схема БД закоммичена?**
+  `core/database/schemas/com.moneykeeper.core.database.AppDatabase/<N>.json`
+  создаётся автоматически при сборке — не забыть добавить в коммит.
+
+- [ ] **`versionCode` поднят на +1?**
+  Текущий: `app/build.gradle.kts` → `defaultConfig.versionCode`.
+  Android отказывает в установке поверх, если `versionCode` не вырос.
+
+- [ ] **`versionName` обновлён?**
+  Семантика: `MAJOR.MINOR.PATCH` — например `1.1.0` для новой фичи, `1.0.1` для патча.
+
+---
+
+## Специальные случаи
+
+- [ ] **Менял KDF-параметры или формат EncryptedSharedPreferences?**
+  Написать миграционный код в `DatabaseKeyStorage` (бамп суффикса ключей `_v1` → `_v2`).
+  Без этого `AEADBadTagException` → `AuthState.DataCorrupted` у друга после апдейта.
+
+- [ ] **Менял формат `BackupManifest`?**
+  Обновить `BackupCompatibilityChecker`. Старые бэкапы должны либо восстанавливаться,
+  либо давать понятную ошибку «бэкап создан несовместимой версией».
+
+- [ ] **Менял `Worker`'ов в WorkManager (сигнатуру Data, периодичность или `WORK_NAME`)?**
+  Поставить `ExistingPeriodicWorkPolicy.UPDATE` на один релиз (или переименовать `WORK_NAME`).
+
+---
+
+## Сборка и проверка
+
+- [ ] **Собрать release-APK:**
+  ```
+  ./gradlew :app:assembleRelease
+  ```
+  APK: `app/build/outputs/apk/release/app-release.apk`
+
+- [ ] **Проверить подпись:**
+  ```
+  jarsigner -verify -verbose -certs app/build/outputs/apk/release/app-release.apk
+  ```
+  Должно быть `jar verified` с `CN=` из твоего keystore.
+
+- [ ] **Поставить поверх на тестовом устройстве** (у себя, не у друга):
+  - APK устанавливается без ошибок
+  - Unlock работает со старым паролем
+  - Все транзакции, счета, вклады на месте
+  - Миграции прошли без `DataCorruptedScreen`
+
+---
+
+## Публикация
+
+- [ ] **Git tag на коммите релиза:**
+  ```
+  git tag v1.X.Y
+  git push origin v1.X.Y
+  ```
+  Позволяет пересобрать идентичный APK в будущем.
+
+- [ ] **Отправить друзьям** файл `app-release.apk` + инструкцию из `docs/INSTALL_GUIDE.md`.
+
+---
+
+## Таблица истории релизов
+
+| versionCode | versionName | Дата | Что изменилось |
+|-------------|-------------|------|----------------|
+| 100 | 1.0.0 | — | Первый релиз |

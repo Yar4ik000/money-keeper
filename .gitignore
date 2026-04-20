@@ -14,7 +14,8 @@
 .cxx
 local.properties
 plans
-# Секреты и локальные настройки
+# Секреты и локальные настройки — никогда не коммитить
+keystore.properties
 *.jks
 *.keystore
 secrets.properties
