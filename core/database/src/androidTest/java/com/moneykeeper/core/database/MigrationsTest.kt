@@ -5,6 +5,7 @@ import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.moneykeeper.core.database.migration.MIGRATION_2_3
+import com.moneykeeper.core.database.migration.MIGRATION_4_5
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
@@ -189,6 +190,120 @@ class MigrationsTest {
             assertNull(c.getString(1))
         }
         // Account preserved intact
+        db.query("SELECT COUNT(*) FROM accounts").use { c ->
+            assertTrue(c.moveToFirst()); assertEquals(1, c.getInt(0))
+        }
+    }
+
+    // ── 4 → 5 (manual migration) ──────────────────────────────────────────────
+
+    @Test
+    fun migrate_4_to_5_convertsCategoryIdToCategoryIds() {
+        helper.createDatabase(TEST_DB, 4).apply {
+            execSQL(INSERT_CATEGORY)
+            execSQL("""
+                INSERT INTO budgets (categoryId, amount, period, currency, accountIds)
+                VALUES (1, '3000.00', 'MONTHLY', 'RUB', NULL)
+            """.trimIndent())
+            close()
+        }
+
+        val db = helper.runMigrationsAndValidate(TEST_DB, 5, true, MIGRATION_4_5)
+
+        db.query("SELECT categoryIds, amount, accountIds FROM budgets").use { c ->
+            assertTrue("Budget row must survive migration 4→5", c.moveToFirst())
+            assertEquals("1", c.getString(0))
+            assertEquals("3000.00", c.getString(1))
+            assertNull("accountIds must remain NULL", c.getString(2))
+        }
+    }
+
+    @Test
+    fun migrate_4_to_5_preservesAccountIds() {
+        helper.createDatabase(TEST_DB, 4).apply {
+            execSQL(INSERT_CATEGORY)
+            execSQL("""
+                INSERT INTO budgets (categoryId, amount, period, currency, accountIds)
+                VALUES (1, '2000.00', 'WEEKLY', 'USD', '10,11')
+            """.trimIndent())
+            close()
+        }
+
+        val db = helper.runMigrationsAndValidate(TEST_DB, 5, true, MIGRATION_4_5)
+
+        db.query("SELECT categoryIds, accountIds FROM budgets").use { c ->
+            assertTrue(c.moveToFirst())
+            assertEquals("1", c.getString(0))
+            assertEquals("10,11", c.getString(1))
+        }
+    }
+
+    @Test
+    fun migrate_4_to_5_acceptsMultipleCategoryIdsAfterMigration() {
+        helper.createDatabase(TEST_DB, 4).apply { close() }
+
+        val db = helper.runMigrationsAndValidate(TEST_DB, 5, true, MIGRATION_4_5)
+
+        db.execSQL("""
+            INSERT INTO budgets (categoryIds, amount, period, currency, accountIds)
+            VALUES ('1,2,3', '5000.00', 'MONTHLY', 'RUB', NULL)
+        """.trimIndent())
+        db.query("SELECT categoryIds FROM budgets").use { c ->
+            assertTrue(c.moveToFirst())
+            assertEquals("1,2,3", c.getString(0))
+        }
+    }
+
+    @Test
+    fun migrate_4_to_5_acceptsNullCategoryIds() {
+        helper.createDatabase(TEST_DB, 4).apply { close() }
+
+        val db = helper.runMigrationsAndValidate(TEST_DB, 5, true, MIGRATION_4_5)
+
+        db.execSQL("""
+            INSERT INTO budgets (categoryIds, amount, period, currency, accountIds)
+            VALUES (NULL, '1000.00', 'MONTHLY', 'RUB', NULL)
+        """.trimIndent())
+        db.query("SELECT categoryIds FROM budgets").use { c ->
+            assertTrue(c.moveToFirst())
+            assertNull("NULL categoryIds means all categories", c.getString(0))
+        }
+    }
+
+    // ── Full 2 → 5 chain ──────────────────────────────────────────────────────
+
+    @Test
+    fun migrate_2_to_5_fullChain_preservesAllData() {
+        helper.createDatabase(TEST_DB, 2).apply {
+            execSQL(INSERT_ACCOUNT)
+            execSQL("""
+                INSERT INTO deposits
+                    (accountId, initialAmount, interestRate, startDate, endDate,
+                     isCapitalized, capitalizationPeriod, notifyDaysBefore, autoRenew, payoutAccountId, isActive)
+                VALUES (1, '200000.00', '15.00', '2026-01-01', '2027-01-01',
+                        0, NULL, '7', 0, NULL, 1)
+            """.trimIndent())
+            execSQL(INSERT_CATEGORY)
+            execSQL("""
+                INSERT INTO budgets (categoryId, amount, period, currency)
+                VALUES (1, '3000.00', 'MONTHLY', 'RUB')
+            """.trimIndent())
+            close()
+        }
+
+        val db = helper.runMigrationsAndValidate(TEST_DB, 5, true, MIGRATION_2_3, MIGRATION_4_5)
+
+        db.query("SELECT initialAmount, rateTiersJson FROM deposits").use { c ->
+            assertTrue(c.moveToFirst())
+            assertEquals("200000.00", c.getString(0))
+            assertNull(c.getString(1))
+        }
+        db.query("SELECT amount, categoryIds, accountIds FROM budgets").use { c ->
+            assertTrue(c.moveToFirst())
+            assertEquals("3000.00", c.getString(0))
+            assertEquals("1", c.getString(1))    // old categoryId → "1"
+            assertNull(c.getString(2))            // accountIds NULL
+        }
         db.query("SELECT COUNT(*) FROM accounts").use { c ->
             assertTrue(c.moveToFirst()); assertEquals(1, c.getInt(0))
         }

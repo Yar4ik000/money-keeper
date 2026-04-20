@@ -129,6 +129,25 @@ class CategoryDaoTest {
     }
 
     @Test
+    fun upsert_existingCategory_updatesIconWithoutChangingId() = runTest {
+        val id = dao.upsert(category("Food").copy(iconName = "Restaurant"))
+        dao.upsert(category("Food").copy(id = id, iconName = "LocalCafe"))
+        val result = dao.getById(id)!!
+        assertEquals(id, result.id)
+        assertEquals("LocalCafe", result.iconName)
+        assertEquals(1, dao.observeAll().first().size)
+    }
+
+    @Test
+    fun upsert_existingCategory_updatesColorWithoutChangingId() = runTest {
+        val id = dao.upsert(category("Transport").copy(colorHex = "#FF0000"))
+        dao.upsert(category("Transport").copy(id = id, colorHex = "#0000FF"))
+        val result = dao.getById(id)!!
+        assertEquals(id, result.id)
+        assertEquals("#0000FF", result.colorHex)
+    }
+
+    @Test
     fun isDefault_persistedCorrectly() = runTest {
         val id = dao.upsert(category("Default").copy(isDefault = true))
         val result = dao.getById(id)!!

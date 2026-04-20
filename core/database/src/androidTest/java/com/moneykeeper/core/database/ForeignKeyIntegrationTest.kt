@@ -175,6 +175,27 @@ class ForeignKeyIntegrationTest {
     }
 
     @Test
+    fun updateCategory_upsert_preservesTransactionCategoryId() = runTest {
+        // Regression: INSERT OR REPLACE deleted the row triggering ON DELETE SET_NULL.
+        // @Upsert uses INSERT OR IGNORE + UPDATE so the row is never deleted.
+        val accId = insertAccount("Card")
+        val catId = db.categoryDao().upsert(
+            CategoryEntity(name = "Food", type = CategoryType.EXPENSE,
+                colorHex = "#F00", iconName = "Restaurant")
+        )
+        val txId = insertTransaction(accId, categoryId = catId)
+
+        db.categoryDao().upsert(
+            CategoryEntity(id = catId, name = "Food", type = CategoryType.EXPENSE,
+                colorHex = "#F00", iconName = "LocalCafe")
+        )
+
+        val tx = db.transactionDao().getById(txId)
+        assertNotNull(tx)
+        assertEquals("Transaction must still reference the updated category", catId, tx!!.categoryId)
+    }
+
+    @Test
     fun deleteParentCategory_setsChildParentCategoryIdToNull() = runTest {
         val parentId = db.categoryDao().upsert(
             CategoryEntity(name = "Food", type = CategoryType.EXPENSE,

@@ -98,11 +98,11 @@ UI (Composable)
 
 | Таблица | Ключевая особенность |
 |---------|----------------------|
-| `accounts` | `type: AccountType` — CARD/CASH/DEPOSIT/SAVINGS/INVESTMENT/OTHER |
+| `accounts` | `type: AccountType` — CARD/CASH/DEPOSIT/SAVINGS/INVESTMENT/OTHER; `iconName: String` — ключ иконки |
 | `transactions` | `toAccountId` nullable — заполняется только для TRANSFER |
-| `categories` | `parentId` nullable — двухуровневое дерево (Income/Expense/Transfer) |
+| `categories` | `parentId` nullable — двухуровневое дерево (Income/Expense/Transfer); `iconName: String` — ключ иконки |
 | `deposits` | FK на `accounts`, `UNIQUE(accountId)` — один депозит на счёт |
-| `budgets` | месячные лимиты по категориям |
+| `budgets` | `categoryIds TEXT` nullable (null=все, "1,2,3"=конкретные); `accountIds TEXT` nullable (null=все); без FK |
 
 ### TypeConverters — как Room хранит нестандартные типы
 
@@ -503,8 +503,11 @@ feature/dashboard/
 **DepositCalculator перенесён в `core:domain`.**  
 Ранее он жил в `feature:accounts`. Поскольку его использует и `feature:dashboard`, он перемещён в `core/domain/src/main/java/com/moneykeeper/core/domain/calculator/DepositCalculator.kt`. Это единственное место для расчёта простых и сложных процентов.
 
-**Утилиты форматирования в `core:ui`.**  
-`CurrencyFormatter.kt` — `BigDecimal.formatAsCurrency(currency)` с маппингом валюта→локаль. `ColorUtils.kt` — `parseHexColor(hex)` для перевода `#RRGGBB` строки в Compose `Color`. Оба доступны всем feature-модулям.
+**Утилиты форматирования и иконок в `core:ui`.**  
+`CurrencyFormatter.kt` — `BigDecimal.formatAsCurrency(currency)` с маппингом валюта→локаль. `ColorUtils.kt` — `parseHexColor(hex)` для перевода `#RRGGBB` строки в Compose `Color`.  
+`AccountIconMapper.kt` — `ACCOUNT_ICON_OPTIONS: List<Pair<String, ImageVector>>` (12 иконок, ключи: `"bank"`, `"wallet"`, `"card"` и т.д.) и `accountIconVector(iconName)` с fallback на `AccountBalance`.  
+`CategoryIconMapper.kt` — `CATEGORY_ICON_OPTIONS` (18 иконок, ключи: `"other"`, `"food"`, `"transport"` и т.д.) и `categoryIconVector(iconName)` с fallback на `Category`.  
+Все feature-модули используют эти утилиты напрямую, не дублируя маппинг.
 
 **DashboardViewModel — combine(5 flows).**  
 Объединяет `observeActiveAccounts()`, `observeTotalsByCurrency()`, `observePeriodSummary(from, to)`, `observeRecent(10)`, `observeExpiringSoon(30)` в единый `StateFlow<DashboardUiState>` через `stateIn(WhileSubscribed(5s))`. Сортировка `MultiCurrencyTotal.entries` — defaultCurrency первой.
@@ -518,7 +521,7 @@ feature/dashboard/
 ### Инварианты
 
 - `ExpiringDepositsWidget` виден только когда `state.expiringDeposits.isNotEmpty()`.
-- `TransactionListItem` использует первую букву названия категории как fallback-иконку (иконковая система — §7+).
+- `TransactionListItem` показывает `categoryIconVector(meta.categoryIcon)` на залитом цветом круге. `categoryIcon` приходит из `TransactionWithMeta`, который собирается в `TransactionRepositoryImpl.combine()`.
 - `currentMonthName()` форматирует через `AppLocale.current()` (не хардкод `ru`).
 
 ### Instrumented тесты (8 сценариев, `DashboardScreenTest.kt`)
@@ -581,6 +584,9 @@ feature/analytics/src/main/java/com/moneykeeper/feature/analytics/
 
 **AnalyticsScreen — CurrencyChipRow скрыт при одной валюте.**
 Если `availableCurrencies.size <= 1`, FlowRow с FilterChip-ами не рендерится.
+
+**Цвета и иконки в разбивке.**
+`CategoryExpense` использует `category.colorHex` и `category.iconName` напрямую через `categoryIconVector()`. `AccountBreakdown` несёт `accountColorHex` и `accountIconName` — ViewModel берёт их из объекта `Account` при сборке `expensesByAccount` / `incomeByAccount`. `ForecastEngine` аналогично строит `accountMap` для заполнения `accountColorHex`/`accountIconName` в каждом `TimelineEvent`.
 
 **Batch delete с балансом.**
 `TransactionSaver.deleteMany` аккумулирует per-account дельты из всех удаляемых транзакций, затем атомарно удаляет и применяет корректировки через `TransactionRunner.run { ... }`.
@@ -767,7 +773,14 @@ Switch биометрии показывается только если `Biomet
 
 ### Бюджеты
 
-`BudgetsViewModel` объединяет `BudgetRepository.observeAll()`, `CategoryRepository.observeByType(EXPENSE)`, `TransactionRepository.observeByCategory(...)` через Kotlin `combine`. Экран: `LazyColumn` карточек с `LinearProgressIndicator` (красный при > 100%), FAB для добавления нового бюджета (AlertDialog с выбором категории, суммой и периодом MONTHLY/WEEKLY).
+`BudgetsViewModel` объединяет `BudgetRepository.observeAll()`, `CategoryRepository.observeByType(EXPENSE)`, `AccountRepository.observeActiveAccounts()`, `TransactionRepository.observe(currentMonth)` через Kotlin `combine`.
+
+`Budget.categoryIds: Set<Long>` — пустой set означает «все категории»; хранится в БД как `TEXT?` (null = все, `"1,2,3"` = конкретные). Аналогично `accountIds`. FK на `categories` отсутствует — поэтому `CategoryDao` использует `@Upsert` (не `INSERT OR REPLACE`): `@Upsert` работает через `INSERT OR IGNORE + UPDATE`, не удаляет строку, и не триггерит `ON DELETE SET_NULL` на `transactions.categoryId`.
+
+Экран: `LazyColumn` карточек с `LinearProgressIndicator` (красный при > 100%), FAB открывает `AlertDialog` с:
+- мульти-чекбокс категорий (checkbox «Все категории» + список с иконками)
+- мульти-чекбокс счетов
+- поле суммы и выбор периода MONTHLY/WEEKLY
 
 ---
 
