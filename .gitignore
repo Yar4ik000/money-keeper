@@ -19,6 +19,7 @@ plans
 *.keystore
 secrets.properties
 CLAUDE.md
+screen.png
 
 # Временные файлы сборки (они огромные и ИИ они не нужны)
 .gradle/

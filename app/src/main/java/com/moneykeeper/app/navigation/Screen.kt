@@ -35,4 +35,10 @@ sealed class Screen(val route: String) {
     }
 
     data object Categories : Screen("transactions/categories")
+
+    data object History : Screen("analytics/history")
+
+    data object CategoryAnalytics : Screen("analytics/category/{categoryId}") {
+        fun buildRoute(id: Long): String = "analytics/category/$id"
+    }
 }

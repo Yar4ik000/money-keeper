@@ -5,6 +5,7 @@ import com.moneykeeper.core.domain.model.Transaction
 import com.moneykeeper.core.domain.model.TransactionType
 import com.moneykeeper.core.domain.repository.AccountRepository
 import com.moneykeeper.core.domain.repository.RecurringRuleRepository
+import com.moneykeeper.core.domain.repository.TransactionDeleter
 import com.moneykeeper.core.domain.repository.TransactionRepository
 import com.moneykeeper.core.domain.repository.TransactionRunner
 import java.math.BigDecimal
@@ -15,7 +16,7 @@ class TransactionSaver @Inject constructor(
     private val accountRepo: AccountRepository,
     private val recurringRuleRepo: RecurringRuleRepository,
     private val txRunner: TransactionRunner,
-) {
+) : TransactionDeleter {
 
     suspend fun save(transaction: Transaction, recurringRule: RecurringRule? = null) {
         txRunner.run {
@@ -41,7 +42,7 @@ class TransactionSaver @Inject constructor(
         }
     }
 
-    suspend fun deleteMany(ids: Set<Long>) {
+    override suspend fun deleteMany(ids: Set<Long>) {
         if (ids.isEmpty()) return
         txRunner.run {
             val transactions = transactionRepo.getByIds(ids)

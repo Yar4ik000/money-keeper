@@ -44,17 +44,30 @@ interface TransactionDao {
     @Query("SELECT * FROM transactions WHERE id IN (:ids)")
     suspend fun getByIds(ids: List<Long>): List<TransactionEntity>
 
-    // Агрегация расходов по категориям — только для одной валюты (смешивать ₽ и $ бессмысленно)
+    // Агрегация операций по категориям — только для одной валюты (смешивать ₽ и $ бессмысленно).
+    // COALESCE(categoryId, 0): транзакции без категории объединяются под id=0 ("Без категории").
     @Query("""
-        SELECT t.categoryId AS categoryId, SUM(t.amount) AS total, COUNT(*) AS count
+        SELECT COALESCE(t.categoryId, 0) AS categoryId, SUM(t.amount) AS total, COUNT(*) AS count
         FROM transactions t
         INNER JOIN accounts a ON a.id = t.accountId
-        WHERE t.type = 'EXPENSE'
+        WHERE t.type = :type
           AND a.currency = :currency
           AND t.date BETWEEN :from AND :to
-        GROUP BY t.categoryId
+        GROUP BY COALESCE(t.categoryId, 0)
     """)
-    fun observeExpensesByCategory(currency: String, from: String, to: String): Flow<List<CategorySumRow>>
+    fun observeByCategory(currency: String, from: String, to: String, type: String): Flow<List<CategorySumRow>>
+
+    // Агрегация операций по счетам — только для одной валюты
+    @Query("""
+        SELECT t.accountId AS accountId, SUM(t.amount) AS total, COUNT(*) AS count
+        FROM transactions t
+        INNER JOIN accounts a ON a.id = t.accountId
+        WHERE t.type = :type
+          AND a.currency = :currency
+          AND t.date BETWEEN :from AND :to
+        GROUP BY t.accountId
+    """)
+    fun observeByAccount(currency: String, from: String, to: String, type: String): Flow<List<AccountSumRow>>
 
     // Итоги доходов/расходов за период, раздельно по валютам
     @Query("""
@@ -76,11 +89,11 @@ interface TransactionDao {
         FROM transactions t
         INNER JOIN accounts a ON a.id = t.accountId
         WHERE a.currency = :currency
-          AND t.date >= :from
+          AND t.date BETWEEN :from AND :to
         GROUP BY substr(t.date, 1, 7)
         ORDER BY yearMonth ASC
     """)
-    fun observeMonthlyTrend(currency: String, from: String): Flow<List<MonthlyTrendRow>>
+    fun observeMonthlyTrend(currency: String, from: String, to: String): Flow<List<MonthlyTrendRow>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(transaction: TransactionEntity): Long
@@ -94,5 +107,6 @@ interface TransactionDao {
 
 // DAO-проекции — маппятся в domain-типы в репозитории
 data class CategorySumRow(val categoryId: Long, val total: BigDecimal, val count: Int)
+data class AccountSumRow(val accountId: Long, val total: BigDecimal, val count: Int)
 data class PeriodSummaryRow(val currency: String, val income: BigDecimal, val expense: BigDecimal)
 data class MonthlyTrendRow(val yearMonth: String, val income: BigDecimal, val expense: BigDecimal)

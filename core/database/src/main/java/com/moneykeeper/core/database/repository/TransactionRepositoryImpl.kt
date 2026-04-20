@@ -5,6 +5,7 @@ import com.moneykeeper.core.database.dao.CategoryDao
 import com.moneykeeper.core.database.dao.TransactionDao
 import com.moneykeeper.core.database.entity.toDomain
 import com.moneykeeper.core.database.entity.toEntity
+import com.moneykeeper.core.domain.analytics.AccountSum
 import com.moneykeeper.core.domain.analytics.CategorySum
 import com.moneykeeper.core.domain.analytics.MonthlyBarEntry
 import com.moneykeeper.core.domain.analytics.PeriodSummaryByCurrency
@@ -16,7 +17,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import java.time.LocalDate
-import java.time.YearMonth
 
 class TransactionRepositoryImpl(
     private val txDao: TransactionDao,
@@ -83,21 +83,30 @@ class TransactionRepositoryImpl(
             rows.map { PeriodSummaryByCurrency(it.currency, it.income, it.expense) }
         }
 
-    override fun observeExpensesByCategory(
+    override fun observeByCategory(
         currency: String,
         from: LocalDate,
         to: LocalDate,
+        type: TransactionType,
     ): Flow<List<CategorySum>> =
-        txDao.observeExpensesByCategory(currency, from.toString(), to.toString()).map { rows ->
+        txDao.observeByCategory(currency, from.toString(), to.toString(), type.name).map { rows ->
             rows.map { CategorySum(it.categoryId, it.total, it.count) }
         }
 
-    override fun observeMonthlyTrend(currency: String, months: Int): Flow<List<MonthlyBarEntry>> {
-        val from = YearMonth.now().minusMonths((months - 1).toLong()).atDay(1).toString()
-        return txDao.observeMonthlyTrend(currency, from).map { rows ->
+    override fun observeByAccount(
+        currency: String,
+        from: LocalDate,
+        to: LocalDate,
+        type: TransactionType,
+    ): Flow<List<AccountSum>> =
+        txDao.observeByAccount(currency, from.toString(), to.toString(), type.name).map { rows ->
+            rows.map { AccountSum(it.accountId, it.total, it.count) }
+        }
+
+    override fun observeMonthlyTrend(currency: String, from: LocalDate, to: LocalDate): Flow<List<MonthlyBarEntry>> =
+        txDao.observeMonthlyTrend(currency, from.toString(), to.toString()).map { rows ->
             rows.map { MonthlyBarEntry(it.yearMonth, it.income, it.expense) }
         }
-    }
 
     override suspend fun getById(id: Long): Transaction? = txDao.getById(id)?.toDomain()
 

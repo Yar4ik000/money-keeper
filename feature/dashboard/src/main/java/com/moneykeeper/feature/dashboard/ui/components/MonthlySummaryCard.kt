@@ -1,16 +1,21 @@
 package com.moneykeeper.feature.dashboard.ui.components
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -22,8 +27,11 @@ import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.format.TextStyle
 
+private val IncomeBarColor = Color(0xFF4CAF50)
+
 @Composable
 fun MonthlySummaryCard(summary: List<PeriodSummaryByCurrency>) {
+    val expenseBarColor = MaterialTheme.colorScheme.error
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp)) {
             Text(
@@ -68,15 +76,26 @@ fun MonthlySummaryCard(summary: List<PeriodSummaryByCurrency>) {
                         modifier = Modifier.weight(1f),
                     )
                 }
-                val ratio = if (row.income > BigDecimal.ZERO)
-                    (row.expense.toFloat() / row.income.toFloat()).coerceIn(0f, 1f)
-                else 0f
-                LinearProgressIndicator(
-                    progress = { ratio },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 6.dp),
-                )
+                val total = row.income + row.expense
+                if (total > BigDecimal.ZERO) {
+                    val incomeFraction = (row.income.toDouble() / total.toDouble())
+                        .toFloat().coerceIn(0f, 1f)
+                    Canvas(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp)
+                            .height(6.dp)
+                            .clip(RoundedCornerShape(3.dp)),
+                    ) {
+                        val incomeWidth = size.width * incomeFraction
+                        drawRect(IncomeBarColor, size = Size(incomeWidth, size.height))
+                        drawRect(
+                            expenseBarColor,
+                            topLeft = Offset(incomeWidth, 0f),
+                            size = Size(size.width - incomeWidth, size.height),
+                        )
+                    }
+                }
             }
         }
     }

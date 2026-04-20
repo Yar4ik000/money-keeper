@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <plurals name="history_selected_count">
+        <item quantity="one">Выбрана %d запись</item>
+        <item quantity="few">Выбрано %d записи</item>
+        <item quantity="many">Выбрано %d записей</item>
+        <item quantity="other">Выбрано %d записей</item>
+    </plurals>
+</resources>

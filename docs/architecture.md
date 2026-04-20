@@ -536,6 +536,74 @@ feature/dashboard/
 
 ---
 
+## §7 — History & Analytics (`:feature:analytics`)
+
+### Структура файлов
+
+```
+feature/analytics/src/main/java/com/moneykeeper/feature/analytics/
+├── navigation/
+│   └── AnalyticsNavigation.kt         — analyticsGraph(navController), 3 destinations
+├── ui/
+│   ├── history/
+│   │   ├── HistoryUiState.kt           — HistoryFilter, HistoryUiState, TransactionGroup
+│   │   ├── HistoryViewModel.kt         — flatMapLatest on filter + selection state
+│   │   ├── HistoryScreen.kt            — LazyColumn + stickyHeader + selection mode
+│   │   └── FilterBottomSheet.kt        — period/type/account/category chips
+│   ├── analytics/
+│   │   ├── AnalyticsUiState.kt         — CategoryExpense, MonthlyBarEntry (UI-level)
+│   │   ├── AnalyticsViewModel.kt       — combine(period, currency, accounts).flatMapLatest
+│   │   └── AnalyticsScreen.kt          — PieChart + BarChart + PeriodSelector + CurrencyChips
+│   ├── category/
+│   │   ├── CategoryAnalyticsUiState.kt — CategoryMonthlyEntry, CategoryAnalyticsUiState
+│   │   ├── CategoryAnalyticsViewModel.kt — per-category trend from observe() grouped by month
+│   │   └── CategoryAnalyticsScreen.kt
+│   └── components/
+│       ├── PeriodSelector.kt           — month navigation with disabled future arrow
+│       ├── PieChart.kt                 — Canvas Arc donut (no Vico)
+│       ├── BarChart.kt                 — MonthlyBarChart + CategoryTrendBarChart via Vico
+│       └── TransactionGroupedList.kt   — TransactionGroupHeader + TransactionHistoryItem
+```
+
+### Ключевые решения
+
+**`TransactionDeleter` interface в `core:domain`.**
+`HistoryViewModel` нуждается в `deleteMany(ids)` с обратным пересчётом баланса, но `TransactionSaver` (который это реализует) находится в `feature:transactions`. Кросс-фиче зависимости запрещены. Решение: интерфейс `TransactionDeleter` в `core:domain/repository`, `TransactionSaver` его реализует, Hilt-binding `@Binds` в `feature:transactions/di/TransactionModule`. `HistoryViewModel` инжектирует интерфейс.
+
+**HistoryViewModel — selection поверх derived state.**
+`uiState` производится из `_filter.flatMapLatest { ... }`. Состояние выбора (`selectedIds`, `isSelectionMode`) хранится в отдельных `MutableStateFlow` и объединяется в финальный `StateFlow` через `combine(derivedTransactions, _selectedIds, _isSelectionMode)`. При изменении фильтра выбор сбрасывается автоматически.
+
+**MonthlyBarEntry — два уровня.**
+В `core:domain/analytics` существует `MonthlyBarEntry(yearMonth: String, ...)` — DAO-ориентированная форма (ISO "2026-04"). В `analytics/ui/analytics` создан UI-уровневый `MonthlyBarEntry(month: YearMonth, ...)`. Маппинг `YearMonth.parse(entry.yearMonth)` происходит в `AnalyticsViewModel`.
+
+**CategoryAnalyticsViewModel — тренд без отдельного DAO.**
+`observeMonthlyTrendForCategory` не существует. Тренд вычисляется client-side: `observe(categoryId=..., from=6monthsAgo, to=today)` → группировка по `YearMonth.from(date)` в ViewModel.
+
+**AnalyticsScreen — CurrencyChipRow скрыт при одной валюте.**
+Если `availableCurrencies.size <= 1`, FlowRow с FilterChip-ами не рендерится.
+
+**Batch delete с балансом.**
+`TransactionSaver.deleteMany` аккумулирует per-account дельты из всех удаляемых транзакций, затем атомарно удаляет и применяет корректировки через `TransactionRunner.run { ... }`.
+
+### Маршруты
+
+| Route | Экран |
+|-------|-------|
+| `analytics` | AnalyticsScreen (доходы vs расходы, пирог) |
+| `analytics/history` | HistoryScreen (группировка по дням, фильтр) |
+| `analytics/category/{categoryId}` | CategoryAnalyticsScreen (детализация) |
+
+### Instrumented тесты (4 сценария, `HistoryScreenTest.kt`)
+
+| Тест | Что проверяет |
+|------|---------------|
+| `historyScreen_showsLoadingIndicator_whenStateIsLoading` | TopAppBar виден при Loading |
+| `historyScreen_showsEmptyMessage_whenNoTransactions` | «Операций нет» при пустом Success |
+| `historyScreen_showsTransactionCategoryName` | Имя категории в списке |
+| `historyScreen_showsPeriodTotals_whenPresent` | Итоги периода рендерятся |
+
+---
+
 ## Соглашения по коду
 
 - **Все строки** в `strings.xml`. Никаких захардкоженных русских слов в `.kt`.

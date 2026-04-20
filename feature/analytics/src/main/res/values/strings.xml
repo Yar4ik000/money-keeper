@@ -1,0 +1,50 @@
+<resources>
+    <!-- History screen -->
+    <string name="history_title">История</string>
+    <string name="history_search_hint">Поиск по заметкам…</string>
+    <string name="history_empty">Операций нет</string>
+    <string name="history_delete_selected">Удалить</string>
+
+    <!-- Filter bottom sheet -->
+    <string name="filter_title">Фильтр</string>
+    <string name="filter_period">Период</string>
+    <string name="filter_from">С</string>
+    <string name="filter_to">По</string>
+    <string name="filter_type">Тип</string>
+    <string name="filter_type_all">Все</string>
+    <string name="filter_account">Счёт</string>
+    <string name="filter_category">Категория</string>
+    <string name="filter_any">Любой</string>
+    <string name="filter_apply">Применить</string>
+    <string name="filter_reset">Сбросить</string>
+
+    <!-- Transaction types (used by filter chips) -->
+    <string name="analytics_tx_income">Доход</string>
+    <string name="analytics_tx_expense">Расход</string>
+    <string name="analytics_tx_transfer">Перевод</string>
+    <string name="analytics_tx_savings">Накопления</string>
+
+    <!-- Analytics screen -->
+    <string name="analytics_top_expenses">Расходы по категориям</string>
+    <string name="analytics_top_incomes">Доходы по категориям</string>
+    <string name="analytics_monthly_trend">Динамика доходов и расходов</string>
+    <string name="analytics_daily_avg">Среднедневной расход: %s</string>
+    <string name="analytics_group_by_category">По категориям</string>
+    <string name="analytics_group_by_account">По счетам</string>
+    <string name="analytics_no_data">Нет данных за период</string>
+    <string name="analytics_no_expenses">Расходов в этом периоде нет</string>
+    <string name="analytics_legend_income">Доходы</string>
+    <string name="analytics_legend_expense">Расходы</string>
+    <string name="analytics_see_all_transactions">Все операции за период</string>
+
+    <!-- Period picker dialog -->
+    <string name="period_picker_title">Выберите период</string>
+    <string name="period_picker_confirm">Готово</string>
+    <string name="period_picker_cancel">Отмена</string>
+
+    <!-- Category analytics screen -->
+    <string name="category_analytics_title">Категория</string>
+    <string name="category_analytics_total">Итого за период</string>
+    <string name="category_analytics_monthly_trend">Тренд по месяцам</string>
+    <string name="category_analytics_transactions">Операции</string>
+</resources>
