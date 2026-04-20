@@ -10,4 +10,10 @@
 
     <!-- Placeholder для ещё не реализованных экранов скелета (§1.9). -->
     <string name="screen_placeholder">Экран «%1$s» — в разработке</string>
+
+    <!-- Notifications (§9.3) -->
+    <!-- %1$s — «N дней/дня/день» (из plurals.xml) -->
+    <string name="notif_deposit_expiry_title">Вклад заканчивается через %1$s</string>
+    <!-- %1$s — название счёта, %2$s — дата, %3$s — сумма к получению -->
+    <string name="notif_deposit_expiry_big">Вклад «%1$s» закрывается %2$s.\nСумма к получению: %3$s</string>
 </resources>

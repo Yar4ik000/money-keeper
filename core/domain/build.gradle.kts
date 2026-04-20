@@ -14,4 +14,6 @@ android {
 
 dependencies {
     implementation(libs.coroutines.android)
+    // JSR-330 inject annotations only — no framework runtime, just @Inject/@Singleton
+    implementation("javax.inject:javax.inject:1")
 }

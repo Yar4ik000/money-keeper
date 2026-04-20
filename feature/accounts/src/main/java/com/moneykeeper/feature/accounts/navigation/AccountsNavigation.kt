@@ -5,6 +5,8 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import androidx.navigation.navDeepLink
+import com.moneykeeper.core.ui.navigation.DeepLinks
 import com.moneykeeper.feature.accounts.ui.detail.AccountDetailScreen
 import com.moneykeeper.feature.accounts.ui.edit.EditAccountScreen
 import com.moneykeeper.feature.accounts.ui.list.AccountsScreen
@@ -27,6 +29,7 @@ fun NavGraphBuilder.accountsGraph(navController: NavController) {
     composable(
         route = ROUTE_ACCOUNT_DETAIL,
         arguments = listOf(navArgument("accountId") { type = NavType.LongType }),
+        deepLinks = listOf(navDeepLink { uriPattern = DeepLinks.ACCOUNT_DETAIL_PATTERN }),
     ) { back ->
         val id = back.arguments!!.getLong("accountId")
         AccountDetailScreen(

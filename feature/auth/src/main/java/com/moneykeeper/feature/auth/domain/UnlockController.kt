@@ -17,7 +17,10 @@ class UnlockController @Inject constructor(
     private val masterKeyHolder: MasterKeyHolder,
     private val databaseProvider: DatabaseProvider,
     private val biometric: BiometricAuthenticator,
+    private val postUnlockCallbacks: @JvmSuppressWildcards Set<PostUnlockCallback>,
 ) {
+    private fun notifyUnlocked() = postUnlockCallbacks.forEach { it.onUnlocked() }
+
     suspend fun unlockWithPassword(password: CharArray): UnlockResult = withContext(Dispatchers.Default) {
         val derivedKey = try {
             val salt = keyStorage.readOrCreateKdfSalt()
@@ -47,6 +50,7 @@ class UnlockController @Inject constructor(
         } finally {
             dbKey.fill(0)
         }
+        notifyUnlocked()
         UnlockResult.Success
     }
 
@@ -78,6 +82,7 @@ class UnlockController @Inject constructor(
         } finally {
             dbKey.fill(0)
         }
+        notifyUnlocked()
         return UnlockResult.Success
     }
 

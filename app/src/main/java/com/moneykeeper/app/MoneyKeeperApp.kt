@@ -1,13 +1,23 @@
 package com.moneykeeper.app
 
 import android.app.Application
+import androidx.hilt.work.HiltWorkerFactory
+import androidx.work.Configuration
+import com.moneykeeper.app.notification.NotificationChannels
+import com.moneykeeper.app.worker.WorkerScheduler
 import dagger.hilt.android.HiltAndroidApp
+import javax.inject.Inject
 
-/**
- * Application-класс. `@HiltAndroidApp` запускает Hilt-граф.
- *
- * WorkManager (§8.7) и NotificationChannels (§8.2) будут инициализированы здесь после
- * реализации раздела 8. Сейчас — голый скелет.
- */
 @HiltAndroidApp
-class MoneyKeeperApp : Application()
+class MoneyKeeperApp : Application(), Configuration.Provider {
+
+    @Inject lateinit var workerConfiguration: Configuration
+
+    override val workManagerConfiguration get() = workerConfiguration
+
+    override fun onCreate() {
+        super.onCreate()
+        NotificationChannels.createAll(this)
+        WorkerScheduler.scheduleAll(this)
+    }
+}

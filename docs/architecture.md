@@ -604,6 +604,120 @@ feature/analytics/src/main/java/com/moneykeeper/feature/analytics/
 
 ---
 
+## §8 — Financial Forecasting (`:feature:forecast`)
+
+### Структура файлов
+
+```
+feature/forecast/src/main/java/com/moneykeeper/feature/forecast/
+├── navigation/ForecastNavigation.kt        — forecastGraph(navController)
+├── domain/ForecastEngine.kt                — чистая бизнес-логика прогноза
+└── ui/
+    ├── ForecastUiState.kt / ForecastViewModel.kt / ForecastScreen.kt
+    └── components/
+        ├── ForecastDatePicker.kt           — быстрые пресеты + MaterialDatePicker
+        ├── ForecastSummaryTable.kt         — per-account и per-currency итоги
+        └── EventTimeline.kt               — LazyListScope: sticky month headers + события
+```
+
+Доменные типы в `core/domain/src/main/java/com/moneykeeper/core/domain/forecast/`:
+
+- `ForecastModels.kt` — `ForecastResult`, `AccountForecast`, `ForecastCurrencyTotal`, `TimelineEvent`
+- `RecurringDates.kt` — `RecurringRule.expandDates(from, to): List<LocalDate>`, `LocalDate.advance(frequency, interval)`
+
+### ForecastEngine — как считается прогноз
+
+`ForecastEngine.calculate(accounts, deposits, recurringRules, targetDate)` работает в три шага:
+
+1. **Начальные балансы**: `balances = accounts.associate { id → balance }`
+2. **Регулярные правила**: `rule.expandDates(today+1, targetDate)` → для каждой даты: применяем delta к `balances`, добавляем `TimelineEvent`
+3. **Вклады**:
+   - Если `endDate != null && endDate ≤ targetDate` → матурация: `DepositCalculator.projectedBalance(deposit, endDate)`, выводим principal из `balances`, кредитуем `payoutAccountId`
+   - Иначе (активный/накопительный) → начисляем накопленные проценты к `targetDate`
+
+`TimelineEvent.description` берётся из `templateTransaction.note` (если не пустая), иначе из `categoryName`.
+
+### Инварианты
+
+- `endDate` у `Deposit` nullable — накопительные счета (SAVINGS) не имеют срока. `ForecastEngine` и все UI-компоненты обязаны обрабатывать `null`.
+- `ForecastDatePicker` запрещает выбор прошедших дат через `SelectableDates`.
+- Прогноз для накопительного счёта НЕ показывается в форме создания счёта (нет горизонта).
+
+### JVM unit тесты (7 сценариев, `ForecastEngineTest.kt`)
+
+Тестируют: нулевой прогноз на «сегодня», ежемесячный доход/расход, матурацию вклада, накопление процентов, группировку по валюте, порядок событий.
+
+---
+
+## §9 — Notifications & WorkManager (`:app`)
+
+### Структура файлов
+
+```
+app/src/main/java/com/moneykeeper/app/
+├── notification/
+│   ├── NotificationChannels.kt   — создание 2 каналов при старте
+│   └── NotificationHelper.kt     — showDepositExpiry() с deep-link PendingIntent
+├── worker/
+│   ├── DepositExpiryWorker.kt    — @HiltWorker, раз в сутки, в 08:00
+│   ├── RecurringTransactionWorker.kt — @HiltWorker, раз в сутки
+│   └── WorkerScheduler.kt        — enqueueUniquePeriodicWork при старте приложения
+└── di/
+    ├── WorkerModule.kt           — Configuration.Provider через Hilt
+    └── PostUnlockModule.kt       — PostUnlockCallback: catchup + workers после unlock
+```
+
+### Инициализация
+
+```
+MoneyKeeperApp.onCreate()
+  ├── NotificationChannels.createAll()   — регистрация каналов (Android 8+)
+  └── WorkerScheduler.scheduleAll()      — periodic workers с задержкой до 08:00
+```
+
+`MoneyKeeperApp` реализует `Configuration.Provider` — WorkManager получает `HiltWorkerFactory` и умеет создавать `@HiltWorker`-классы с инжекцией.
+
+### Гейтинг Workers на unlock
+
+Оба Worker'а начинают с:
+```kotlin
+if (!masterKeyHolder.isSet()) return Result.retry()
+```
+Если Worker запустился до unlock (OS разбудила процесс для периодической задачи), он возвращает `Result.retry()` с backoff и ждёт. После unlock `PostUnlockCallback` запускает one-time catchup через `WorkManager.enqueueUniqueWork(..., REPLACE, ...)`.
+
+### PostUnlockCallback — паттерн отложенной инициализации
+
+`UnlockController` инжектирует `Set<@JvmSuppressWildcards PostUnlockCallback>` (Hilt multibinding). После успешного unlock вызывает `callback.onUnlocked()` для каждого.
+
+**Критически важно**: `PostUnlockModule.providePostUnlockCallback` принимает `Provider<CatchUpRecurringTransactionsUseCase>` (не сам `use-case`). Это предотвращает eager-конструкцию цепочки DAO → `AppDatabase.require()` в момент инжекции `PostUnlockCallback` в `UnlockController` (который создаётся ДО unlock, во время показа `UnlockScreen`). `Provider.get()` вызывается только внутри `onUnlocked()`, когда БД уже открыта.
+
+```
+PostUnlockCallback провайдится как Singleton
+     │  (захватывает Provider<CatchUp>, не сам CatchUp)
+     │
+UnlockController.notifyUnlocked() после databaseProvider.initialize()
+     │
+     └─► appScope.launch(IO) {
+             catchUpProvider.get()()   ← только здесь создаётся CatchUp и его DAO-зависимости
+             WorkManager.enqueueUniqueWork(DepositExpiry + "_catchup")
+             WorkManager.enqueueUniqueWork(RecurringTx  + "_catchup")
+         }
+```
+
+### GenerateRecurringTransactionsUseCase — идемпотентный догон
+
+Живёт в `core:domain`. Читает `lastGeneratedDate` внутри `TransactionRunner.run { ... }` (= `db.withTransaction`), генерирует пропущенные транзакции, обновляет дату. Повторный вызов в тот же день — no-op. Параллельный вызов (Worker + catchup) — безопасен: Room-транзакция сериализует доступ.
+
+### SettingsRepository
+
+`AppSettings` (data class в `core:domain`) + `SettingsRepository` (interface) + `SettingsRepositoryImpl` (DataStore в `core:database`). Настройки: `depositNotificationsEnabled`, `recurringRemindersEnabled`, `defaultNotifyDaysBefore`, `themeMode`, `currencyCode`.
+
+### Deep links из уведомлений
+
+`DeepLinks` object в `core:ui` определяет схему `moneykeeper://accounts/{accountId}`. `AccountsNavigation.kt` добавляет `deepLinks = listOf(navDeepLink { uriPattern = DeepLinks.ACCOUNT_DETAIL_PATTERN })` к `AccountDetail` composable. `NotificationHelper` создаёт `PendingIntent` с этим URI. `MainActivity` с `launchMode=singleTop` обрабатывает входящий Intent через `onNewIntent`.
+
+---
+
 ## Соглашения по коду
 
 - **Все строки** в `strings.xml`. Никаких захардкоженных русских слов в `.kt`.
