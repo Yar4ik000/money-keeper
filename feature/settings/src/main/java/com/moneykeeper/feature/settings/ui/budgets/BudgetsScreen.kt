@@ -1,14 +1,20 @@
 package com.moneykeeper.feature.settings.ui.budgets
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -27,6 +33,7 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -41,6 +48,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
@@ -51,6 +59,8 @@ import com.moneykeeper.core.domain.model.Account
 import com.moneykeeper.core.domain.model.Budget
 import com.moneykeeper.core.domain.model.BudgetPeriod
 import com.moneykeeper.core.domain.model.Category
+import com.moneykeeper.core.ui.util.categoryIconVector
+import com.moneykeeper.core.ui.util.parseHexColor
 import com.moneykeeper.feature.settings.R
 import java.math.BigDecimal
 
@@ -125,10 +135,11 @@ private fun BudgetCard(
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(text = item.category?.name ?: "—")
+                    Text(text = item.categoryNames, style = MaterialTheme.typography.bodyLarge)
                     Text(
                         text = item.accountNames,
-                        style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 Text("${item.spent.toPlainString()} / ${item.budget.amount.toPlainString()}")
@@ -157,20 +168,21 @@ private fun BudgetDialog(
     onConfirm: (Budget) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val initialCategory = remember(existing, categories) {
-        if (existing != null) categories.find { it.id == existing.categoryId }
-        else categories.firstOrNull()
-    }
-    var selectedCategory by remember(initialCategory) { mutableStateOf(initialCategory) }
     var amount by rememberSaveable(existing) { mutableStateOf(existing?.amount?.toPlainString() ?: "") }
     var period by remember(existing) { mutableStateOf(existing?.period ?: BudgetPeriod.MONTHLY) }
-    var categoryExpanded by remember { mutableStateOf(false) }
     var periodExpanded by remember { mutableStateOf(false) }
 
+    // Category multi-select
+    val initialAllCategories = remember(existing) { existing?.categoryIds?.isEmpty() ?: true }
+    var allCategories by remember(existing) { mutableStateOf(initialAllCategories) }
+    val initialSelectedCatIds = remember(existing) { existing?.categoryIds ?: emptySet() }
+    var selectedCategoryIds by remember(existing) { mutableStateOf(initialSelectedCatIds) }
+
+    // Account multi-select
     val initialAllAccounts = remember(existing) { existing?.accountIds?.isEmpty() ?: true }
     var allAccounts by remember(existing) { mutableStateOf(initialAllAccounts) }
-    val initialSelected = remember(existing) { existing?.accountIds ?: emptySet() }
-    var selectedAccountIds by remember(existing) { mutableStateOf(initialSelected) }
+    val initialSelectedAccIds = remember(existing) { existing?.accountIds ?: emptySet() }
+    var selectedAccountIds by remember(existing) { mutableStateOf(initialSelectedAccIds) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -182,28 +194,7 @@ private fun BudgetDialog(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                ExposedDropdownMenuBox(
-                    expanded = categoryExpanded,
-                    onExpandedChange = { categoryExpanded = it },
-                ) {
-                    OutlinedTextField(
-                        value = selectedCategory?.name ?: "",
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text(stringResource(R.string.budgets_category)) },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(categoryExpanded) },
-                        modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth(),
-                    )
-                    ExposedDropdownMenu(expanded = categoryExpanded, onDismissRequest = { categoryExpanded = false }) {
-                        categories.forEach { cat ->
-                            DropdownMenuItem(
-                                text = { Text(cat.name) },
-                                onClick = { selectedCategory = cat; categoryExpanded = false },
-                            )
-                        }
-                    }
-                }
-
+                // ── Amount ─────────────────────────────────────────────────────
                 OutlinedTextField(
                     value = amount,
                     onValueChange = { amount = it },
@@ -213,6 +204,7 @@ private fun BudgetDialog(
                     singleLine = true,
                 )
 
+                // ── Period ─────────────────────────────────────────────────────
                 ExposedDropdownMenuBox(
                     expanded = periodExpanded,
                     onExpandedChange = { periodExpanded = it },
@@ -240,10 +232,64 @@ private fun BudgetDialog(
                     }
                 }
 
+                // ── Categories ─────────────────────────────────────────────────
+                if (categories.isNotEmpty()) {
+                    Text(
+                        text = stringResource(R.string.budgets_category),
+                        style = MaterialTheme.typography.labelMedium,
+                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Checkbox(
+                            checked = allCategories,
+                            onCheckedChange = { checked ->
+                                allCategories = checked
+                                if (checked) selectedCategoryIds = emptySet()
+                            },
+                        )
+                        Text(stringResource(R.string.budgets_all_categories))
+                    }
+                    if (!allCategories) {
+                        categories.forEach { category ->
+                            val accentColor = parseHexColor(category.colorHex)
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth().padding(start = 16.dp),
+                            ) {
+                                Checkbox(
+                                    checked = category.id in selectedCategoryIds,
+                                    onCheckedChange = { checked ->
+                                        selectedCategoryIds = if (checked)
+                                            selectedCategoryIds + category.id
+                                        else
+                                            selectedCategoryIds - category.id
+                                    },
+                                )
+                                Box(
+                                    modifier = Modifier.size(24.dp).clip(CircleShape).background(accentColor),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(
+                                        imageVector = categoryIconVector(category.iconName),
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(14.dp),
+                                    )
+                                }
+                                Spacer(Modifier.width(8.dp))
+                                Text(category.name)
+                            }
+                        }
+                    }
+                }
+
+                // ── Accounts ───────────────────────────────────────────────────
                 if (accounts.isNotEmpty()) {
                     Text(
                         text = stringResource(R.string.budgets_accounts),
-                        style = androidx.compose.material3.MaterialTheme.typography.labelMedium,
+                        style = MaterialTheme.typography.labelMedium,
                     )
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -267,11 +313,10 @@ private fun BudgetDialog(
                                 Checkbox(
                                     checked = account.id in selectedAccountIds,
                                     onCheckedChange = { checked ->
-                                        selectedAccountIds = if (checked) {
+                                        selectedAccountIds = if (checked)
                                             selectedAccountIds + account.id
-                                        } else {
+                                        else
                                             selectedAccountIds - account.id
-                                        }
                                     },
                                 )
                                 Text(account.name)
@@ -284,21 +329,21 @@ private fun BudgetDialog(
         confirmButton = {
             TextButton(
                 onClick = {
-                    val cat = selectedCategory ?: return@TextButton
                     val amt = amount.toBigDecimalOrNull() ?: return@TextButton
-                    val accountIds = if (allAccounts) emptySet() else selectedAccountIds
+                    val catIds = if (allCategories) emptySet() else selectedCategoryIds
+                    val accIds = if (allAccounts) emptySet() else selectedAccountIds
                     onConfirm(
                         Budget(
                             id = existing?.id ?: 0,
-                            categoryId = cat.id,
+                            categoryIds = catIds,
                             amount = amt,
                             period = period,
                             currency = existing?.currency ?: "RUB",
-                            accountIds = accountIds,
+                            accountIds = accIds,
                         )
                     )
                 },
-                enabled = selectedCategory != null && amount.toBigDecimalOrNull() != null,
+                enabled = amount.toBigDecimalOrNull() != null,
             ) { Text(stringResource(android.R.string.ok)) }
         },
         dismissButton = {

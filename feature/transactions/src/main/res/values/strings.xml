@@ -55,6 +55,7 @@
     <string name="edit_category_name">Название</string>
     <string name="edit_category_type">Тип</string>
     <string name="edit_category_color">Цвет</string>
+    <string name="edit_category_icon">Иконка</string>
     <string name="edit_category_parent">Родительская категория</string>
     <string name="edit_category_no_parent">Нет (корневая)</string>
     <string name="edit_category_save">Сохранить</string>

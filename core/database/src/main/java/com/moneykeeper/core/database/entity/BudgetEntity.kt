@@ -1,35 +1,24 @@
 package com.moneykeeper.core.database.entity
 
 import androidx.room.Entity
-import androidx.room.ForeignKey
-import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.moneykeeper.core.domain.model.Budget
 import com.moneykeeper.core.domain.model.BudgetPeriod
 import java.math.BigDecimal
 
-@Entity(
-    tableName = "budgets",
-    foreignKeys = [ForeignKey(
-        entity = CategoryEntity::class,
-        parentColumns = ["id"],
-        childColumns = ["categoryId"],
-        onDelete = ForeignKey.CASCADE,
-    )],
-    indices = [Index("categoryId")],
-)
+@Entity(tableName = "budgets")
 data class BudgetEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val categoryId: Long,
+    val categoryIds: String? = null, // null = all categories; "1,2,3" = specific IDs
     val amount: BigDecimal,
     val period: BudgetPeriod,
     val currency: String,
-    val accountIds: String? = null, // null = all accounts; "1,2,3" = specific account IDs
+    val accountIds: String? = null, // null = all accounts; "1,2,3" = specific IDs
 )
 
 fun BudgetEntity.toDomain() = Budget(
     id = id,
-    categoryId = categoryId,
+    categoryIds = categoryIds?.split(",")?.mapNotNull { it.toLongOrNull() }?.toSet() ?: emptySet(),
     amount = amount,
     period = period,
     currency = currency,
@@ -38,7 +27,7 @@ fun BudgetEntity.toDomain() = Budget(
 
 fun Budget.toEntity() = BudgetEntity(
     id = id,
-    categoryId = categoryId,
+    categoryIds = categoryIds.takeIf { it.isNotEmpty() }?.joinToString(","),
     amount = amount,
     period = period,
     currency = currency,

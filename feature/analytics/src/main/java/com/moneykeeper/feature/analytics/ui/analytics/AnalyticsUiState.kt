@@ -14,6 +14,8 @@ data class CategoryExpense(
 data class AccountBreakdown(
     val accountId: Long,
     val accountName: String,
+    val accountColorHex: String,
+    val accountIconName: String,
     val total: BigDecimal,
     val percentage: Float,
     val transactionCount: Int,

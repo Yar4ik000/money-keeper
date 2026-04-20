@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -49,6 +50,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.moneykeeper.core.domain.model.CategoryType
+import com.moneykeeper.core.ui.util.CATEGORY_ICON_OPTIONS
+import com.moneykeeper.core.ui.util.categoryIconVector
 import com.moneykeeper.feature.transactions.R
 import com.moneykeeper.feature.transactions.ui.components.parseCategoryColor
 
@@ -163,6 +166,46 @@ fun EditCategoryScreen(
                             )
                             .clickable { viewModel.onColorChange(hex) },
                     )
+                }
+            }
+
+            // Icon picker
+            Text(
+                text = stringResource(R.string.edit_category_icon),
+                style = MaterialTheme.typography.labelLarge,
+            )
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                CATEGORY_ICON_OPTIONS.forEach { (name, vector) ->
+                    val isSelected = state.iconName == name
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(
+                                if (isSelected) MaterialTheme.colorScheme.primaryContainer
+                                else MaterialTheme.colorScheme.surfaceVariant
+                            )
+                            .then(
+                                if (isSelected) Modifier.border(
+                                    2.dp,
+                                    MaterialTheme.colorScheme.primary,
+                                    RoundedCornerShape(8.dp),
+                                ) else Modifier
+                            )
+                            .clickable { viewModel.onIconChange(name) },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = vector,
+                            contentDescription = name,
+                            tint = if (isSelected) MaterialTheme.colorScheme.primary
+                                   else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(24.dp),
+                        )
+                    }
                 }
             }
 

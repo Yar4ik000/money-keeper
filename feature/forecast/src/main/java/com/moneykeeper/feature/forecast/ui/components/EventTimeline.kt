@@ -1,8 +1,15 @@
 package com.moneykeeper.feature.forecast.ui.components
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.TrendingDown
@@ -13,11 +20,15 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.moneykeeper.core.domain.forecast.TimelineEvent
+import com.moneykeeper.core.ui.util.accountIconVector
 import com.moneykeeper.core.ui.util.formatAsCurrency
+import com.moneykeeper.core.ui.util.parseHexColor
 import java.math.BigDecimal
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
@@ -55,10 +66,30 @@ fun TimelineEventItem(event: TimelineEvent, currency: String) {
         is TimelineEvent.RecurringExpense -> Icons.Default.TrendingDown to MaterialTheme.colorScheme.error
     }
     val sign = if (event.amountDelta >= BigDecimal.ZERO) "+" else ""
+    val accentColor = parseHexColor(event.accountColorHex)
     ListItem(
         leadingContent = { Icon(icon, contentDescription = null, tint = color) },
         headlineContent = { Text(event.description) },
-        supportingContent = { Text("${event.accountName} · ${event.date.format(dayFormatter)}") },
+        supportingContent = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(16.dp)
+                        .clip(CircleShape)
+                        .background(accentColor),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = accountIconVector(event.accountIconName),
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(10.dp),
+                    )
+                }
+                Spacer(Modifier.width(4.dp))
+                Text("${event.accountName} · ${event.date.format(dayFormatter)}")
+            }
+        },
         trailingContent = {
             Text(
                 text = sign + event.amountDelta.abs().formatAsCurrency(currency),

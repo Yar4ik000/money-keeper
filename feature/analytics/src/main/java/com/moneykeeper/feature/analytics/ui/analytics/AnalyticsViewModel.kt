@@ -97,6 +97,8 @@ class AnalyticsViewModel @Inject constructor(
                 AccountBreakdown(
                     accountId = acc.id,
                     accountName = acc.name,
+                    accountColorHex = acc.colorHex,
+                    accountIconName = acc.iconName,
                     total = sum.total,
                     percentage = if (total > BigDecimal.ZERO)
                         (sum.total.toDouble() / total.toDouble() * 100.0).toFloat() else 0f,

@@ -47,8 +47,9 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.moneykeeper.core.domain.model.Category
+import com.moneykeeper.core.ui.util.categoryIconVector
+import com.moneykeeper.core.ui.util.parseHexColor
 import com.moneykeeper.feature.transactions.R
-import com.moneykeeper.feature.transactions.ui.components.parseCategoryColor
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -179,8 +180,16 @@ private fun CategoryItem(
             modifier = Modifier
                 .size(36.dp)
                 .clip(CircleShape)
-                .background(parseCategoryColor(category.colorHex)),
-        )
+                .background(parseHexColor(category.colorHex)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = categoryIconVector(category.iconName),
+                contentDescription = null,
+                tint = androidx.compose.ui.graphics.Color.White,
+                modifier = Modifier.size(20.dp),
+            )
+        }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(category.name, style = MaterialTheme.typography.bodyLarge)

@@ -1,24 +1,33 @@
 package com.moneykeeper.feature.forecast.ui.components
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Card
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.moneykeeper.core.domain.forecast.AccountForecast
+import com.moneykeeper.core.ui.util.accountIconVector
 import com.moneykeeper.core.ui.util.formatAsCurrency
+import com.moneykeeper.core.ui.util.parseHexColor
 import com.moneykeeper.feature.forecast.R
 import java.math.BigDecimal
 
@@ -37,11 +46,28 @@ fun ForecastSummaryTable(
             )
             Spacer(Modifier.height(8.dp))
             forecasts.forEach { item ->
+                val accentColor = parseHexColor(item.account.colorHex)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
+                    Box(
+                        modifier = Modifier
+                            .size(28.dp)
+                            .clip(CircleShape)
+                            .background(accentColor),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = accountIconVector(item.account.iconName),
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(16.dp),
+                        )
+                    }
+                    Spacer(Modifier.width(8.dp))
                     Text(
                         text = item.account.name,
                         modifier = Modifier.weight(1f),

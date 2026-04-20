@@ -38,6 +38,8 @@ import androidx.compose.ui.unit.dp
 import com.moneykeeper.core.domain.model.Category
 import com.moneykeeper.core.domain.model.CategoryType
 import com.moneykeeper.core.domain.model.TransactionType
+import com.moneykeeper.core.ui.util.categoryIconVector
+import com.moneykeeper.core.ui.util.parseHexColor
 import com.moneykeeper.feature.transactions.R
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -138,8 +140,16 @@ private fun CategoryRow(
             modifier = Modifier
                 .size(24.dp)
                 .clip(CircleShape)
-                .background(parseCategoryColor(category.colorHex)),
-        )
+                .background(parseHexColor(category.colorHex)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = categoryIconVector(category.iconName),
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(14.dp),
+            )
+        }
         Spacer(Modifier.width(12.dp))
         Text(
             text = category.name,

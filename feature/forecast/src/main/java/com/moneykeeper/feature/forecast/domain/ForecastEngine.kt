@@ -37,9 +37,14 @@ class ForecastEngine @Inject constructor() {
             accounts.associate { it.id to it.balance }.toMutableMap()
         val events = mutableListOf<TimelineEvent>()
 
+        val accountMap = accounts.associateBy { it.id }
+
         // Recurring transactions
         for (rule in recurringRules) {
             val dates = rule.rule.expandDates(from = today.plusDays(1), to = targetDate)
+            val ruleAccount = accountMap[rule.templateTransaction.accountId]
+            val ruleColorHex = ruleAccount?.colorHex ?: "#607D8B"
+            val ruleIconName = ruleAccount?.iconName ?: "bank"
             for (date in dates) {
                 val tx = rule.templateTransaction
                 when (tx.type) {
@@ -49,6 +54,8 @@ class ForecastEngine @Inject constructor() {
                             date = date,
                             categoryName = rule.categoryName,
                             accountName = rule.accountName,
+                            accountColorHex = ruleColorHex,
+                            accountIconName = ruleIconName,
                             amountDelta = tx.amount,
                             description = rule.description,
                         )
@@ -59,6 +66,8 @@ class ForecastEngine @Inject constructor() {
                             date = date,
                             categoryName = rule.categoryName,
                             accountName = rule.accountName,
+                            accountColorHex = ruleColorHex,
+                            accountIconName = ruleIconName,
                             amountDelta = tx.amount.negate(),
                             description = rule.description,
                         )
@@ -74,7 +83,8 @@ class ForecastEngine @Inject constructor() {
         // Deposits
         for (deposit in deposits) {
             val payoutId = deposit.payoutAccountId ?: deposit.accountId
-            val depositAccountName = accounts.find { it.id == deposit.accountId }?.name.orEmpty()
+            val depositAccount = accountMap[deposit.accountId]
+            val depositAccountName = depositAccount?.name.orEmpty()
             val endDate = deposit.endDate
 
             if (endDate != null && !endDate.isAfter(targetDate)) {
@@ -85,6 +95,8 @@ class ForecastEngine @Inject constructor() {
                     date = endDate,
                     deposit = deposit,
                     accountName = depositAccountName,
+                    accountColorHex = depositAccount?.colorHex ?: "#607D8B",
+                    accountIconName = depositAccount?.iconName ?: "bank",
                     maturityAmount = maturity,
                     amountDelta = maturity - deposit.initialAmount,
                     description = "Окончание вклада: $depositAccountName",

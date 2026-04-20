@@ -19,6 +19,7 @@ import com.moneykeeper.core.database.entity.DepositEntity
 import com.moneykeeper.core.database.entity.RecurringRuleEntity
 import com.moneykeeper.core.database.entity.TransactionEntity
 import com.moneykeeper.core.database.migration.MIGRATION_2_3
+import com.moneykeeper.core.database.migration.MIGRATION_4_5
 
 @Database(
     entities = [
@@ -32,6 +33,7 @@ import com.moneykeeper.core.database.migration.MIGRATION_2_3
     version = AppDatabase.VERSION,
     exportSchema = true,
     autoMigrations = [AutoMigration(from = 3, to = 4)],
+    // Note: 4→5 is manual (budgets table restructured)
 )
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
@@ -45,8 +47,8 @@ abstract class AppDatabase : RoomDatabase() {
 
     companion object {
         const val DB_NAME = "money_keeper.db"
-        const val VERSION = 4
+        const val VERSION = 5
 
-        val MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_2_3)
+        val MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_2_3, MIGRATION_4_5)
     }
 }

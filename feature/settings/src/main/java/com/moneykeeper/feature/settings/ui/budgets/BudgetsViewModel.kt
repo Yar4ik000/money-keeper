@@ -25,9 +25,10 @@ import javax.inject.Inject
 
 data class BudgetWithSpent(
     val budget: Budget,
-    val category: Category?,
+    val categories: List<Category>,
+    val categoryNames: String,
     val spent: BigDecimal,
-    val accountNames: String, // "Все счета" or "Счёт 1, Счёт 2"
+    val accountNames: String,
 )
 
 data class BudgetsUiState(
@@ -61,20 +62,23 @@ class BudgetsViewModel @Inject constructor(
                 val spent = txWithMeta
                     .filter { meta ->
                         meta.transaction.type == TransactionType.EXPENSE &&
-                        meta.transaction.categoryId == budget.categoryId &&
+                        (budget.categoryIds.isEmpty() || meta.transaction.categoryId in budget.categoryIds) &&
                         (budget.accountIds.isEmpty() || meta.transaction.accountId in budget.accountIds)
                     }
                     .fold(BigDecimal.ZERO) { acc, meta -> acc + meta.transaction.amount }
 
-                val accountNames = if (budget.accountIds.isEmpty()) {
-                    "Все счета"
-                } else {
-                    budget.accountIds.mapNotNull { id -> accountById[id]?.name }.joinToString(", ")
-                }
+                val budgetCategories = if (budget.categoryIds.isEmpty()) emptyList()
+                    else budget.categoryIds.mapNotNull { catById[it] }
+                val categoryNames = if (budget.categoryIds.isEmpty()) "Все категории"
+                    else budgetCategories.joinToString(", ") { it.name }
+
+                val accountNames = if (budget.accountIds.isEmpty()) "Все счета"
+                    else budget.accountIds.mapNotNull { id -> accountById[id]?.name }.joinToString(", ")
 
                 BudgetWithSpent(
                     budget = budget,
-                    category = catById[budget.categoryId],
+                    categories = budgetCategories,
+                    categoryNames = categoryNames,
                     spent = spent,
                     accountNames = accountNames,
                 )

@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
@@ -40,6 +41,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.moneykeeper.core.ui.util.accountIconVector
+import com.moneykeeper.core.ui.util.categoryIconVector
 import com.moneykeeper.core.ui.util.formatAsCurrency
 import com.moneykeeper.core.ui.util.parseHexColor
 import com.moneykeeper.feature.analytics.R
@@ -314,46 +317,65 @@ private fun AccountBreakdownItem(
     currency: String,
     barColor: Color,
 ) {
-    Column(
+    val accentColor = parseHexColor(breakdown.accountColorHex)
+    Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .clip(CircleShape)
+                .background(accentColor),
+            contentAlignment = Alignment.Center,
         ) {
-            Text(
-                text = breakdown.accountName,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium,
-            )
-            Text(
-                text = breakdown.total.formatAsCurrency(currency),
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium,
+            Icon(
+                imageVector = accountIconVector(breakdown.accountIconName),
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(20.dp),
             )
         }
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 2.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            LinearProgressIndicator(
-                progress = { breakdown.percentage / 100f },
+        Spacer(Modifier.width(10.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    text = breakdown.accountName,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                )
+                Text(
+                    text = breakdown.total.formatAsCurrency(currency),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                )
+            }
+            Row(
                 modifier = Modifier
-                    .weight(1f)
-                    .padding(end = 8.dp),
-                color = barColor,
-                trackColor = MaterialTheme.colorScheme.surfaceVariant,
-            )
-            Text(
-                text = "${breakdown.transactionCount} · ${String.format("%.0f", breakdown.percentage)}%",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+                    .fillMaxWidth()
+                    .padding(top = 2.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                LinearProgressIndicator(
+                    progress = { breakdown.percentage / 100f },
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(end = 8.dp),
+                    color = accentColor,
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                )
+                Text(
+                    text = "${breakdown.transactionCount} · ${String.format("%.0f", breakdown.percentage)}%",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }
@@ -385,13 +407,14 @@ private fun CategoryExpenseItem(
                 modifier = Modifier
                     .size(36.dp)
                     .clip(CircleShape)
-                    .background(color.copy(alpha = 0.2f)),
+                    .background(color),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(
-                    text = expense.category.name.take(1).uppercase(),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = color,
+                Icon(
+                    imageVector = categoryIconVector(expense.category.iconName),
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(20.dp),
                 )
             }
         },

@@ -4,7 +4,7 @@ import java.math.BigDecimal
 
 data class Budget(
     val id: Long = 0,
-    val categoryId: Long,
+    val categoryIds: Set<Long> = emptySet(), // empty = all categories
     val amount: BigDecimal,
     val period: BudgetPeriod,
     val currency: String,

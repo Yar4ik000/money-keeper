@@ -31,11 +31,15 @@ sealed interface TimelineEvent {
     val description: String
     val amountDelta: BigDecimal
     val accountName: String
+    val accountColorHex: String
+    val accountIconName: String
 
     data class DepositMaturity(
         override val date: LocalDate,
         val deposit: Deposit,
         override val accountName: String,
+        override val accountColorHex: String,
+        override val accountIconName: String,
         val maturityAmount: BigDecimal,
         override val amountDelta: BigDecimal,
         override val description: String,
@@ -45,6 +49,8 @@ sealed interface TimelineEvent {
         override val date: LocalDate,
         val categoryName: String,
         override val accountName: String,
+        override val accountColorHex: String,
+        override val accountIconName: String,
         override val amountDelta: BigDecimal,
         override val description: String,
     ) : TimelineEvent
@@ -53,6 +59,8 @@ sealed interface TimelineEvent {
         override val date: LocalDate,
         val categoryName: String,
         override val accountName: String,
+        override val accountColorHex: String,
+        override val accountIconName: String,
         override val amountDelta: BigDecimal,
         override val description: String,
     ) : TimelineEvent
