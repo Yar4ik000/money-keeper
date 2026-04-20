@@ -11,41 +11,51 @@ import java.util.concurrent.TimeUnit
 
 object WorkerScheduler {
 
-    fun scheduleAll(context: Context) {
-        val workManager = WorkManager.getInstance(context)
+    fun scheduleAll(context: Context, hour: Int = 8, minute: Int = 0) {
+        val wm = WorkManager.getInstance(context)
 
-        val depositCheckRequest = PeriodicWorkRequestBuilder<DepositExpiryWorker>(
-            repeatInterval = 1, repeatIntervalTimeUnit = TimeUnit.DAYS,
-        )
-            .setInitialDelay(calculateDelayUntilMorning(), TimeUnit.MILLISECONDS)
-            .setConstraints(Constraints.Builder().build())
-            .build()
-
-        workManager.enqueueUniquePeriodicWork(
+        wm.enqueueUniquePeriodicWork(
             DepositExpiryWorker.WORK_NAME,
             ExistingPeriodicWorkPolicy.KEEP,
-            depositCheckRequest,
+            PeriodicWorkRequestBuilder<DepositExpiryWorker>(1, TimeUnit.DAYS)
+                .setInitialDelay(calculateDelayUntil(hour, minute), TimeUnit.MILLISECONDS)
+                .setConstraints(Constraints.Builder().build())
+                .build(),
         )
 
-        val recurringRequest = PeriodicWorkRequestBuilder<RecurringTransactionWorker>(
-            repeatInterval = 1, repeatIntervalTimeUnit = TimeUnit.DAYS,
-        )
-            .setInitialDelay(calculateDelayUntilMorning() + 60_000L, TimeUnit.MILLISECONDS)
-            .build()
-
-        workManager.enqueueUniquePeriodicWork(
+        wm.enqueueUniquePeriodicWork(
             RecurringTransactionWorker.WORK_NAME,
             ExistingPeriodicWorkPolicy.KEEP,
-            recurringRequest,
+            PeriodicWorkRequestBuilder<RecurringTransactionWorker>(1, TimeUnit.DAYS)
+                .setInitialDelay(calculateDelayUntil(hour, minute) + 60_000L, TimeUnit.MILLISECONDS)
+                .build(),
         )
     }
 
-    private fun calculateDelayUntilMorning(): Long {
+    fun reschedule(context: Context, hour: Int, minute: Int) {
+        val wm = WorkManager.getInstance(context)
+
+        wm.enqueueUniquePeriodicWork(
+            DepositExpiryWorker.WORK_NAME,
+            ExistingPeriodicWorkPolicy.CANCEL_AND_REENQUEUE,
+            PeriodicWorkRequestBuilder<DepositExpiryWorker>(1, TimeUnit.DAYS)
+                .setInitialDelay(calculateDelayUntil(hour, minute), TimeUnit.MILLISECONDS)
+                .build(),
+        )
+
+        wm.enqueueUniquePeriodicWork(
+            RecurringTransactionWorker.WORK_NAME,
+            ExistingPeriodicWorkPolicy.CANCEL_AND_REENQUEUE,
+            PeriodicWorkRequestBuilder<RecurringTransactionWorker>(1, TimeUnit.DAYS)
+                .setInitialDelay(calculateDelayUntil(hour, minute) + 60_000L, TimeUnit.MILLISECONDS)
+                .build(),
+        )
+    }
+
+    fun calculateDelayUntil(hour: Int, minute: Int): Long {
         val now = LocalDateTime.now()
-        val target = if (now.hour < 8)
-            now.toLocalDate().atTime(8, 0)
-        else
-            now.toLocalDate().plusDays(1).atTime(8, 0)
+        val todayTarget = now.toLocalDate().atTime(hour, minute)
+        val target = if (now.isBefore(todayTarget)) todayTarget else todayTarget.plusDays(1)
         return ChronoUnit.MILLIS.between(now, target)
     }
 }

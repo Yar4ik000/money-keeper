@@ -27,6 +27,8 @@ class SettingsRepositoryImpl @Inject constructor(
         val DEPOSIT_NOTIFICATIONS = booleanPreferencesKey("deposit_notifications_enabled")
         val RECURRING_REMINDERS   = booleanPreferencesKey("recurring_reminders_enabled")
         val DEFAULT_NOTIFY_DAYS   = intPreferencesKey("default_notify_days_before")
+        val NOTIFICATION_HOUR     = intPreferencesKey("notification_hour")
+        val NOTIFICATION_MINUTE   = intPreferencesKey("notification_minute")
         val THEME_MODE            = stringPreferencesKey("theme_mode")
         val CURRENCY_CODE         = stringPreferencesKey("currency_code")
     }
@@ -36,6 +38,8 @@ class SettingsRepositoryImpl @Inject constructor(
             depositNotificationsEnabled = prefs[Keys.DEPOSIT_NOTIFICATIONS] ?: true,
             recurringRemindersEnabled   = prefs[Keys.RECURRING_REMINDERS] ?: true,
             defaultNotifyDaysBefore     = prefs[Keys.DEFAULT_NOTIFY_DAYS] ?: 7,
+            notificationHour            = prefs[Keys.NOTIFICATION_HOUR] ?: 8,
+            notificationMinute          = prefs[Keys.NOTIFICATION_MINUTE] ?: 0,
             themeMode                   = prefs[Keys.THEME_MODE] ?: "system",
             currencyCode                = prefs[Keys.CURRENCY_CODE] ?: "RUB",
         )
@@ -46,6 +50,8 @@ class SettingsRepositoryImpl @Inject constructor(
             prefs[Keys.DEPOSIT_NOTIFICATIONS] = settings.depositNotificationsEnabled
             prefs[Keys.RECURRING_REMINDERS]   = settings.recurringRemindersEnabled
             prefs[Keys.DEFAULT_NOTIFY_DAYS]   = settings.defaultNotifyDaysBefore
+            prefs[Keys.NOTIFICATION_HOUR]     = settings.notificationHour
+            prefs[Keys.NOTIFICATION_MINUTE]   = settings.notificationMinute
             prefs[Keys.THEME_MODE]            = settings.themeMode
             prefs[Keys.CURRENCY_CODE]         = settings.currencyCode
         }

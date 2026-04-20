@@ -2,4 +2,10 @@
     <string name="settings_title">Настройки</string>
     <string name="settings_categories">Категории</string>
     <string name="settings_categories_subtitle">Управление категориями операций</string>
+    <string name="settings_deposit_notifications">Уведомления о вкладах</string>
+    <string name="settings_deposit_notifications_subtitle">Напоминать об истечении срока вклада</string>
+    <string name="settings_recurring_reminders">Напоминания о повторяющихся операциях</string>
+    <string name="settings_recurring_reminders_subtitle">Уведомлять о запланированных платежах</string>
+    <string name="settings_notification_time">Время уведомлений</string>
+    <string name="settings_notification_time_value">%1$02d:%2$02d</string>
 </resources>
