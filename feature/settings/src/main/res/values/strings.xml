@@ -55,6 +55,8 @@
     <string name="budgets_period">Период</string>
     <string name="budgets_period_monthly">Ежемесячно</string>
     <string name="budgets_period_weekly">Еженедельно</string>
+    <string name="budgets_accounts">Счета</string>
+    <string name="budgets_all_accounts">Все счета</string>
 
     <string name="onboarding_back">Назад</string>
     <string name="onboarding_next">Далее</string>

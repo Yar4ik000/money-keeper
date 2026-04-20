@@ -77,7 +77,7 @@ class BackupRepositoryImpl @Inject constructor(
         try {
             val masterKey = masterKeyProvider.requireKey()
             try {
-                exportPlainDump(databaseProvider.require(), tempPlain)
+                exportPlainDump(tempPlain)
 
                 val iv = ByteArray(12).also { SecureRandom().nextBytes(it) }
                 val cipherText = aesGcmEncrypt(tempPlain.readBytes(), masterKey, iv)
@@ -187,6 +187,8 @@ class BackupRepositoryImpl @Inject constructor(
                 importPlainIntoEncrypted(tempPlain, pending, currentDbKey)
             } catch (e: Exception) {
                 pending.delete()
+                // Re-open the original DB so the app stays functional after import failure
+                databaseProvider.initialize(currentDbKey)
                 return@withContext RestoreResult.Error("Ошибка импорта: ${e.message.orEmpty()}")
             } finally {
                 currentDbKey.fill(0)
@@ -212,30 +214,102 @@ class BackupRepositoryImpl @Inject constructor(
         kotlin.system.exitProcess(0)
     }
 
-    private fun exportPlainDump(db: AppDatabase, target: File) {
-        val helper = db.openHelper.writableDatabase
-        // PRAGMA wal_checkpoint doesn't return rows — execSQL is fine
-        helper.execSQL("PRAGMA wal_checkpoint(FULL)")
+    private fun exportPlainDump(target: File) {
+        // Use a dedicated OPEN_READWRITE connection rather than Room's live connection.
+        //
+        // Using Room's write connection (db.openHelper.writableDatabase) for ATTACH +
+        // sqlcipher_export disrupts TriggerBasedInvalidationTracker in two ways:
+        //   1. If the connection has a concurrent BEGIN TRANSACTION (from syncTriggers),
+        //      ATTACH triggers "cannot change into wal mode from within a transaction".
+        //   2. The SQLite backup API (used by sqlcipher_export) acquires/releases read locks
+        //      that perturb Room's InvalidationTracker, causing it to drop/recreate
+        //      room_table_modification_log. The resulting gap leaves syncTriggers unable
+        //      to INSERT into the table → "no such table" crash after backup.
+        //
+        // The dedicated connection's attempt to switch journal_mode to DELETE (Android default)
+        // fails with a logged warning but proceeds in WAL mode — this is harmless.
+        // The ATTACH on this connection creates a fresh file with no competing transactions,
+        // so WAL initialisation of the new file succeeds without interference.
+
         target.delete()
-        // ATTACH/DETACH don't return rows — execSQL is fine
-        // Escape single quotes in path (cache dir paths never contain them, but be safe)
-        val safePath = target.absolutePath.replace("'", "''")
-        helper.execSQL("ATTACH DATABASE '$safePath' AS plaintext KEY ''")
-        // sqlcipher_export returns a value — Room's execSQL rejects SELECT; use query() instead
-        helper.query("SELECT sqlcipher_export('plaintext')").use { it.moveToFirst() }
-        helper.execSQL("DETACH DATABASE plaintext")
+        // Pre-create the target as an empty unencrypted SQLite file so ATTACH opens an
+        // existing file rather than creating one. SQLCipher with ByteArray(0) writes a
+        // standard (no-encryption) SQLite file with no Android-specific tables —
+        // unlike android.database.sqlite.SQLiteDatabase which adds android_metadata,
+        // causing sqlcipher_export to fail with "table android_metadata already exists".
+        net.zetetic.database.sqlcipher.SQLiteDatabase.openDatabase(
+            target.absolutePath, ByteArray(0), null,
+            net.zetetic.database.sqlcipher.SQLiteDatabase.OPEN_READWRITE or
+            net.zetetic.database.sqlcipher.SQLiteDatabase.CREATE_IF_NECESSARY,
+            null, null,
+        ).close()
+
+        val dbKey = getCurrentDbKey()
+        try {
+            val dbPath = context.getDatabasePath(AppDatabase.DB_NAME).absolutePath
+            val roConn = net.zetetic.database.sqlcipher.SQLiteDatabase.openDatabase(
+                dbPath, dbKey, null,
+                net.zetetic.database.sqlcipher.SQLiteDatabase.OPEN_READWRITE,
+                null, null,
+            )
+            try {
+                val safePath = target.absolutePath.replace("'", "''")
+                roConn.execSQL("ATTACH DATABASE '$safePath' AS plaintext KEY ''")
+                // sqlcipher_export returns a value — use rawQuery, not execSQL
+                roConn.rawQuery("SELECT sqlcipher_export('plaintext')", null).use { it.moveToFirst() }
+                roConn.execSQL("DETACH DATABASE plaintext")
+            } finally {
+                roConn.close()
+            }
+        } finally {
+            dbKey.fill(0)
+        }
     }
 
     private fun importPlainIntoEncrypted(plainDb: File, target: File, dbKey: ByteArray) {
+        // Open the encrypted target as MAIN using the SAME key path as Room:
+        //   openDatabase(path, ByteArray) → nativeKey(rawBytes) → sqlite3_key_v2 → PBKDF2
+        // ATTACH … KEY "x'hex'" bypasses PBKDF2 (raw key) — that is a DIFFERENT derived key
+        // than what sqlite3_key_v2 with raw bytes produces, causing HMAC mismatch on open.
+        // Keeping the encrypted side as MAIN avoids ATTACH KEY entirely.
         val db = net.zetetic.database.sqlcipher.SQLiteDatabase.openDatabase(
-            plainDb.absolutePath, "".toByteArray(), null,
-            net.zetetic.database.sqlcipher.SQLiteDatabase.OPEN_READWRITE, null, null,
+            target.absolutePath, dbKey, null,
+            net.zetetic.database.sqlcipher.SQLiteDatabase.OPEN_READWRITE or
+            net.zetetic.database.sqlcipher.SQLiteDatabase.CREATE_IF_NECESSARY,
+            null, null,
         )
         try {
-            val keyHex = dbKey.joinToString("") { "%02x".format(it) }
-            db.execSQL("ATTACH DATABASE ? AS enc KEY \"x'$keyHex'\"", arrayOf<Any>(target.absolutePath))
-            db.execSQL("SELECT sqlcipher_export('enc')")
-            db.execSQL("DETACH DATABASE enc")
+            val safePlainPath = plainDb.absolutePath.replace("'", "''")
+            db.execSQL("ATTACH DATABASE '$safePlainPath' AS src KEY ''")
+            db.execSQL("PRAGMA foreign_keys = OFF")
+
+            // Replay DDL from src (rowid order ensures deps are created before dependents).
+            // Exclude sqlite_* objects — SQLite owns those internally and rejects explicit CREATE.
+            db.rawQuery(
+                "SELECT sql FROM src.sqlite_schema WHERE sql NOT NULL AND name NOT LIKE 'sqlite_%' ORDER BY rowid",
+                null,
+            ).use { c ->
+                while (c.moveToNext()) db.execSQL(c.getString(0))
+            }
+
+            // Copy table data
+            db.rawQuery(
+                "SELECT name FROM src.sqlite_schema WHERE type = 'table' AND name NOT LIKE 'sqlite_%'",
+                null,
+            ).use { c ->
+                while (c.moveToNext()) {
+                    val t = c.getString(0)
+                    db.execSQL("INSERT INTO \"$t\" SELECT * FROM src.\"$t\"")
+                }
+            }
+
+            // sqlite_sequence tracks AUTOINCREMENT counters — copy if present
+            runCatching {
+                db.execSQL("INSERT INTO sqlite_sequence SELECT * FROM src.sqlite_sequence")
+            }
+
+            db.execSQL("PRAGMA foreign_keys = ON")
+            db.execSQL("DETACH DATABASE src")
         } finally {
             db.close()
         }

@@ -6,6 +6,7 @@ import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Analytics
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -27,6 +28,7 @@ import com.moneykeeper.feature.accounts.navigation.accountsGraph
 import com.moneykeeper.feature.analytics.navigation.analyticsGraph
 import com.moneykeeper.feature.dashboard.navigation.dashboardGraph
 import com.moneykeeper.feature.forecast.navigation.forecastGraph
+import com.moneykeeper.feature.settings.navigation.budgetsGraph
 import com.moneykeeper.feature.settings.navigation.settingsGraph
 import com.moneykeeper.feature.transactions.navigation.transactionsGraph
 
@@ -48,6 +50,7 @@ fun MoneyKeeperNavHost(
             analyticsGraph(navController)
             settingsGraph(navController)
             forecastGraph(navController)
+            budgetsGraph(navController)
         }
     }
 }
@@ -59,9 +62,10 @@ private data class BottomNavItem(
 )
 
 private val bottomNavItems = listOf(
-    BottomNavItem(Screen.Dashboard, Icons.Filled.Home,                 R.string.nav_dashboard),
-    BottomNavItem(Screen.Accounts,  Icons.Filled.AccountBalanceWallet, R.string.nav_accounts),
-    BottomNavItem(Screen.Analytics, Icons.Filled.Analytics,            R.string.nav_analytics),
+    BottomNavItem(Screen.Dashboard, Icons.Filled.Home,                    R.string.nav_dashboard),
+    BottomNavItem(Screen.Accounts,  Icons.Filled.AccountBalanceWallet,    R.string.nav_accounts),
+    BottomNavItem(Screen.Budgets,   Icons.Filled.Savings,                 R.string.nav_budgets),
+    BottomNavItem(Screen.Analytics, Icons.Filled.Analytics,               R.string.nav_analytics),
     BottomNavItem(Screen.Forecast,  Icons.AutoMirrored.Filled.TrendingUp, R.string.nav_forecast),
 )
 
@@ -78,9 +82,6 @@ private fun MoneyKeeperBottomBar(navController: NavHostController) {
                 selected = selected,
                 onClick = {
                     navController.navigate(item.screen.route) {
-                        // popUpTo без saveState/restoreState: при flat-графе (без nested
-                        // графов на таб) saveState/restoreState сохраняет в «accounts»-стек
-                        // всё, включая sub-экраны других табов, и восстанавливает не тот экран.
                         popUpTo(navController.graph.findStartDestination().id) {
                             inclusive = false
                         }
@@ -93,4 +94,3 @@ private fun MoneyKeeperBottomBar(navController: NavHostController) {
         }
     }
 }
-

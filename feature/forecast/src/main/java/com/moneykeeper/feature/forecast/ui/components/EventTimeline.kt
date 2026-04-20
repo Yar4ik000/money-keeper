@@ -58,7 +58,7 @@ fun TimelineEventItem(event: TimelineEvent, currency: String) {
     ListItem(
         leadingContent = { Icon(icon, contentDescription = null, tint = color) },
         headlineContent = { Text(event.description) },
-        supportingContent = { Text(event.date.format(dayFormatter)) },
+        supportingContent = { Text("${event.accountName} · ${event.date.format(dayFormatter)}") },
         trailingContent = {
             Text(
                 text = sign + event.amountDelta.abs().formatAsCurrency(currency),

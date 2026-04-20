@@ -30,11 +30,12 @@ sealed interface TimelineEvent {
     val date: LocalDate
     val description: String
     val amountDelta: BigDecimal
+    val accountName: String
 
     data class DepositMaturity(
         override val date: LocalDate,
         val deposit: Deposit,
-        val accountName: String,
+        override val accountName: String,
         val maturityAmount: BigDecimal,
         override val amountDelta: BigDecimal,
         override val description: String,
@@ -43,7 +44,7 @@ sealed interface TimelineEvent {
     data class RecurringIncome(
         override val date: LocalDate,
         val categoryName: String,
-        val accountName: String,
+        override val accountName: String,
         override val amountDelta: BigDecimal,
         override val description: String,
     ) : TimelineEvent
@@ -51,7 +52,7 @@ sealed interface TimelineEvent {
     data class RecurringExpense(
         override val date: LocalDate,
         val categoryName: String,
-        val accountName: String,
+        override val accountName: String,
         override val amountDelta: BigDecimal,
         override val description: String,
     ) : TimelineEvent

@@ -37,14 +37,24 @@ class DatabaseProvider @Inject constructor(
         if (db != null) return
 
         System.loadLibrary("sqlcipher")
-        val factory = net.zetetic.database.sqlcipher.SupportOpenHelperFactory(dbKey)
+        // SupportOpenHelperFactory keeps a reference, not a copy, of the key byte array.
+        // The caller zeros dbKey after initialize() returns (security hygiene), which would
+        // corrupt any subsequent pool connection opened by SQLCipher. Use a dedicated copy
+        // whose lifetime is tied to this factory/database pair instead.
+        val factory = net.zetetic.database.sqlcipher.SupportOpenHelperFactory(dbKey.copyOf())
 
-        db = Room.databaseBuilder(context, AppDatabase::class.java, AppDatabase.DB_NAME)
+        val database = Room.databaseBuilder(context, AppDatabase::class.java, AppDatabase.DB_NAME)
             .openHelperFactory(factory)
             .addMigrations(*AppDatabase.MIGRATIONS)
             .fallbackToDestructiveMigration(dropAllTables = true)
             .addCallback(PrepopulateCallback(context))
             .build()
+
+        // Room is lazy — force-open now so a wrong-key exception surfaces here (inside
+        // UnlockController's try-catch) rather than later on a background thread with no handler.
+        database.openHelper.writableDatabase
+
+        db = database
         _state.value = State.Initialized
     }
 

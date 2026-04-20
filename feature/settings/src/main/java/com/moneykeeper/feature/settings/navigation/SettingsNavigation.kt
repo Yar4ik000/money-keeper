@@ -10,14 +10,13 @@ import com.moneykeeper.feature.settings.ui.budgets.BudgetsScreen
 private const val ROUTE_SETTINGS = "settings"
 private const val ROUTE_CATEGORIES = "transactions/categories"
 private const val ROUTE_BACKUP = "settings/backup"
-private const val ROUTE_BUDGETS = "settings/budgets"
+const val ROUTE_BUDGETS = "budgets"
 
 fun NavGraphBuilder.settingsGraph(navController: NavController) {
     composable(ROUTE_SETTINGS) {
         SettingsScreen(
             onBack = { navController.popBackStack() },
             onCategories = { navController.navigate(ROUTE_CATEGORIES) },
-            onBudgets = { navController.navigate(ROUTE_BUDGETS) },
             onBackup = { navController.navigate(ROUTE_BACKUP) },
         )
     }
@@ -25,7 +24,9 @@ fun NavGraphBuilder.settingsGraph(navController: NavController) {
     composable(ROUTE_BACKUP) {
         BackupScreen(onBack = { navController.popBackStack() })
     }
+}
 
+fun NavGraphBuilder.budgetsGraph(navController: NavController) {
     composable(ROUTE_BUDGETS) {
         BudgetsScreen(onBack = { navController.popBackStack() })
     }

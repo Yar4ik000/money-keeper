@@ -8,7 +8,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -16,6 +18,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -44,6 +47,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.moneykeeper.core.domain.model.Account
 import com.moneykeeper.core.domain.model.Budget
 import com.moneykeeper.core.domain.model.BudgetPeriod
 import com.moneykeeper.core.domain.model.Category
@@ -57,7 +61,6 @@ fun BudgetsScreen(
     viewModel: BudgetsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    // null = closed, non-null = open (null budget = new, non-null budget = edit)
     var editingBudget by remember { mutableStateOf<Budget?>(null) }
     var dialogOpen by remember { mutableStateOf(false) }
 
@@ -95,6 +98,7 @@ fun BudgetsScreen(
     if (dialogOpen) {
         BudgetDialog(
             categories = state.categories,
+            accounts = state.accounts,
             existing = editingBudget,
             onConfirm = { budget ->
                 viewModel.save(budget)
@@ -118,12 +122,15 @@ private fun BudgetCard(
     val overBudget = item.spent > item.budget.amount
 
     Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = item.category?.name ?: "—",
-                    modifier = Modifier.weight(1f),
-                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(text = item.category?.name ?: "—")
+                    Text(
+                        text = item.accountNames,
+                        style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                    )
+                }
                 Text("${item.spent.toPlainString()} / ${item.budget.amount.toPlainString()}")
                 IconButton(onClick = onEdit) {
                     Icon(Icons.Default.Edit, contentDescription = null)
@@ -145,6 +152,7 @@ private fun BudgetCard(
 @Composable
 private fun BudgetDialog(
     categories: List<Category>,
+    accounts: List<Account>,
     existing: Budget?,
     onConfirm: (Budget) -> Unit,
     onDismiss: () -> Unit,
@@ -159,13 +167,21 @@ private fun BudgetDialog(
     var categoryExpanded by remember { mutableStateOf(false) }
     var periodExpanded by remember { mutableStateOf(false) }
 
+    val initialAllAccounts = remember(existing) { existing?.accountIds?.isEmpty() ?: true }
+    var allAccounts by remember(existing) { mutableStateOf(initialAllAccounts) }
+    val initialSelected = remember(existing) { existing?.accountIds ?: emptySet() }
+    var selectedAccountIds by remember(existing) { mutableStateOf(initialSelected) }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(if (existing == null) stringResource(R.string.budgets_add) else stringResource(R.string.budgets_edit))
         },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 ExposedDropdownMenuBox(
                     expanded = categoryExpanded,
                     onExpandedChange = { categoryExpanded = it },
@@ -223,6 +239,46 @@ private fun BudgetDialog(
                         )
                     }
                 }
+
+                if (accounts.isNotEmpty()) {
+                    Text(
+                        text = stringResource(R.string.budgets_accounts),
+                        style = androidx.compose.material3.MaterialTheme.typography.labelMedium,
+                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Checkbox(
+                            checked = allAccounts,
+                            onCheckedChange = { checked ->
+                                allAccounts = checked
+                                if (checked) selectedAccountIds = emptySet()
+                            },
+                        )
+                        Text(stringResource(R.string.budgets_all_accounts))
+                    }
+                    if (!allAccounts) {
+                        accounts.forEach { account ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth().padding(start = 16.dp),
+                            ) {
+                                Checkbox(
+                                    checked = account.id in selectedAccountIds,
+                                    onCheckedChange = { checked ->
+                                        selectedAccountIds = if (checked) {
+                                            selectedAccountIds + account.id
+                                        } else {
+                                            selectedAccountIds - account.id
+                                        }
+                                    },
+                                )
+                                Text(account.name)
+                            }
+                        }
+                    }
+                }
             }
         },
         confirmButton = {
@@ -230,6 +286,7 @@ private fun BudgetDialog(
                 onClick = {
                     val cat = selectedCategory ?: return@TextButton
                     val amt = amount.toBigDecimalOrNull() ?: return@TextButton
+                    val accountIds = if (allAccounts) emptySet() else selectedAccountIds
                     onConfirm(
                         Budget(
                             id = existing?.id ?: 0,
@@ -237,6 +294,7 @@ private fun BudgetDialog(
                             amount = amt,
                             period = period,
                             currency = existing?.currency ?: "RUB",
+                            accountIds = accountIds,
                         )
                     )
                 },

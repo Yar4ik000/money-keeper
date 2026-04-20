@@ -52,7 +52,6 @@ private val SUPPORTED_CURRENCIES = listOf("RUB", "USD", "EUR", "GBP", "CNY", "BY
 fun SettingsScreen(
     onBack: () -> Unit,
     onCategories: () -> Unit,
-    onBudgets: () -> Unit,
     onBackup: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
@@ -152,12 +151,6 @@ fun SettingsScreen(
                 headlineContent = { Text(stringResource(R.string.settings_categories)) },
                 supportingContent = { Text(stringResource(R.string.settings_categories_subtitle)) },
                 modifier = Modifier.clickable(onClick = onCategories),
-            )
-            ListItem(
-                leadingContent = { Icon(Icons.Outlined.AccountBalance, contentDescription = null) },
-                headlineContent = { Text(stringResource(R.string.settings_budgets)) },
-                supportingContent = { Text(stringResource(R.string.settings_budgets_subtitle)) },
-                modifier = Modifier.clickable(onClick = onBudgets),
             )
 
             HorizontalDivider()

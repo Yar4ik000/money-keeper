@@ -1,5 +1,6 @@
 package com.moneykeeper.core.database
 
+import androidx.room.AutoMigration
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
@@ -30,6 +31,7 @@ import com.moneykeeper.core.database.migration.MIGRATION_2_3
     ],
     version = AppDatabase.VERSION,
     exportSchema = true,
+    autoMigrations = [AutoMigration(from = 3, to = 4)],
 )
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
@@ -43,7 +45,7 @@ abstract class AppDatabase : RoomDatabase() {
 
     companion object {
         const val DB_NAME = "money_keeper.db"
-        const val VERSION = 3
+        const val VERSION = 4
 
         val MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_2_3)
     }

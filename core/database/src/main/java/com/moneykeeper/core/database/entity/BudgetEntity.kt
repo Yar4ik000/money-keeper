@@ -24,12 +24,23 @@ data class BudgetEntity(
     val amount: BigDecimal,
     val period: BudgetPeriod,
     val currency: String,
+    val accountIds: String? = null, // null = all accounts; "1,2,3" = specific account IDs
 )
 
 fun BudgetEntity.toDomain() = Budget(
-    id = id, categoryId = categoryId, amount = amount, period = period, currency = currency,
+    id = id,
+    categoryId = categoryId,
+    amount = amount,
+    period = period,
+    currency = currency,
+    accountIds = accountIds?.split(",")?.mapNotNull { it.toLongOrNull() }?.toSet() ?: emptySet(),
 )
 
 fun Budget.toEntity() = BudgetEntity(
-    id = id, categoryId = categoryId, amount = amount, period = period, currency = currency,
+    id = id,
+    categoryId = categoryId,
+    amount = amount,
+    period = period,
+    currency = currency,
+    accountIds = accountIds.takeIf { it.isNotEmpty() }?.joinToString(","),
 )

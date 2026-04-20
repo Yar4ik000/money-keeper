@@ -8,6 +8,7 @@ data class Budget(
     val amount: BigDecimal,
     val period: BudgetPeriod,
     val currency: String,
+    val accountIds: Set<Long> = emptySet(), // empty = all accounts
 )
 
 enum class BudgetPeriod { MONTHLY, WEEKLY }

@@ -6,6 +6,7 @@
     <string name="nav_accounts">Счета</string>
     <string name="nav_analytics">Аналитика</string>
     <string name="nav_forecast">Прогноз</string>
+    <string name="nav_budgets">Бюджеты</string>
     <string name="nav_add_transaction">Новая операция</string>
 
     <!-- Placeholder для ещё не реализованных экранов скелета (§1.9). -->
