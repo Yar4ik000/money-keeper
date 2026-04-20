@@ -18,8 +18,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.material3.Icon
 import com.moneykeeper.core.domain.model.TransactionType
 import com.moneykeeper.core.domain.model.TransactionWithMeta
+import com.moneykeeper.core.ui.util.categoryIconVector
 import com.moneykeeper.core.ui.util.formatAsCurrency
 import com.moneykeeper.core.ui.util.parseHexColor
 import com.moneykeeper.feature.dashboard.R
@@ -57,13 +59,14 @@ fun TransactionListItem(meta: TransactionWithMeta, onClick: () -> Unit) {
                 modifier = Modifier
                     .size(40.dp)
                     .clip(CircleShape)
-                    .background(accentColor.copy(alpha = 0.2f)),
+                    .background(accentColor),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(
-                    text = meta.categoryName.take(1).uppercase().ifEmpty { "?" },
-                    style = MaterialTheme.typography.labelLarge,
-                    color = accentColor,
+                Icon(
+                    imageVector = categoryIconVector(meta.categoryIcon),
+                    contentDescription = null,
+                    tint = androidx.compose.ui.graphics.Color.White,
+                    modifier = Modifier.size(22.dp),
                 )
             }
         },

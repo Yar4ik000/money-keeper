@@ -2,9 +2,8 @@ package com.moneykeeper.core.database.dao
 
 import androidx.room.Dao
 import androidx.room.Delete
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Upsert
 import com.moneykeeper.core.database.entity.CategoryEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -26,7 +25,7 @@ interface CategoryDao {
     @Query("SELECT * FROM categories WHERE id = :id")
     suspend fun getById(id: Long): CategoryEntity?
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun upsert(category: CategoryEntity): Long
 
     @Delete
