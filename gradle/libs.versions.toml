@@ -28,7 +28,6 @@ sqlcipher               = "4.14.1"
 security-crypto         = "1.1.0"
 kotlinx-serialization   = "1.8.1"
 core-ktx                = "1.18.0"
-appcompat               = "1.7.0"
 activity-compose        = "1.13.0"
 hilt-androidx           = "1.3.0"
 junit                   = "4.13.2"
@@ -39,7 +38,6 @@ espresso                = "3.7.0"
 [libraries]
 # AndroidX
 androidx-core-ktx            = { group = "androidx.core", name = "core-ktx", version.ref = "core-ktx" }
-appcompat                    = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 
 # Compose BOM + UI
 compose-bom                  = { group = "androidx.compose", name = "compose-bom", version.ref = "compose-bom" }
