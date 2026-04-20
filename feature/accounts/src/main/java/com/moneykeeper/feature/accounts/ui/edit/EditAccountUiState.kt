@@ -14,7 +14,7 @@ data class EditAccountUiState(
     val colorHex: String = "#4CAF50",
     val iconName: String = "AccountBalance",
     /** Raw text in the balance field — may contain trailing "." while user is typing. */
-    val balanceInput: String = "0",
+    val balanceInput: String = "",
     val deposit: Deposit? = null,
     val createdAt: LocalDate? = null,
     val saved: Boolean = false,

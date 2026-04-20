@@ -74,7 +74,12 @@ class EditAccountViewModel @Inject constructor(
 
     fun onBalanceInputChange(input: String) {
         val filtered = input.replace(",", ".").filter { it.isDigit() || it == '.' }
-        _uiState.update { it.copy(balanceInput = filtered, error = null) }
+        val cleaned = when {
+            filtered.length > 1 && filtered.startsWith("0") && !filtered.startsWith("0.") ->
+                filtered.trimStart('0').ifEmpty { "" }
+            else -> filtered
+        }
+        _uiState.update { it.copy(balanceInput = cleaned, error = null) }
     }
 
     fun onDepositChange(deposit: Deposit) = _uiState.update { it.copy(deposit = deposit, error = null) }
