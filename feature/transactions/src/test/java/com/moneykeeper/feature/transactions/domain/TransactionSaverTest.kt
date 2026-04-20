@@ -72,6 +72,7 @@ class TransactionSaverTest {
             savedTransactions.removeIf { it.id in ids }
             deletedIds.addAll(ids)
         }
+        override suspend fun getAll() = throw UnsupportedOperationException()
     }
 
     private val fakeRuleRepo = object : RecurringRuleRepository {

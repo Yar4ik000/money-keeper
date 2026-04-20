@@ -34,6 +34,8 @@ class AccountRepositoryImpl(private val dao: AccountDao) : AccountRepository {
         dao.getById(id)?.let { dao.delete(it) }
     }
 
-    override suspend fun adjustBalance(id: Long, delta: BigDecimal) =
-        dao.adjustBalance(id, delta)
+    override suspend fun adjustBalance(id: Long, delta: BigDecimal) {
+        val current = dao.getById(id)?.balance ?: return
+        dao.setBalance(id, current + delta)
+    }
 }

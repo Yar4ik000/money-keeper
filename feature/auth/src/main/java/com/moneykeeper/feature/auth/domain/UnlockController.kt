@@ -22,6 +22,14 @@ class UnlockController @Inject constructor(
     private fun notifyUnlocked() = postUnlockCallbacks.forEach { it.onUnlocked() }
 
     suspend fun unlockWithPassword(password: CharArray): UnlockResult = withContext(Dispatchers.Default) {
+        val lockoutUntil = keyStorage.getLockoutUntilMs()
+        val now = System.currentTimeMillis()
+        if (lockoutUntil > now) {
+            password.fill(0.toChar())
+            val secondsLeft = (lockoutUntil - now + 999) / 1000
+            return@withContext UnlockResult.LockedOut(secondsLeft)
+        }
+
         val derivedKey = try {
             val salt = keyStorage.readOrCreateKdfSalt()
             val params = keyStorage.readKdfParams()
@@ -37,9 +45,11 @@ class UnlockController @Inject constructor(
             aesGcmDecrypt(enc.ciphertext, derivedKey, enc.iv)
         } catch (e: AEADBadTagException) {
             derivedKey.fill(0)
+            keyStorage.recordFailedAttempt()
             return@withContext UnlockResult.WrongPassword
         }
 
+        keyStorage.resetFailedAttempts()
         masterKeyHolder.set(derivedKey)
         derivedKey.fill(0)
 
@@ -92,5 +102,7 @@ class UnlockController @Inject constructor(
         data object BiometricCancelled : UnlockResult
         data object BiometricStale : UnlockResult
         data class DataCorrupted(val message: String) : UnlockResult
+        /** Too many failed attempts — [secondsRemaining] until retry is allowed. */
+        data class LockedOut(val secondsRemaining: Long) : UnlockResult
     }
 }

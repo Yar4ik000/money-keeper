@@ -9,6 +9,8 @@ import androidx.annotation.Keep
 import com.moneykeeper.core.database.AppDatabase
 import com.moneykeeper.core.database.DatabaseProvider
 import com.moneykeeper.core.database.security.DatabaseKeyStorage
+import com.moneykeeper.core.database.security.aesGcmDecrypt
+import com.moneykeeper.core.database.security.aesGcmEncrypt
 import com.moneykeeper.core.domain.repository.BackupInfo
 import com.moneykeeper.core.domain.repository.BackupInfoResult
 import com.moneykeeper.core.domain.repository.BackupRepository
@@ -31,9 +33,6 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
 import javax.crypto.AEADBadTagException
-import javax.crypto.Cipher
-import javax.crypto.spec.GCMParameterSpec
-import javax.crypto.spec.SecretKeySpec
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -119,7 +118,7 @@ class BackupRepositoryImpl @Inject constructor(
         } catch (e: Exception) {
             BackupResult.Error(e.message ?: "Ошибка создания резервной копии")
         } finally {
-            tempPlain.delete()
+            shredAndDelete(tempPlain)
         }
     }
 
@@ -202,7 +201,31 @@ class BackupRepositoryImpl @Inject constructor(
         } catch (e: Exception) {
             RestoreResult.Error(e.message ?: "Ошибка восстановления")
         } finally {
-            tempPlain.delete()
+            shredAndDelete(tempPlain)
+        }
+    }
+
+    private fun shredAndDelete(file: File) {
+        if (!file.exists()) return
+        try {
+            val size = file.length()
+            if (size > 0) {
+                file.outputStream().use { out ->
+                    val chunk = ByteArray(minOf(size, 4096L).toInt())
+                    SecureRandom().nextBytes(chunk)
+                    var remaining = size
+                    while (remaining > 0) {
+                        val write = minOf(remaining, chunk.size.toLong()).toInt()
+                        out.write(chunk, 0, write)
+                        remaining -= write
+                    }
+                    out.flush()
+                    out.fd.sync()
+                }
+            }
+        } catch (_: Exception) {
+        } finally {
+            file.delete()
         }
     }
 
@@ -292,13 +315,15 @@ class BackupRepositoryImpl @Inject constructor(
                 while (c.moveToNext()) db.execSQL(c.getString(0))
             }
 
-            // Copy table data
+            // Copy table data — validate names to guard against future schema regressions
+            val tableNameRegex = Regex("^[a-zA-Z_][a-zA-Z0-9_]*$")
             db.rawQuery(
                 "SELECT name FROM src.sqlite_schema WHERE type = 'table' AND name NOT LIKE 'sqlite_%'",
                 null,
             ).use { c ->
                 while (c.moveToNext()) {
                     val t = c.getString(0)
+                    require(t.matches(tableNameRegex)) { "Unexpected table name in backup: $t" }
                     db.execSQL("INSERT INTO \"$t\" SELECT * FROM src.\"$t\"")
                 }
             }
@@ -354,15 +379,4 @@ class BackupRepositoryImpl @Inject constructor(
         return null
     }
 
-    private fun aesGcmEncrypt(plain: ByteArray, key: ByteArray, iv: ByteArray): ByteArray {
-        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
-        cipher.init(Cipher.ENCRYPT_MODE, SecretKeySpec(key, "AES"), GCMParameterSpec(128, iv))
-        return cipher.doFinal(plain)
-    }
-
-    private fun aesGcmDecrypt(cipherText: ByteArray, key: ByteArray, iv: ByteArray): ByteArray {
-        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
-        cipher.init(Cipher.DECRYPT_MODE, SecretKeySpec(key, "AES"), GCMParameterSpec(128, iv))
-        return cipher.doFinal(cipherText)
-    }
 }

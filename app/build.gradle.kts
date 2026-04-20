@@ -82,6 +82,7 @@ dependencies {
     // Lifecycle
     implementation(libs.lifecycle.viewmodel.compose)
     implementation(libs.lifecycle.runtime.compose)
+    implementation(libs.lifecycle.process)
 
     // WorkManager + Hilt integration
     implementation(libs.workmanager.ktx)

@@ -29,9 +29,10 @@ class UnlockViewModel @Inject constructor(
     fun onPasswordSubmit(password: CharArray) = viewModelScope.launch {
         _uiState.update { it.copy(isLoading = true, error = null) }
         when (val result = unlockController.unlockWithPassword(password)) {
-            UnlockController.UnlockResult.Success         -> _uiState.update { it.copy(isLoading = false, unlocked = true) }
-            UnlockController.UnlockResult.WrongPassword   -> _uiState.update { it.copy(isLoading = false, error = UnlockError.WrongPassword) }
+            UnlockController.UnlockResult.Success          -> _uiState.update { it.copy(isLoading = false, unlocked = true) }
+            UnlockController.UnlockResult.WrongPassword    -> _uiState.update { it.copy(isLoading = false, error = UnlockError.WrongPassword) }
             is UnlockController.UnlockResult.DataCorrupted -> _uiState.update { it.copy(isLoading = false, corruptedMessage = result.message) }
+            is UnlockController.UnlockResult.LockedOut     -> _uiState.update { it.copy(isLoading = false, error = UnlockError.LockedOut(result.secondsRemaining)) }
             else -> _uiState.update { it.copy(isLoading = false) }
         }
     }
@@ -60,4 +61,5 @@ data class UnlockUiState(
 sealed interface UnlockError {
     data object WrongPassword : UnlockError
     data object BiometricStale : UnlockError
+    data class LockedOut(val secondsRemaining: Long) : UnlockError
 }

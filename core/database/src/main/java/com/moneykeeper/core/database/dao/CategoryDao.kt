@@ -22,6 +22,9 @@ interface CategoryDao {
     @Query("SELECT * FROM categories WHERE parentCategoryId = :parentId ORDER BY sortOrder ASC")
     fun observeChildren(parentId: Long): Flow<List<CategoryEntity>>
 
+    @Query("SELECT * FROM categories")
+    suspend fun getAll(): List<CategoryEntity>
+
     @Query("SELECT * FROM categories WHERE id = :id")
     suspend fun getById(id: Long): CategoryEntity?
 

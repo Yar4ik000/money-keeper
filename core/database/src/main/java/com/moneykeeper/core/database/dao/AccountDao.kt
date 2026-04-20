@@ -19,6 +19,9 @@ interface AccountDao {
     @Query("SELECT * FROM accounts ORDER BY sortOrder ASC")
     fun observeAll(): Flow<List<AccountEntity>>
 
+    @Query("SELECT * FROM accounts")
+    suspend fun getAll(): List<AccountEntity>
+
     @Query("SELECT * FROM accounts WHERE id = :id")
     suspend fun getById(id: Long): AccountEntity?
 
@@ -38,8 +41,8 @@ interface AccountDao {
     @Update
     suspend fun update(account: AccountEntity)
 
-    @Query("UPDATE accounts SET balance = balance + :delta WHERE id = :id")
-    suspend fun adjustBalance(id: Long, delta: BigDecimal)
+    @Query("UPDATE accounts SET balance = :balance WHERE id = :id")
+    suspend fun setBalance(id: Long, balance: BigDecimal)
 
     @Query("UPDATE accounts SET isArchived = 1 WHERE id = :id")
     suspend fun archive(id: Long)

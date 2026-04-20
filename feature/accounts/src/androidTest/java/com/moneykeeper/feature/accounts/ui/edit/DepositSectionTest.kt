@@ -28,7 +28,7 @@ class DepositSectionTest {
         endDate = LocalDate.of(2026, 1, 1),
         isCapitalized = false,
         capitalizationPeriod = CapPeriod.MONTHLY,
-        notifyDaysBefore = 7,
+        notifyDaysBefore = listOf(7),
         autoRenew = false,
         payoutAccountId = null,
         isActive = true,

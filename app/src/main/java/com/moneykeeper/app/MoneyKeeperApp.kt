@@ -2,6 +2,7 @@ package com.moneykeeper.app
 
 import android.app.Application
 import androidx.hilt.work.HiltWorkerFactory
+import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.work.Configuration
 import com.moneykeeper.app.crash.CrashLogger
 import com.moneykeeper.app.notification.NotificationChannels
@@ -13,6 +14,7 @@ import javax.inject.Inject
 class MoneyKeeperApp : Application(), Configuration.Provider {
 
     @Inject lateinit var workerConfiguration: Configuration
+    @Inject lateinit var autoLockObserver: AppAutoLockObserver
 
     override val workManagerConfiguration get() = workerConfiguration
 
@@ -21,5 +23,6 @@ class MoneyKeeperApp : Application(), Configuration.Provider {
         CrashLogger.install(this)
         NotificationChannels.createAll(this)
         WorkerScheduler.scheduleAll(this)
+        ProcessLifecycleOwner.get().lifecycle.addObserver(autoLockObserver)
     }
 }

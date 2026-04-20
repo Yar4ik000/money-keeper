@@ -17,6 +17,7 @@
     <string name="unlock_button_biometric">Войти отпечатком пальца</string>
     <string name="unlock_error_wrong_password">Неверный пароль</string>
     <string name="unlock_error_biometric_stale">Биометрия устарела. Войдите паролем и настройте биометрию заново.</string>
+    <string name="unlock_error_locked_out">Слишком много попыток. Повторите через %1$d сек.</string>
 
     <!-- ChangePasswordScreen -->
     <string name="change_title">Сменить пароль</string>

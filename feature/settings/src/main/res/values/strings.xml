@@ -26,6 +26,11 @@
     <string name="settings_change_password_subtitle">Изменить мастер-пароль приложения</string>
     <string name="settings_biometric">Биометрическая разблокировка</string>
     <string name="settings_biometric_subtitle">Вход по отпечатку пальца или Face ID</string>
+    <string name="settings_autolock">Автоматическая блокировка</string>
+    <string name="settings_autolock_subtitle">Блокировать приложение при уходе в фон</string>
+    <string name="settings_autolock_never">Никогда</string>
+    <string name="settings_autolock_immediate">Сразу</string>
+    <string name="settings_autolock_minutes">%1$d мин.</string>
 
     <string name="settings_categories">Категории</string>
     <string name="settings_categories_subtitle">Управление категориями операций</string>

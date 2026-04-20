@@ -1,6 +1,7 @@
 package com.moneykeeper.feature.auth.domain
 
 import android.content.Context
+import android.os.Build
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyPermanentlyInvalidatedException
 import android.security.keystore.KeyProperties
@@ -98,15 +99,17 @@ class BiometricEnrollment @Inject constructor(
     private fun ensureKeyExists() {
         val keyStore = KeyStore.getInstance(KEYSTORE_PROVIDER).also { it.load(null) }
         if (keyStore.containsAlias(KEY_ALIAS)) return
-        val spec = KeyGenParameterSpec.Builder(KEY_ALIAS, KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
+        val builder = KeyGenParameterSpec.Builder(KEY_ALIAS, KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
             .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
             .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
             .setKeySize(256)
             .setUserAuthenticationRequired(true)
             .setInvalidatedByBiometricEnrollment(true)
-            .build()
+        if (Build.VERSION.SDK_INT >= 30) {
+            builder.setUserAuthenticationParameters(0, KeyProperties.AUTH_BIOMETRIC_STRONG)
+        }
         KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, KEYSTORE_PROVIDER).run {
-            init(spec)
+            init(builder.build())
             generateKey()
         }
     }
@@ -125,10 +128,10 @@ class BiometricEnrollment @Inject constructor(
                 ContextCompat.getMainExecutor(activity),
                 object : BiometricPrompt.AuthenticationCallback() {
                     override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                        cont.resume(result.cryptoObject?.cipher)
+                        if (cont.isActive) cont.resume(result.cryptoObject?.cipher)
                     }
                     override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
-                        cont.resume(null)
+                        if (cont.isActive) cont.resume(null)
                     }
                     override fun onAuthenticationFailed() { /* retry, не завершаем */ }
                 }

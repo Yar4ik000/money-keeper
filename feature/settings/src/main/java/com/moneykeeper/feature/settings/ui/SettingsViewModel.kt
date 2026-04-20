@@ -36,6 +36,8 @@ class SettingsViewModel @Inject constructor(
 
     fun setCurrency(code: String) = update { copy(currencyCode = code) }
 
+    fun setAutoLockTimeout(minutes: Int) = update { copy(autoLockTimeoutMinutes = minutes) }
+
     private fun update(block: AppSettings.() -> AppSettings) {
         viewModelScope.launch { settingsRepo.updateSettings(settings.value.block()) }
     }

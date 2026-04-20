@@ -11,6 +11,8 @@ data class AppSettings(
     val themeMode: String = "system",
     val currencyCode: String = "RUB",
     val onboardingCompleted: Boolean = false,
+    /** Minutes before auto-lock when app goes to background. -1 = disabled, 0 = immediate. */
+    val autoLockTimeoutMinutes: Int = -1,
 )
 
 interface SettingsRepository {

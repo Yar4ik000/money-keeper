@@ -7,6 +7,7 @@ import com.moneykeeper.core.domain.model.Transaction
 import com.moneykeeper.core.domain.model.TransactionType
 import com.moneykeeper.core.domain.repository.AccountRepository
 import com.moneykeeper.core.domain.repository.TransactionRepository
+import com.moneykeeper.core.domain.repository.TransactionRunner
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -39,6 +40,7 @@ sealed interface TransferError {
 class TransferViewModel @Inject constructor(
     private val accountRepo: AccountRepository,
     private val transactionRepo: TransactionRepository,
+    private val txRunner: TransactionRunner,
 ) : ViewModel() {
 
     val accounts: StateFlow<List<Account>> = accountRepo.observeActiveAccounts()
@@ -67,20 +69,22 @@ class TransferViewModel @Inject constructor(
             return@launch
         }
 
-        transactionRepo.save(
-            Transaction(
-                accountId = fromId,
-                toAccountId = toId,
-                amount = s.amount,
-                type = TransactionType.TRANSFER,
-                categoryId = null,
-                date = s.date,
-                note = s.note,
-                createdAt = LocalDateTime.now(),
+        txRunner.run {
+            transactionRepo.save(
+                Transaction(
+                    accountId = fromId,
+                    toAccountId = toId,
+                    amount = s.amount,
+                    type = TransactionType.TRANSFER,
+                    categoryId = null,
+                    date = s.date,
+                    note = s.note,
+                    createdAt = LocalDateTime.now(),
+                )
             )
-        )
-        accountRepo.adjustBalance(fromId, s.amount.negate())
-        accountRepo.adjustBalance(toId, s.amount)
+            accountRepo.adjustBalance(fromId, s.amount.negate())
+            accountRepo.adjustBalance(toId, s.amount)
+        }
 
         _uiState.update { it.copy(saved = true) }
     }

@@ -81,18 +81,20 @@ fun UnlockScreen(
             Spacer(Modifier.height(8.dp))
             Text(
                 text = when (error) {
-                    UnlockError.WrongPassword  -> stringResource(R.string.unlock_error_wrong_password)
-                    UnlockError.BiometricStale -> stringResource(R.string.unlock_error_biometric_stale)
+                    UnlockError.WrongPassword   -> stringResource(R.string.unlock_error_wrong_password)
+                    UnlockError.BiometricStale  -> stringResource(R.string.unlock_error_biometric_stale)
+                    is UnlockError.LockedOut    -> stringResource(R.string.unlock_error_locked_out, error.secondsRemaining)
                 },
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodySmall,
             )
         }
 
+        val isLockedOut = uiState.error is UnlockError.LockedOut
         Spacer(Modifier.height(24.dp))
         Button(
             onClick = { viewModel.onPasswordSubmit(password.toCharArray()) },
-            enabled = !uiState.isLoading,
+            enabled = !uiState.isLoading && !isLockedOut,
             modifier = Modifier.fillMaxWidth(),
         ) {
             if (uiState.isLoading) {
@@ -109,7 +111,7 @@ fun UnlockScreen(
                     val activity = context as? FragmentActivity ?: return@OutlinedButton
                     viewModel.onBiometricClick(activity)
                 },
-                enabled = !uiState.isLoading,
+                enabled = !uiState.isLoading && !isLockedOut,
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Icon(Icons.Outlined.Fingerprint, contentDescription = null)

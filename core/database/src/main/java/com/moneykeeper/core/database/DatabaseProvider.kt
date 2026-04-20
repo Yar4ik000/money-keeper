@@ -46,7 +46,6 @@ class DatabaseProvider @Inject constructor(
         val database = Room.databaseBuilder(context, AppDatabase::class.java, AppDatabase.DB_NAME)
             .openHelperFactory(factory)
             .addMigrations(*AppDatabase.MIGRATIONS)
-            .fallbackToDestructiveMigration(dropAllTables = true)
             .addCallback(PrepopulateCallback(context))
             .build()
 

@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.security.MessageDigest
 import java.security.SecureRandom
 import javax.inject.Inject
 
@@ -42,7 +43,10 @@ class ChangePasswordViewModel @Inject constructor(
             val params = keyStorage.readKdfParams()
             val oldDerived = derivation.derive(oldPw, salt, params.iterations, params.memoryKb, params.parallelism)
 
-            if (!oldDerived.contentEquals(masterKeyHolder.require())) {
+            val currentKey = masterKeyHolder.require()
+            val passwordMatches = MessageDigest.isEqual(oldDerived, currentKey)
+            currentKey.fill(0)
+            if (!passwordMatches) {
                 oldDerived.fill(0)
                 _uiState.update { it.copy(isLoading = false, error = ChangeError.WrongOldPassword) }
                 return@launch

@@ -85,6 +85,7 @@ fun SettingsScreen(
     var showTimePicker by remember { mutableStateOf(false) }
     var showThemeDialog by remember { mutableStateOf(false) }
     var showCurrencyDialog by remember { mutableStateOf(false) }
+    var showAutoLockDialog by remember { mutableStateOf(false) }
 
     val themeLabel = when (settings.themeMode) {
         "light" -> stringResource(R.string.theme_light)
@@ -186,6 +187,20 @@ fun SettingsScreen(
                 headlineContent = { Text(stringResource(R.string.settings_change_password)) },
                 supportingContent = { Text(stringResource(R.string.settings_change_password_subtitle)) },
                 modifier = Modifier.clickable(onClick = onChangePassword),
+            )
+
+            val autoLockLabel = when (settings.autoLockTimeoutMinutes) {
+                -1   -> stringResource(R.string.settings_autolock_never)
+                0    -> stringResource(R.string.settings_autolock_immediate)
+                1    -> stringResource(R.string.settings_autolock_minutes, 1)
+                else -> stringResource(R.string.settings_autolock_minutes, settings.autoLockTimeoutMinutes)
+            }
+            ListItem(
+                leadingContent = { Icon(Icons.Outlined.Lock, contentDescription = null) },
+                headlineContent = { Text(stringResource(R.string.settings_autolock)) },
+                supportingContent = { Text(stringResource(R.string.settings_autolock_subtitle)) },
+                trailingContent = { Text(autoLockLabel, style = MaterialTheme.typography.bodyMedium) },
+                modifier = Modifier.clickable { showAutoLockDialog = true },
             )
 
             if (securityViewModel.isBiometricAvailable) {
@@ -329,6 +344,40 @@ fun SettingsScreen(
             },
             confirmButton = {
                 TextButton(onClick = { showCurrencyDialog = false }) { Text(stringResource(android.R.string.cancel)) }
+            },
+        )
+    }
+
+    if (showAutoLockDialog) {
+        val autoLockOptions = listOf(
+            -1 to stringResource(R.string.settings_autolock_never),
+            0  to stringResource(R.string.settings_autolock_immediate),
+            1  to stringResource(R.string.settings_autolock_minutes, 1),
+            5  to stringResource(R.string.settings_autolock_minutes, 5),
+            15 to stringResource(R.string.settings_autolock_minutes, 15),
+            30 to stringResource(R.string.settings_autolock_minutes, 30),
+        )
+        AlertDialog(
+            onDismissRequest = { showAutoLockDialog = false },
+            title = { Text(stringResource(R.string.settings_autolock)) },
+            text = {
+                Column {
+                    autoLockOptions.forEach { (minutes, label) ->
+                        ListItem(
+                            headlineContent = { Text(label) },
+                            leadingContent = {
+                                RadioButton(
+                                    selected = settings.autoLockTimeoutMinutes == minutes,
+                                    onClick = { viewModel.setAutoLockTimeout(minutes); showAutoLockDialog = false },
+                                )
+                            },
+                            modifier = Modifier.clickable { viewModel.setAutoLockTimeout(minutes); showAutoLockDialog = false },
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showAutoLockDialog = false }) { Text(stringResource(android.R.string.cancel)) }
             },
         )
     }

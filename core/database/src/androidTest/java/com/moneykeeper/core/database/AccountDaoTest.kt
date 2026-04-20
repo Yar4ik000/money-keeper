@@ -92,21 +92,24 @@ class AccountDaoTest {
     @Test
     fun adjustBalance_addsPositiveDelta() = runTest {
         val id = dao.upsert(account("Card", balance = BigDecimal("500.00")))
-        dao.adjustBalance(id, BigDecimal("200.00"))
+        val current = dao.getById(id)!!.balance
+        dao.setBalance(id, current + BigDecimal("200.00"))
         assertAmount(BigDecimal("700.00"), dao.getById(id)!!.balance)
     }
 
     @Test
     fun adjustBalance_subtractsNegativeDelta() = runTest {
         val id = dao.upsert(account("Card", balance = BigDecimal("1000.00")))
-        dao.adjustBalance(id, BigDecimal("-300.00"))
+        val current = dao.getById(id)!!.balance
+        dao.setBalance(id, current + BigDecimal("-300.00"))
         assertAmount(BigDecimal("700.00"), dao.getById(id)!!.balance)
     }
 
     @Test
     fun adjustBalance_canProduceNegativeBalance() = runTest {
         val id = dao.upsert(account("Card", balance = BigDecimal("100.00")))
-        dao.adjustBalance(id, BigDecimal("-500.00"))
+        val current = dao.getById(id)!!.balance
+        dao.setBalance(id, current + BigDecimal("-500.00"))
         assertAmount(BigDecimal("-400.00"), dao.getById(id)!!.balance)
     }
 

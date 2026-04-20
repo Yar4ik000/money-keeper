@@ -35,6 +35,9 @@ interface TransactionDao {
     """)
     fun observeRecent(limit: Int): Flow<List<TransactionEntity>>
 
+    @Query("SELECT * FROM transactions ORDER BY date DESC, createdAt DESC")
+    suspend fun getAll(): List<TransactionEntity>
+
     @Query("SELECT * FROM transactions WHERE id = :id")
     suspend fun getById(id: Long): TransactionEntity?
 

@@ -15,7 +15,7 @@ import com.moneykeeper.core.domain.model.TransactionWithMeta
 import com.moneykeeper.core.domain.repository.TransactionRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import java.time.LocalDate
 
@@ -39,8 +39,8 @@ class TransactionRepositoryImpl(
         to: LocalDate,
     ): Flow<List<TransactionWithMeta>> = combine(
         txDao.observe(accountId, categoryId, type?.name, from.toString(), to.toString()),
-        accountDao.observeAll(),
-        categoryDao.observeAll(),
+        accountDao.observeAll().distinctUntilChanged(),
+        categoryDao.observeAll().distinctUntilChanged(),
     ) { txs, accounts, categories ->
         val accById = accounts.associateBy { it.id }
         val catById = categories.associateBy { it.id }
@@ -60,8 +60,8 @@ class TransactionRepositoryImpl(
 
     override fun observeRecent(limit: Int): Flow<List<TransactionWithMeta>> = combine(
         txDao.observeRecent(limit),
-        accountDao.observeAll(),
-        categoryDao.observeAll(),
+        accountDao.observeAll().distinctUntilChanged(),
+        categoryDao.observeAll().distinctUntilChanged(),
     ) { txs, accounts, categories ->
         val accById = accounts.associateBy { it.id }
         val catById = categories.associateBy { it.id }
@@ -109,8 +109,25 @@ class TransactionRepositoryImpl(
             rows.map { MonthlyBarEntry(it.yearMonth, it.income, it.expense) }
         }
 
-    override suspend fun getAll(): List<TransactionWithMeta> =
-        observe(from = LocalDate.of(2000, 1, 1), to = LocalDate.of(2099, 12, 31)).first()
+    override suspend fun getAll(): List<TransactionWithMeta> {
+        val txs = txDao.getAll()
+        val accounts = accountDao.getAll()
+        val categories = categoryDao.getAll()
+        val accById = accounts.associateBy { it.id }
+        val catById = categories.associateBy { it.id }
+        return txs.mapNotNull { tx ->
+            val acc = accById[tx.accountId] ?: return@mapNotNull null
+            val cat = tx.categoryId?.let { catById[it] }
+            TransactionWithMeta(
+                transaction = tx.toDomain(),
+                accountName = acc.name,
+                accountCurrency = acc.currency,
+                categoryName = cat?.name.orEmpty(),
+                categoryColor = cat?.colorHex ?: "#9E9E9E",
+                categoryIcon = cat?.iconName ?: "HelpOutline",
+            )
+        }
+    }
 
     override suspend fun getById(id: Long): Transaction? = txDao.getById(id)?.toDomain()
 

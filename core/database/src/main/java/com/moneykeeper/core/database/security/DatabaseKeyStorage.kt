@@ -85,6 +85,43 @@ class DatabaseKeyStorage @Inject constructor(
 
     fun wipe() = prefs.edit().clear().apply()
 
+    // --- Rate-limiting for password unlock ---
+
+    fun getFailedAttempts(): Int = prefs.getInt(KEY_FAILED_ATTEMPTS, 0)
+
+    fun getLockoutUntilMs(): Long = prefs.getLong(KEY_LOCKOUT_UNTIL_MS, 0L)
+
+    fun recordFailedAttempt(): Int {
+        val count = getFailedAttempts() + 1
+        val lockoutMs = when {
+            count >= WIPE_THRESHOLD -> {
+                wipe()
+                return count
+            }
+            count >= LOCKOUT_THRESHOLD -> System.currentTimeMillis() + lockoutDurationMs(count)
+            else -> 0L
+        }
+        prefs.edit()
+            .putInt(KEY_FAILED_ATTEMPTS, count)
+            .putLong(KEY_LOCKOUT_UNTIL_MS, lockoutMs)
+            .apply()
+        return count
+    }
+
+    fun resetFailedAttempts() {
+        prefs.edit()
+            .putInt(KEY_FAILED_ATTEMPTS, 0)
+            .putLong(KEY_LOCKOUT_UNTIL_MS, 0L)
+            .apply()
+    }
+
+    private fun lockoutDurationMs(failedCount: Int): Long {
+        // Exponential backoff starting at 30 s, capped at 1 h
+        val exponent = (failedCount - LOCKOUT_THRESHOLD).coerceAtLeast(0)
+        val seconds = minOf(30L * (1L shl exponent), 3_600L)
+        return seconds * 1_000L
+    }
+
     // --- Biometric wrap (§3.7) ---
 
     fun writeBiometricWrap(ciphertext: ByteArray, iv: ByteArray) {
@@ -126,7 +163,7 @@ class DatabaseKeyStorage @Inject constructor(
     }
 
     private companion object {
-        const val PREFS_FILE          = "money_keeper_secure_prefs"
+        const val PREFS_FILE           = "money_keeper_secure_prefs"
         const val KEY_ENCRYPTED_DB_KEY = "encrypted_db_key_v1"
         const val KEY_DB_KEY_IV        = "db_key_iv_v1"
         const val KEY_KDF_SALT         = "kdf_salt_v1"
@@ -136,5 +173,9 @@ class DatabaseKeyStorage @Inject constructor(
         const val SALT_SIZE            = 16
         const val KEY_BIO_WRAPPED_KEY  = "bio_wrapped_master_key_v1"
         const val KEY_BIO_WRAP_IV      = "bio_wrap_iv_v1"
+        const val KEY_FAILED_ATTEMPTS  = "failed_unlock_attempts_v1"
+        const val KEY_LOCKOUT_UNTIL_MS = "lockout_until_ms_v1"
+        const val LOCKOUT_THRESHOLD    = 5   // start blocking after 5 failures
+        const val WIPE_THRESHOLD       = 10  // wipe all data after 10 consecutive failures
     }
 }
