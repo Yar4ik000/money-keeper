@@ -1,0 +1,5 @@
+<resources>
+    <string name="settings_title">Настройки</string>
+    <string name="settings_categories">Категории</string>
+    <string name="settings_categories_subtitle">Управление категориями операций</string>
+</resources>

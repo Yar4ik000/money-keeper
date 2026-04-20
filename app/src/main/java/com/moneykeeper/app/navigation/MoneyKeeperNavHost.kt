@@ -33,6 +33,7 @@ import com.moneykeeper.app.R
 import com.moneykeeper.feature.accounts.navigation.accountsGraph
 import com.moneykeeper.feature.analytics.navigation.analyticsGraph
 import com.moneykeeper.feature.dashboard.navigation.dashboardGraph
+import com.moneykeeper.feature.settings.navigation.settingsGraph
 import com.moneykeeper.feature.transactions.navigation.transactionsGraph
 
 /** Маршруты, на которых показывается глобальный FAB «Новая операция».
@@ -70,6 +71,7 @@ fun MoneyKeeperNavHost(
             accountsGraph(navController)
             transactionsGraph(navController)
             analyticsGraph(navController)
+            settingsGraph(navController)
             composable(Screen.Forecast.route)    { StubScreen(R.string.nav_forecast) }
         }
     }

@@ -17,7 +17,7 @@ fun NavGraphBuilder.dashboardGraph(navController: NavController) {
             },
             onSeeAllTransactions = { navController.navigate("analytics/history") },
             onDepositClick = { accountId -> navController.navigate("accounts/$accountId") },
-            onSettings = { /* TODO §10 settings screen */ },
+            onSettings = { navController.navigate("settings") },
             onTransactionClick = { id -> navController.navigate("transactions/$id/edit") },
         )
     }
