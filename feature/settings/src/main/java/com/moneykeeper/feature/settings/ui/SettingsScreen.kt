@@ -1,11 +1,15 @@
 package com.moneykeeper.feature.settings.ui
 
+import android.content.Intent
+import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.core.content.FileProvider
+import java.io.File
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Label
@@ -14,6 +18,7 @@ import androidx.compose.material.icons.outlined.AccountBalance
 import androidx.compose.material.icons.outlined.Backup
 import androidx.compose.material.icons.outlined.CurrencyExchange
 import androidx.compose.material.icons.outlined.Fingerprint
+import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Notifications
@@ -213,6 +218,29 @@ fun SettingsScreen(
 
             HorizontalDivider()
             SectionHeader(stringResource(R.string.settings_section_about))
+
+            ListItem(
+                leadingContent = { Icon(Icons.Outlined.BugReport, contentDescription = null) },
+                headlineContent = { Text(stringResource(R.string.settings_share_logs)) },
+                supportingContent = { Text(stringResource(R.string.settings_share_logs_subtitle)) },
+                modifier = Modifier.clickable {
+                    val logDir = File(context.filesDir, "crash_logs")
+                    val files = logDir.takeIf { it.exists() }?.listFiles()?.toList() ?: emptyList()
+                    if (files.isEmpty()) {
+                        Toast.makeText(context, context.getString(R.string.settings_no_logs), Toast.LENGTH_SHORT).show()
+                        return@clickable
+                    }
+                    val uris = files.map { file ->
+                        FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+                    }
+                    val intent = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
+                        type = "text/plain"
+                        putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(uris))
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                    context.startActivity(Intent.createChooser(intent, null))
+                },
+            )
 
             ListItem(
                 leadingContent = { Icon(Icons.Outlined.Info, contentDescription = null) },

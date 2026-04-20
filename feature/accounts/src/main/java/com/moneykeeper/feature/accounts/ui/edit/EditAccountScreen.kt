@@ -61,6 +61,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.moneykeeper.core.domain.model.AccountType
 import com.moneykeeper.core.domain.model.CapPeriod
 import com.moneykeeper.core.domain.model.Deposit
+import com.moneykeeper.core.ui.util.ACCOUNT_ICON_OPTIONS
+import com.moneykeeper.core.ui.util.accountIconVector
 import com.moneykeeper.core.ui.util.ThousandsVisualTransformation
 import com.moneykeeper.feature.accounts.R
 import com.moneykeeper.feature.accounts.ui.list.parseColor
@@ -171,6 +173,38 @@ fun EditAccountScreen(
                             )
                             .clickable { viewModel.onColorChange(hex) },
                     )
+                }
+            }
+
+            // Icon picker
+            Text(stringResource(R.string.edit_account_icon), style = MaterialTheme.typography.labelLarge)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                ACCOUNT_ICON_OPTIONS.forEach { (name, vector) ->
+                    val isSelected = state.iconName == name
+                    Box(
+                        Modifier
+                            .size(44.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(
+                                if (isSelected) MaterialTheme.colorScheme.primaryContainer
+                                else MaterialTheme.colorScheme.surfaceVariant
+                            )
+                            .border(
+                                width = if (isSelected) 2.dp else 0.dp,
+                                color = MaterialTheme.colorScheme.primary,
+                                shape = RoundedCornerShape(8.dp),
+                            )
+                            .clickable { viewModel.onIconChange(name) },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = vector,
+                            contentDescription = null,
+                            tint = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer
+                                   else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(24.dp),
+                        )
+                    }
                 }
             }
 

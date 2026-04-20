@@ -17,16 +17,19 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.moneykeeper.core.domain.model.Account
+import com.moneykeeper.core.ui.util.accountIconVector
 import com.moneykeeper.core.ui.util.formatAsCurrency
 import com.moneykeeper.core.ui.util.parseHexColor
 
@@ -68,7 +71,15 @@ private fun AccountCard(account: Account, onClick: () -> Unit) {
                     .clip(CircleShape)
                     .background(accentColor.copy(alpha = 0.3f))
                     .align(Alignment.TopEnd),
-            )
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = accountIconVector(account.iconName),
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(16.dp),
+                )
+            }
             Column(modifier = Modifier.align(Alignment.BottomStart)) {
                 Text(
                     text = account.name,

@@ -35,6 +35,7 @@
     <string name="edit_account_type">Тип счёта</string>
     <string name="edit_account_currency">Валюта</string>
     <string name="edit_account_color">Цвет</string>
+    <string name="edit_account_icon">Иконка</string>
     <string name="edit_account_initial_balance">Начальный баланс</string>
     <string name="edit_account_save">Сохранить</string>
 

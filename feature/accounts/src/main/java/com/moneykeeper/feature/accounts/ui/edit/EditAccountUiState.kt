@@ -12,7 +12,7 @@ data class EditAccountUiState(
     val type: AccountType = AccountType.CARD,
     val currency: String = "RUB",
     val colorHex: String = "#4CAF50",
-    val iconName: String = "AccountBalance",
+    val iconName: String = "bank",
     /** Raw text in the balance field — may contain trailing "." while user is typing. */
     val balanceInput: String = "",
     val deposit: Deposit? = null,

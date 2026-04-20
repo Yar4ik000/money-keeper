@@ -33,6 +33,9 @@
     <string name="settings_budgets_subtitle">Лимиты расходов по категориям</string>
     <string name="settings_backup">Резервное копирование</string>
     <string name="settings_backup_subtitle">Экспорт данных и создание резервных копий</string>
+    <string name="settings_share_logs">Отправить логи</string>
+    <string name="settings_share_logs_subtitle">Поделиться журналом ошибок для диагностики</string>
+    <string name="settings_no_logs">Журнал ошибок пуст</string>
 
     <string name="backup_title">Резервное копирование</string>
     <string name="backup_export_csv">Экспорт в CSV</string>

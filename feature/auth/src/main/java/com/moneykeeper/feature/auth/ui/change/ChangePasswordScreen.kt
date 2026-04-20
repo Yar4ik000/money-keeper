@@ -4,12 +4,15 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.outlined.Visibility
+import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -44,6 +47,9 @@ fun ChangePasswordScreen(
     var oldPw   by remember { mutableStateOf("") }
     var newPw   by remember { mutableStateOf("") }
     var confirm by remember { mutableStateOf("") }
+    var oldVisible     by remember { mutableStateOf(false) }
+    var newVisible     by remember { mutableStateOf(false) }
+    var confirmVisible by remember { mutableStateOf(false) }
 
     val pwOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
 
@@ -70,26 +76,41 @@ fun ChangePasswordScreen(
                 value = oldPw, onValueChange = { oldPw = it; viewModel.clearError() },
                 label = { Text(stringResource(R.string.change_old_label)) },
                 singleLine = true,
-                visualTransformation = PasswordVisualTransformation(),
+                visualTransformation = if (oldVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 keyboardOptions = pwOptions, modifier = Modifier.fillMaxWidth(),
                 isError = uiState.error == ChangeError.WrongOldPassword,
+                trailingIcon = {
+                    IconButton(onClick = { oldVisible = !oldVisible }) {
+                        Icon(if (oldVisible) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility, contentDescription = null)
+                    }
+                },
             )
             Spacer(Modifier.height(12.dp))
             OutlinedTextField(
                 value = newPw, onValueChange = { newPw = it; viewModel.clearError() },
                 label = { Text(stringResource(R.string.change_new_label)) },
                 singleLine = true,
-                visualTransformation = PasswordVisualTransformation(),
+                visualTransformation = if (newVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 keyboardOptions = pwOptions, modifier = Modifier.fillMaxWidth(),
+                trailingIcon = {
+                    IconButton(onClick = { newVisible = !newVisible }) {
+                        Icon(if (newVisible) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility, contentDescription = null)
+                    }
+                },
             )
             Spacer(Modifier.height(12.dp))
             OutlinedTextField(
                 value = confirm, onValueChange = { confirm = it; viewModel.clearError() },
                 label = { Text(stringResource(R.string.change_confirm_label)) },
                 singleLine = true,
-                visualTransformation = PasswordVisualTransformation(),
+                visualTransformation = if (confirmVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 keyboardOptions = pwOptions, modifier = Modifier.fillMaxWidth(),
                 isError = uiState.error == ChangeError.Mismatch,
+                trailingIcon = {
+                    IconButton(onClick = { confirmVisible = !confirmVisible }) {
+                        Icon(if (confirmVisible) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility, contentDescription = null)
+                    }
+                },
             )
 
             uiState.error?.let { error ->
