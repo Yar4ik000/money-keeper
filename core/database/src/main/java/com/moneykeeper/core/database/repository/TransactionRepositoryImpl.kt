@@ -15,6 +15,7 @@ import com.moneykeeper.core.domain.model.TransactionWithMeta
 import com.moneykeeper.core.domain.repository.TransactionRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import java.time.LocalDate
 
@@ -107,6 +108,9 @@ class TransactionRepositoryImpl(
         txDao.observeMonthlyTrend(currency, from.toString(), to.toString()).map { rows ->
             rows.map { MonthlyBarEntry(it.yearMonth, it.income, it.expense) }
         }
+
+    override suspend fun getAll(): List<TransactionWithMeta> =
+        observe(from = LocalDate.of(2000, 1, 1), to = LocalDate.of(2099, 12, 31)).first()
 
     override suspend fun getById(id: Long): Transaction? = txDao.getById(id)?.toDomain()
 

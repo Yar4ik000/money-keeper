@@ -1,12 +1,13 @@
 package com.moneykeeper.feature.auth.domain
 
+import com.moneykeeper.core.domain.repository.KeyDerivation
 import org.bouncycastle.crypto.generators.Argon2BytesGenerator
 import org.bouncycastle.crypto.params.Argon2Parameters
 import javax.inject.Inject
 
-class MasterKeyDerivation @Inject constructor() {
+class MasterKeyDerivation @Inject constructor() : KeyDerivation {
 
-    fun derive(
+    override fun derive(
         password: CharArray,
         salt: ByteArray,
         iterations: Int,

@@ -34,8 +34,11 @@ sealed class Screen(val route: String) {
         fun buildRoute(id: Long): String = "transactions/$id/edit"
     }
 
-    data object Settings   : Screen("settings")
-    data object Categories : Screen("transactions/categories")
+    data object Settings    : Screen("settings")
+    data object Categories  : Screen("transactions/categories")
+    data object Backup      : Screen("settings/backup")
+    data object Budgets     : Screen("settings/budgets")
+    data object Onboarding  : Screen("onboarding")
 
     data object History : Screen("analytics/history")
 

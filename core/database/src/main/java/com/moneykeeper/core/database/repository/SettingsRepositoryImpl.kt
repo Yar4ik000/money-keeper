@@ -24,13 +24,14 @@ class SettingsRepositoryImpl @Inject constructor(
 ) : SettingsRepository {
 
     private object Keys {
-        val DEPOSIT_NOTIFICATIONS = booleanPreferencesKey("deposit_notifications_enabled")
-        val RECURRING_REMINDERS   = booleanPreferencesKey("recurring_reminders_enabled")
-        val DEFAULT_NOTIFY_DAYS   = intPreferencesKey("default_notify_days_before")
-        val NOTIFICATION_HOUR     = intPreferencesKey("notification_hour")
-        val NOTIFICATION_MINUTE   = intPreferencesKey("notification_minute")
-        val THEME_MODE            = stringPreferencesKey("theme_mode")
-        val CURRENCY_CODE         = stringPreferencesKey("currency_code")
+        val DEPOSIT_NOTIFICATIONS  = booleanPreferencesKey("deposit_notifications_enabled")
+        val RECURRING_REMINDERS    = booleanPreferencesKey("recurring_reminders_enabled")
+        val DEFAULT_NOTIFY_DAYS    = intPreferencesKey("default_notify_days_before")
+        val NOTIFICATION_HOUR      = intPreferencesKey("notification_hour")
+        val NOTIFICATION_MINUTE    = intPreferencesKey("notification_minute")
+        val THEME_MODE             = stringPreferencesKey("theme_mode")
+        val CURRENCY_CODE          = stringPreferencesKey("currency_code")
+        val ONBOARDING_COMPLETED   = booleanPreferencesKey("onboarding_completed")
     }
 
     override val settings: Flow<AppSettings> = context.dataStore.data.map { prefs ->
@@ -42,6 +43,7 @@ class SettingsRepositoryImpl @Inject constructor(
             notificationMinute          = prefs[Keys.NOTIFICATION_MINUTE] ?: 0,
             themeMode                   = prefs[Keys.THEME_MODE] ?: "system",
             currencyCode                = prefs[Keys.CURRENCY_CODE] ?: "RUB",
+            onboardingCompleted         = prefs[Keys.ONBOARDING_COMPLETED] ?: false,
         )
     }
 
@@ -54,6 +56,7 @@ class SettingsRepositoryImpl @Inject constructor(
             prefs[Keys.NOTIFICATION_MINUTE]   = settings.notificationMinute
             prefs[Keys.THEME_MODE]            = settings.themeMode
             prefs[Keys.CURRENCY_CODE]         = settings.currencyCode
+            prefs[Keys.ONBOARDING_COMPLETED]  = settings.onboardingCompleted
         }
     }
 }

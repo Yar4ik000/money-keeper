@@ -25,6 +25,7 @@ interface TransactionRepository {
     fun observeByAccount(currency: String, from: LocalDate, to: LocalDate, type: TransactionType): Flow<List<AccountSum>>
     fun observeMonthlyTrend(currency: String, from: LocalDate, to: LocalDate): Flow<List<MonthlyBarEntry>>
 
+    suspend fun getAll(): List<TransactionWithMeta>
     suspend fun getById(id: Long): Transaction?
     suspend fun getByIds(ids: Set<Long>): List<Transaction>
     suspend fun save(transaction: Transaction): Long

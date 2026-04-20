@@ -21,24 +21,22 @@ class SettingsViewModel @Inject constructor(
     val settings: StateFlow<AppSettings> = settingsRepo.settings
         .stateIn(viewModelScope, SharingStarted.Eagerly, AppSettings())
 
-    fun toggleDepositNotifications(enabled: Boolean) {
-        viewModelScope.launch {
-            settingsRepo.updateSettings(settings.value.copy(depositNotificationsEnabled = enabled))
-        }
-    }
+    fun toggleDepositNotifications(enabled: Boolean) = update { copy(depositNotificationsEnabled = enabled) }
 
-    fun toggleRecurringReminders(enabled: Boolean) {
-        viewModelScope.launch {
-            settingsRepo.updateSettings(settings.value.copy(recurringRemindersEnabled = enabled))
-        }
-    }
+    fun toggleRecurringReminders(enabled: Boolean) = update { copy(recurringRemindersEnabled = enabled) }
 
     fun updateNotificationTime(hour: Int, minute: Int) {
         viewModelScope.launch {
-            settingsRepo.updateSettings(
-                settings.value.copy(notificationHour = hour, notificationMinute = minute)
-            )
+            settingsRepo.updateSettings(settings.value.copy(notificationHour = hour, notificationMinute = minute))
             workScheduler.rescheduleNotifications(hour, minute)
         }
+    }
+
+    fun setThemeMode(mode: String) = update { copy(themeMode = mode) }
+
+    fun setCurrency(code: String) = update { copy(currencyCode = code) }
+
+    private fun update(block: AppSettings.() -> AppSettings) {
+        viewModelScope.launch { settingsRepo.updateSettings(settings.value.block()) }
     }
 }

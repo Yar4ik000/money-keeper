@@ -10,6 +10,7 @@ data class AppSettings(
     val notificationMinute: Int = 0,
     val themeMode: String = "system",
     val currencyCode: String = "RUB",
+    val onboardingCompleted: Boolean = false,
 )
 
 interface SettingsRepository {

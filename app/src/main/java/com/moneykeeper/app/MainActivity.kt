@@ -8,6 +8,7 @@ import androidx.activity.viewModels
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.moneykeeper.app.navigation.MoneyKeeperNavHost
+import com.moneykeeper.app.navigation.Screen
 import com.moneykeeper.core.ui.theme.MoneyKeeperTheme
 import com.moneykeeper.core.ui.theme.ThemeMode
 import com.moneykeeper.feature.auth.state.AuthGateViewModel
@@ -15,18 +16,27 @@ import com.moneykeeper.feature.auth.state.AuthState
 import com.moneykeeper.feature.auth.ui.corrupted.DataCorruptedScreen
 import com.moneykeeper.feature.auth.ui.setup.SetupPasswordScreen
 import com.moneykeeper.feature.auth.ui.unlock.UnlockScreen
+import com.moneykeeper.feature.settings.ui.onboarding.OnboardingScreen
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
     private val authGateViewModel: AuthGateViewModel by viewModels()
+    private val mainViewModel: MainViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            MoneyKeeperTheme(themeMode = ThemeMode.SYSTEM) {
+            val settings by mainViewModel.settings.collectAsStateWithLifecycle()
+            val themeMode = when (settings.themeMode) {
+                "light" -> ThemeMode.LIGHT
+                "dark" -> ThemeMode.DARK
+                else -> ThemeMode.SYSTEM
+            }
+
+            MoneyKeeperTheme(themeMode = themeMode) {
                 val authState by authGateViewModel.state.collectAsStateWithLifecycle()
 
                 when (authState) {
@@ -37,7 +47,13 @@ class MainActivity : ComponentActivity() {
                         onUnlocked  = authGateViewModel::onUnlocked,
                         onCorrupted = authGateViewModel::onCorrupted,
                     )
-                    AuthState.Unlocked -> MoneyKeeperNavHost()
+                    AuthState.Unlocked -> {
+                        if (!settings.onboardingCompleted) {
+                            OnboardingScreen(onFinished = { mainViewModel.completeOnboarding() })
+                        } else {
+                            MoneyKeeperNavHost()
+                        }
+                    }
                     is AuthState.DataCorrupted -> DataCorruptedScreen(
                         message = (authState as AuthState.DataCorrupted).message,
                         onWiped = authGateViewModel::onWiped,

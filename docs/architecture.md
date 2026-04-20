@@ -718,6 +718,40 @@ UnlockController.notifyUnlocked() после databaseProvider.initialize()
 
 ---
 
+## §10 — Settings, Polish & Export
+
+### Тема из настроек
+
+`MainActivity` инжектирует `MainViewModel` (обёртка над `SettingsRepository`). `themeMode: String` ("system"/"light"/"dark") читается из DataStore и маппируется в `ThemeMode` enum из `core:ui`. `MoneyKeeperTheme` оборачивает всю `setContent`-ветку, включая auth-экраны, — тема меняется без перезапуска Activity.
+
+### Онбординг
+
+`AppSettings.onboardingCompleted: Boolean` хранится в DataStore. После успешного unlock `MainActivity` проверяет этот флаг: если `false` — показывает `OnboardingScreen` вместо `MoneyKeeperNavHost`. `OnboardingScreen` — 3 страницы через `HorizontalPager` (Compose Foundation), на третьей — запрос разрешения `POST_NOTIFICATIONS`. `OnboardingViewModel.completeOnboarding()` пишет `onboardingCompleted = true`, экран заменяется NavHost автоматически через State.
+
+### CSV-экспорт
+
+`ExportCsvUseCase` в `feature:settings/domain/`. Вызывает `transactionRepo.getAll()` (метод добавлен в интерфейс `TransactionRepository`, impl использует `observe(from=2000, to=2099).first()`). CSV: разделитель `;`, BOM `\uFEFF` для Excel, экранирование RFC 4180 (`CsvEscape.kt`). Запуск через SAF `ActivityResultContracts.CreateDocument("text/csv")`.
+
+### Резервное копирование (зашифрованный бэкап)
+
+**Интерфейсы в `core:domain`:**
+- `MasterKeyProvider.requireKey()` — `MasterKeyHolder` реализует интерфейс; биндинг в `AuthBindingsModule`
+- `KeyDerivation.derive(...)` — `MasterKeyDerivation` реализует интерфейс; биндинг в `AuthBindingsModule`
+- `BackupRepository` — `createBackup(uri)`, `getBackupInfo(uri)`, `restoreBackup(uri, password)`, `restartProcess(activity)`
+
+**`BackupRepositoryImpl` в `core:database`:**
+- Backup: `masterKey` из `MasterKeyProvider` → WAL checkpoint → SQLCipher `cipher_export` plain-дамп → AES-GCM шифрование → zip с `manifest.json` + `database.enc`
+- Restore: читает `manifest.json` → Argon2id из пароля пользователя → расшифровка `database.enc` → пишет в `*.restore-pending` → `Files.move(ATOMIC_MOVE)` → `exitProcess(0)`
+- Совместимость: `manifest.databaseVersion > AppDatabase.VERSION` → `IncompatibleVersion` (отказ без изменения файлов)
+
+**UI:** `BackupScreen` с тремя SAF-лаунчерами (CSV, backup, restore), диалог ввода пароля для restore, финальный диалог «Перезапустить».
+
+### Бюджеты
+
+`BudgetsViewModel` объединяет `BudgetRepository.observeAll()`, `CategoryRepository.observeByType(EXPENSE)`, `TransactionRepository.observeByCategory(...)` через Kotlin `combine`. Экран: `LazyColumn` карточек с `LinearProgressIndicator` (красный при > 100%), FAB для добавления нового бюджета (AlertDialog с выбором категории, суммой и периодом MONTHLY/WEEKLY).
+
+---
+
 ## Соглашения по коду
 
 - **Все строки** в `strings.xml`. Никаких захардкоженных русских слов в `.kt`.

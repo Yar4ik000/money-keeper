@@ -1,0 +1,294 @@
+package com.moneykeeper.core.database.repository
+
+import android.app.Activity
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.util.Base64
+import androidx.annotation.Keep
+import com.moneykeeper.core.database.AppDatabase
+import com.moneykeeper.core.database.DatabaseProvider
+import com.moneykeeper.core.database.security.DatabaseKeyStorage
+import com.moneykeeper.core.domain.repository.BackupInfo
+import com.moneykeeper.core.domain.repository.BackupInfoResult
+import com.moneykeeper.core.domain.repository.BackupRepository
+import com.moneykeeper.core.domain.repository.BackupResult
+import com.moneykeeper.core.domain.repository.KeyDerivation
+import com.moneykeeper.core.domain.repository.MasterKeyProvider
+import com.moneykeeper.core.domain.repository.RestoreResult
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import java.io.File
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
+import java.security.SecureRandom
+import java.time.Instant
+import java.util.zip.ZipEntry
+import java.util.zip.ZipInputStream
+import java.util.zip.ZipOutputStream
+import javax.crypto.AEADBadTagException
+import javax.crypto.Cipher
+import javax.crypto.spec.GCMParameterSpec
+import javax.crypto.spec.SecretKeySpec
+import javax.inject.Inject
+import javax.inject.Singleton
+
+@Serializable
+@Keep
+private data class BackupManifest(
+    val appVersionCode: Int,
+    val databaseVersion: Int,
+    val createdAt: String,
+    val kdf: KdfSpec,
+    @SerialName("dbEncIv") val dbEncIv: String,
+) {
+    @Serializable
+    @Keep
+    data class KdfSpec(
+        val salt: String,
+        val iterations: Int,
+        val memoryKb: Int,
+        val parallelism: Int,
+    )
+
+    companion object {
+        const val MANIFEST_ENTRY = "manifest.json"
+        const val DB_ENTRY = "database.enc"
+    }
+}
+
+@Singleton
+class BackupRepositoryImpl @Inject constructor(
+    @ApplicationContext private val context: Context,
+    private val databaseProvider: DatabaseProvider,
+    private val masterKeyProvider: MasterKeyProvider,
+    private val keyDerivation: KeyDerivation,
+    private val keyStorage: DatabaseKeyStorage,
+) : BackupRepository {
+
+    private val json = Json { ignoreUnknownKeys = true }
+
+    override suspend fun createBackup(uri: Uri): BackupResult = withContext(Dispatchers.IO) {
+        val tempPlain = File(context.cacheDir, "backup_plain_${System.currentTimeMillis()}.db")
+        try {
+            val masterKey = masterKeyProvider.requireKey()
+            try {
+                exportPlainDump(databaseProvider.require(), tempPlain)
+
+                val iv = ByteArray(12).also { SecureRandom().nextBytes(it) }
+                val cipherText = aesGcmEncrypt(tempPlain.readBytes(), masterKey, iv)
+
+                val kdfParams = keyStorage.readKdfParams()
+                val kdfSalt = keyStorage.readOrCreateKdfSalt()
+
+                val appVersion = try {
+                    context.packageManager.getPackageInfo(context.packageName, 0).longVersionCode.toInt()
+                } catch (_: Exception) { 1 }
+
+                val manifest = BackupManifest(
+                    appVersionCode = appVersion,
+                    databaseVersion = AppDatabase.VERSION,
+                    createdAt = Instant.now().toString(),
+                    kdf = BackupManifest.KdfSpec(
+                        salt = Base64.encodeToString(kdfSalt, Base64.NO_WRAP),
+                        iterations = kdfParams.iterations,
+                        memoryKb = kdfParams.memoryKb,
+                        parallelism = kdfParams.parallelism,
+                    ),
+                    dbEncIv = Base64.encodeToString(iv, Base64.NO_WRAP),
+                )
+
+                context.contentResolver.openOutputStream(uri)?.use { out ->
+                    ZipOutputStream(out).use { zip ->
+                        zip.putNextEntry(ZipEntry(BackupManifest.MANIFEST_ENTRY))
+                        zip.write(json.encodeToString(manifest).toByteArray(Charsets.UTF_8))
+                        zip.closeEntry()
+                        zip.putNextEntry(ZipEntry(BackupManifest.DB_ENTRY))
+                        zip.write(cipherText)
+                        zip.closeEntry()
+                    }
+                }
+                BackupResult.Success
+            } finally {
+                masterKey.fill(0)
+            }
+        } catch (e: Exception) {
+            BackupResult.Error(e.message ?: "Ошибка создания резервной копии")
+        } finally {
+            tempPlain.delete()
+        }
+    }
+
+    override suspend fun getBackupInfo(uri: Uri): BackupInfoResult = withContext(Dispatchers.IO) {
+        try {
+            val manifest = readManifest(uri)
+                ?: return@withContext BackupInfoResult.Error("Файл повреждён: manifest.json не найден")
+            if (manifest.databaseVersion > AppDatabase.VERSION) {
+                return@withContext BackupInfoResult.IncompatibleVersion(
+                    "Резервная копия создана более новой версией приложения (БД v${manifest.databaseVersion}). Обновите приложение."
+                )
+            }
+            val appVersion = try {
+                context.packageManager.getPackageInfo(context.packageName, 0).longVersionCode.toInt()
+            } catch (_: Exception) { 1 }
+            BackupInfoResult.Ready(
+                BackupInfo(
+                    createdAt = manifest.createdAt,
+                    databaseVersion = manifest.databaseVersion,
+                    appVersionCode = appVersion,
+                )
+            )
+        } catch (e: Exception) {
+            BackupInfoResult.Error(e.message ?: "Ошибка чтения резервной копии")
+        }
+    }
+
+    override suspend fun restoreBackup(uri: Uri, password: CharArray): RestoreResult = withContext(Dispatchers.IO) {
+        val tempPlain = File(context.cacheDir, "restore_plain_${System.currentTimeMillis()}.db")
+        try {
+            val manifest = readManifest(uri)
+                ?: return@withContext RestoreResult.Error("Файл повреждён: manifest.json не найден")
+
+            val salt = Base64.decode(manifest.kdf.salt, Base64.NO_WRAP)
+            val backupMasterKey = keyDerivation.derive(
+                password = password,
+                salt = salt,
+                iterations = manifest.kdf.iterations,
+                memoryKb = manifest.kdf.memoryKb,
+                parallelism = manifest.kdf.parallelism,
+            )
+            try {
+                val cipherText = readDbEnc(uri)
+                    ?: return@withContext RestoreResult.Error("Файл повреждён: database.enc не найден")
+                val iv = Base64.decode(manifest.dbEncIv, Base64.NO_WRAP)
+                val plain = try {
+                    aesGcmDecrypt(cipherText, backupMasterKey, iv)
+                } catch (_: AEADBadTagException) {
+                    return@withContext RestoreResult.WrongPassword
+                }
+                tempPlain.writeBytes(plain)
+            } finally {
+                backupMasterKey.fill(0)
+                password.fill(0.toChar())
+            }
+
+            databaseProvider.close()
+            val dbFile = context.getDatabasePath(AppDatabase.DB_NAME)
+            val dbParent = dbFile.parentFile ?: error("DB parent dir is null")
+            val pending = File(dbParent, "${dbFile.name}.restore-pending")
+            pending.delete()
+
+            val currentDbKey = getCurrentDbKey()
+            try {
+                importPlainIntoEncrypted(tempPlain, pending, currentDbKey)
+            } catch (e: Exception) {
+                pending.delete()
+                return@withContext RestoreResult.Error("Ошибка импорта: ${e.message.orEmpty()}")
+            } finally {
+                currentDbKey.fill(0)
+            }
+
+            File(dbParent, "${dbFile.name}-wal").delete()
+            File(dbParent, "${dbFile.name}-shm").delete()
+            Files.move(pending.toPath(), dbFile.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+
+            RestoreResult.Success
+        } catch (e: Exception) {
+            RestoreResult.Error(e.message ?: "Ошибка восстановления")
+        } finally {
+            tempPlain.delete()
+        }
+    }
+
+    override fun restartProcess(activity: Activity) {
+        val launch = context.packageManager.getLaunchIntentForPackage(context.packageName)!!
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+        activity.startActivity(launch)
+        activity.finishAffinity()
+        kotlin.system.exitProcess(0)
+    }
+
+    private fun exportPlainDump(db: AppDatabase, target: File) {
+        val helper = db.openHelper.writableDatabase
+        // PRAGMA wal_checkpoint doesn't return rows — execSQL is fine
+        helper.execSQL("PRAGMA wal_checkpoint(FULL)")
+        target.delete()
+        // ATTACH/DETACH don't return rows — execSQL is fine
+        // Escape single quotes in path (cache dir paths never contain them, but be safe)
+        val safePath = target.absolutePath.replace("'", "''")
+        helper.execSQL("ATTACH DATABASE '$safePath' AS plaintext KEY ''")
+        // sqlcipher_export returns a value — Room's execSQL rejects SELECT; use query() instead
+        helper.query("SELECT sqlcipher_export('plaintext')").use { it.moveToFirst() }
+        helper.execSQL("DETACH DATABASE plaintext")
+    }
+
+    private fun importPlainIntoEncrypted(plainDb: File, target: File, dbKey: ByteArray) {
+        val db = net.zetetic.database.sqlcipher.SQLiteDatabase.openDatabase(
+            plainDb.absolutePath, "".toByteArray(), null,
+            net.zetetic.database.sqlcipher.SQLiteDatabase.OPEN_READWRITE, null, null,
+        )
+        try {
+            val keyHex = dbKey.joinToString("") { "%02x".format(it) }
+            db.execSQL("ATTACH DATABASE ? AS enc KEY \"x'$keyHex'\"", arrayOf<Any>(target.absolutePath))
+            db.execSQL("SELECT sqlcipher_export('enc')")
+            db.execSQL("DETACH DATABASE enc")
+        } finally {
+            db.close()
+        }
+    }
+
+    private fun getCurrentDbKey(): ByteArray {
+        val masterKey = masterKeyProvider.requireKey()
+        try {
+            val enc = keyStorage.readEncryptedDbKey()
+                ?: error("Encrypted db_key отсутствует")
+            return aesGcmDecrypt(enc.ciphertext, masterKey, enc.iv)
+        } finally {
+            masterKey.fill(0)
+        }
+    }
+
+    private fun readManifest(uri: Uri): BackupManifest? {
+        context.contentResolver.openInputStream(uri)?.use { input ->
+            ZipInputStream(input).use { zip ->
+                var entry = zip.nextEntry
+                while (entry != null) {
+                    if (entry.name == BackupManifest.MANIFEST_ENTRY) {
+                        return json.decodeFromString(zip.readBytes().toString(Charsets.UTF_8))
+                    }
+                    entry = zip.nextEntry
+                }
+            }
+        }
+        return null
+    }
+
+    private fun readDbEnc(uri: Uri): ByteArray? {
+        context.contentResolver.openInputStream(uri)?.use { input ->
+            ZipInputStream(input).use { zip ->
+                var entry = zip.nextEntry
+                while (entry != null) {
+                    if (entry.name == BackupManifest.DB_ENTRY) return zip.readBytes()
+                    entry = zip.nextEntry
+                }
+            }
+        }
+        return null
+    }
+
+    private fun aesGcmEncrypt(plain: ByteArray, key: ByteArray, iv: ByteArray): ByteArray {
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        cipher.init(Cipher.ENCRYPT_MODE, SecretKeySpec(key, "AES"), GCMParameterSpec(128, iv))
+        return cipher.doFinal(plain)
+    }
+
+    private fun aesGcmDecrypt(cipherText: ByteArray, key: ByteArray, iv: ByteArray): ByteArray {
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        cipher.init(Cipher.DECRYPT_MODE, SecretKeySpec(key, "AES"), GCMParameterSpec(128, iv))
+        return cipher.doFinal(cipherText)
+    }
+}
