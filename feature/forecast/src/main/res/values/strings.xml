@@ -1,0 +1,16 @@
+<resources>
+    <string name="forecast_preset_3m">3 мес.</string>
+    <string name="forecast_preset_6m">6 мес.</string>
+    <string name="forecast_preset_1y">1 год</string>
+    <string name="forecast_preset_2y">2 года</string>
+    <string name="forecast_confirm">Готово</string>
+    <string name="forecast_cancel">Отмена</string>
+    <string name="forecast_now">Сейчас</string>
+    <string name="forecast_at_date">К дате</string>
+    <string name="forecast_delta">Прирост: %s</string>
+    <string name="forecast_by_account">По счетам</string>
+    <string name="forecast_events_title">Ожидаемые события</string>
+    <string name="forecast_no_events">Нет запланированных событий</string>
+    <string name="forecast_no_accounts">Нет активных счетов</string>
+    <string name="forecast_error">Ошибка расчёта прогноза</string>
+</resources>

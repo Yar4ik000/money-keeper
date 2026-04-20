@@ -273,15 +273,16 @@ private fun AccountCard(
 
 @Composable
 private fun DepositProgressRow(deposit: Deposit, today: LocalDate) {
-    val totalDays = ChronoUnit.DAYS.between(deposit.startDate, deposit.endDate).coerceAtLeast(1)
-    val passedDays = ChronoUnit.DAYS.between(deposit.startDate, today.coerceAtMost(deposit.endDate)).coerceAtLeast(0)
+    val endDate = deposit.endDate ?: return
+    val totalDays = ChronoUnit.DAYS.between(deposit.startDate, endDate).coerceAtLeast(1)
+    val passedDays = ChronoUnit.DAYS.between(deposit.startDate, today.coerceAtMost(endDate)).coerceAtLeast(0)
     val progress = passedDays.toFloat() / totalDays.toFloat()
-    val daysLeft = ChronoUnit.DAYS.between(today, deposit.endDate).coerceAtLeast(0)
+    val daysLeft = ChronoUnit.DAYS.between(today, endDate).coerceAtLeast(0)
     val formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy").withLocale(AppLocale.current())
 
     Column(Modifier.padding(top = 4.dp)) {
         Text(
-            text = stringResource(R.string.deposit_days_left, deposit.endDate.format(formatter), daysLeft),
+            text = stringResource(R.string.deposit_days_left, endDate.format(formatter), daysLeft),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

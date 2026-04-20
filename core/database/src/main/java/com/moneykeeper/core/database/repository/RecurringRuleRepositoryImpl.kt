@@ -55,7 +55,7 @@ class RecurringRuleRepositoryImpl(
             templateTransaction = template.toDomain(),
             accountName = account.name,
             categoryName = category?.name.orEmpty(),
-            description = category?.name ?: account.name,
+            description = template.note.takeIf { it.isNotBlank() } ?: category?.name ?: account.name,
         )
     }
 }

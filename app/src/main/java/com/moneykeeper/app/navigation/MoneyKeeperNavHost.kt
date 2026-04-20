@@ -1,24 +1,18 @@
 package com.moneykeeper.app.navigation
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.AccountBalanceWallet
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Analytics
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
@@ -26,41 +20,22 @@ import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.moneykeeper.app.R
 import com.moneykeeper.feature.accounts.navigation.accountsGraph
 import com.moneykeeper.feature.analytics.navigation.analyticsGraph
 import com.moneykeeper.feature.dashboard.navigation.dashboardGraph
+import com.moneykeeper.feature.forecast.navigation.forecastGraph
 import com.moneykeeper.feature.settings.navigation.settingsGraph
 import com.moneykeeper.feature.transactions.navigation.transactionsGraph
-
-/** Маршруты, на которых показывается глобальный FAB «Новая операция».
- *  Dashboard и Analytics имеют собственный FAB/навигацию. */
-private val GLOBAL_FAB_ROUTES = setOf(Screen.Forecast.route)
 
 @Composable
 fun MoneyKeeperNavHost(
     navController: NavHostController = rememberNavController(),
 ) {
-    val backStackEntry by navController.currentBackStackEntryAsState()
-    val showGlobalFab = backStackEntry?.destination?.route in GLOBAL_FAB_ROUTES
-
     Scaffold(
         bottomBar = { MoneyKeeperBottomBar(navController) },
-        floatingActionButton = {
-            if (showGlobalFab) {
-                FloatingActionButton(
-                    onClick = { navController.navigate(Screen.AddTransaction.buildRoute()) },
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Add,
-                        contentDescription = stringResource(R.string.nav_add_transaction),
-                    )
-                }
-            }
-        },
     ) { padding ->
         NavHost(
             navController = navController,
@@ -72,7 +47,7 @@ fun MoneyKeeperNavHost(
             transactionsGraph(navController)
             analyticsGraph(navController)
             settingsGraph(navController)
-            composable(Screen.Forecast.route)    { StubScreen(R.string.nav_forecast) }
+            forecastGraph(navController)
         }
     }
 }
@@ -119,12 +94,3 @@ private fun MoneyKeeperBottomBar(navController: NavHostController) {
     }
 }
 
-@Composable
-private fun StubScreen(titleRes: Int) {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text(
-            text = stringResource(R.string.screen_placeholder, stringResource(titleRes)),
-            style = MaterialTheme.typography.titleMedium,
-        )
-    }
-}

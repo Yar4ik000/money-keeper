@@ -17,6 +17,7 @@ import com.moneykeeper.core.database.entity.CategoryEntity
 import com.moneykeeper.core.database.entity.DepositEntity
 import com.moneykeeper.core.database.entity.RecurringRuleEntity
 import com.moneykeeper.core.database.entity.TransactionEntity
+import com.moneykeeper.core.database.migration.MIGRATION_2_3
 
 @Database(
     entities = [
@@ -29,8 +30,6 @@ import com.moneykeeper.core.database.entity.TransactionEntity
     ],
     version = AppDatabase.VERSION,
     exportSchema = true,
-    // При каждом bump версии — добавлять AutoMigration(from = N, to = N+1) здесь
-    autoMigrations = [],
 )
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
@@ -44,9 +43,8 @@ abstract class AppDatabase : RoomDatabase() {
 
     companion object {
         const val DB_NAME = "money_keeper.db"
-        const val VERSION = 2
+        const val VERSION = 3
 
-        // Ручные миграции — когда AutoMigration не справляется (переименование колонок, преобразование данных)
-        val MIGRATIONS: Array<Migration> = arrayOf()
+        val MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_2_3)
     }
 }

@@ -46,9 +46,16 @@
     <string name="deposit_end_date">Дата окончания</string>
     <string name="deposit_capitalization_label">Начислять проценты на проценты</string>
     <string name="deposit_cap_period">Период капитализации</string>
+    <string name="deposit_cap_daily">Ежедневно</string>
     <string name="deposit_cap_monthly">Ежемесячно</string>
     <string name="deposit_cap_quarterly">Ежеквартально</string>
     <string name="deposit_cap_yearly">Ежегодно</string>
+    <string name="savings_params_title">Параметры накопительного счёта</string>
+    <string name="deposit_add_rate_tier">Добавить период с другой ставкой</string>
+    <string name="deposit_rate_tiers">Ступенчатая ставка</string>
+    <string name="deposit_remove_rate_tiers">Использовать единую ставку</string>
+    <string name="deposit_tier_from_start">С начала</string>
+    <string name="deposit_tier_from_date">С даты</string>
     <string name="deposit_notify_days">Уведомить за (дней)</string>
     <string name="deposit_forecast_title">Прогноз</string>
     <string name="deposit_forecast_total">Итого к получению</string>

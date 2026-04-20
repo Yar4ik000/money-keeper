@@ -13,12 +13,16 @@ data class EditAccountUiState(
     val currency: String = "RUB",
     val colorHex: String = "#4CAF50",
     val iconName: String = "AccountBalance",
-    val initialBalance: BigDecimal = BigDecimal.ZERO,
+    /** Raw text in the balance field — may contain trailing "." while user is typing. */
+    val balanceInput: String = "0",
     val deposit: Deposit? = null,
     val createdAt: LocalDate? = null,
     val saved: Boolean = false,
     val error: EditAccountError? = null,
-)
+) {
+    val initialBalance: BigDecimal
+        get() = balanceInput.replace(",", ".").toBigDecimalOrNull() ?: BigDecimal.ZERO
+}
 
 sealed interface EditAccountError {
     data object NameEmpty : EditAccountError
@@ -30,10 +34,8 @@ sealed interface EditAccountError {
     data class Domain(val error: DomainError) : EditAccountError
 }
 
-/** Дефолтный вклад при переключении типа на DEPOSIT. */
 fun defaultDeposit(accountId: Long = 0L): Deposit = Deposit(
-    id = 0L,
-    accountId = accountId,
+    id = 0L, accountId = accountId,
     initialAmount = BigDecimal.ZERO,
     interestRate = BigDecimal("10.0"),
     startDate = LocalDate.now(),
@@ -41,7 +43,17 @@ fun defaultDeposit(accountId: Long = 0L): Deposit = Deposit(
     isCapitalized = false,
     capitalizationPeriod = CapPeriod.MONTHLY,
     notifyDaysBefore = listOf(7),
-    autoRenew = false,
-    payoutAccountId = null,
-    isActive = true,
+    autoRenew = false, payoutAccountId = null, isActive = true,
+)
+
+fun defaultSavingsDeposit(accountId: Long = 0L): Deposit = Deposit(
+    id = 0L, accountId = accountId,
+    initialAmount = BigDecimal.ZERO,
+    interestRate = BigDecimal("5.0"),
+    startDate = LocalDate.now(),
+    endDate = null,
+    isCapitalized = true,
+    capitalizationPeriod = CapPeriod.DAILY,
+    notifyDaysBefore = emptyList(),
+    autoRenew = false, payoutAccountId = null, isActive = true,
 )

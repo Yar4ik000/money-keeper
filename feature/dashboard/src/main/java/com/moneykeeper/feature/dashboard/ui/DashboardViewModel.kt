@@ -38,13 +38,14 @@ class DashboardViewModel @Inject constructor(
             accounts = accounts,
             monthlySummary = summary,
             recentTransactions = recent,
-            expiringDeposits = expiring.map { deposit ->
+            expiringDeposits = expiring.mapNotNull { deposit ->
+                val endDate = deposit.endDate ?: return@mapNotNull null
                 DepositWithDaysLeft(
                     deposit = deposit,
                     accountName = accounts.find { it.id == deposit.accountId }?.name ?: "",
-                    daysLeft = ChronoUnit.DAYS.between(LocalDate.now(), deposit.endDate).toInt()
+                    daysLeft = ChronoUnit.DAYS.between(LocalDate.now(), endDate).toInt()
                         .coerceAtLeast(0),
-                    projectedAmount = DepositCalculator.projectedBalance(deposit, deposit.endDate),
+                    projectedAmount = DepositCalculator.projectedBalance(deposit, endDate),
                 )
             },
         )

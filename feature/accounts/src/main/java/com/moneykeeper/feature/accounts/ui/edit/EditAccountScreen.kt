@@ -60,6 +60,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.moneykeeper.core.domain.model.AccountType
 import com.moneykeeper.core.domain.model.CapPeriod
 import com.moneykeeper.core.domain.model.Deposit
+import com.moneykeeper.core.ui.util.ThousandsVisualTransformation
 import com.moneykeeper.feature.accounts.R
 import com.moneykeeper.feature.accounts.ui.list.parseColor
 import java.math.BigDecimal
@@ -171,27 +172,27 @@ fun EditAccountScreen(
                 }
             }
 
-            // Initial balance (hidden for DEPOSIT — balance = deposit.initialAmount)
-            if (state.type != AccountType.DEPOSIT) {
+            // Initial balance (hidden for DEPOSIT/SAVINGS — balance = deposit.initialAmount)
+            if (state.type != AccountType.DEPOSIT && state.type != AccountType.SAVINGS) {
                 OutlinedTextField(
-                    value = state.initialBalance.toPlainString(),
-                    onValueChange = { v ->
-                        v.toBigDecimalOrNull()?.let { viewModel.onBalanceChange(it) }
-                    },
+                    value = state.balanceInput,
+                    onValueChange = viewModel::onBalanceInputChange,
                     label = { Text(stringResource(R.string.edit_account_initial_balance)) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    visualTransformation = ThousandsVisualTransformation,
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
 
-            // Deposit section
-            if (state.type == AccountType.DEPOSIT) {
+            // Deposit / savings section
+            if (state.type == AccountType.DEPOSIT || state.type == AccountType.SAVINGS) {
                 DepositSection(
-                    deposit = state.deposit ?: defaultDeposit(),
+                    deposit = state.deposit ?: if (state.type == AccountType.SAVINGS) defaultSavingsDeposit() else defaultDeposit(),
                     onChange = viewModel::onDepositChange,
                     error = state.error,
                     isNewDeposit = accountId == null,
+                    isSavings = state.type == AccountType.SAVINGS,
                 )
             }
 

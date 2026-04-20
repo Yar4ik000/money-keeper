@@ -64,7 +64,7 @@ fun ExpiringDepositsWidget(
                         Text("$daysText · ${item.projectedAmount.formatAsCurrency()}")
                     },
                     trailingContent = {
-                        Text(item.deposit.endDate.format(DATE_FMT))
+                        Text(item.deposit.endDate?.format(DATE_FMT) ?: "")
                     },
                     modifier = Modifier.clickable { onDepositClick(item.deposit.accountId) },
                 )

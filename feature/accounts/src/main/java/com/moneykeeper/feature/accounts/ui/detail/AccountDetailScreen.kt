@@ -157,16 +157,17 @@ private fun AccountSummaryCard(account: Account, deposit: Deposit?) {
                 Spacer(Modifier.height(8.dp))
                 val dateFormatter = remember { DateTimeFormatter.ofPattern("dd.MM.yyyy").withLocale(AppLocale.current()) }
                 val projected = DepositCalculator.projectedBalance(deposit, today)
+                val effectiveEnd = deposit.endDate ?: today
                 val interest = DepositCalculator.simpleInterest(
                     deposit.initialAmount, deposit.interestRate, deposit.startDate,
-                    today.coerceAtMost(deposit.endDate),
+                    today.coerceAtMost(effectiveEnd),
                 )
                 Text(
                     "${stringResource(R.string.deposit_rate)}: ${deposit.interestRate.toPlainString()}%",
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 Text(
-                    "${deposit.startDate.format(dateFormatter)} – ${deposit.endDate.format(dateFormatter)}",
+                    "${deposit.startDate.format(dateFormatter)}${deposit.endDate?.let { " – ${it.format(dateFormatter)}" } ?: ""}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

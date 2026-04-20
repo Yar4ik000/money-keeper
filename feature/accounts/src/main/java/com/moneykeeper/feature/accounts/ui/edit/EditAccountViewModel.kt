@@ -5,7 +5,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.moneykeeper.core.domain.model.Account
 import com.moneykeeper.core.domain.model.AccountType
-import com.moneykeeper.core.domain.model.CapPeriod
 import com.moneykeeper.core.domain.model.Deposit
 import com.moneykeeper.core.domain.repository.AccountRepository
 import com.moneykeeper.core.domain.repository.DepositRepository
@@ -42,7 +41,7 @@ class EditAccountViewModel @Inject constructor(
                         currency = account.currency,
                         colorHex = account.colorHex,
                         iconName = account.iconName,
-                        initialBalance = account.balance,
+                        balanceInput = account.balance.toPlainString(),
                         createdAt = account.createdAt,
                     )
                 }
@@ -58,7 +57,11 @@ class EditAccountViewModel @Inject constructor(
     fun onTypeChange(type: AccountType) = _uiState.update { s ->
         s.copy(
             type = type,
-            deposit = if (type == AccountType.DEPOSIT) s.deposit ?: defaultDeposit() else null,
+            deposit = when (type) {
+                AccountType.DEPOSIT -> s.deposit ?: defaultDeposit()
+                AccountType.SAVINGS -> s.deposit ?: defaultSavingsDeposit()
+                else -> null
+            },
             error = null,
         )
     }
@@ -69,7 +72,10 @@ class EditAccountViewModel @Inject constructor(
 
     fun onIconChange(iconName: String) = _uiState.update { it.copy(iconName = iconName) }
 
-    fun onBalanceChange(balance: BigDecimal) = _uiState.update { it.copy(initialBalance = balance) }
+    fun onBalanceInputChange(input: String) {
+        val filtered = input.replace(",", ".").filter { it.isDigit() || it == '.' }
+        _uiState.update { it.copy(balanceInput = filtered, error = null) }
+    }
 
     fun onDepositChange(deposit: Deposit) = _uiState.update { it.copy(deposit = deposit, error = null) }
 
@@ -80,8 +86,11 @@ class EditAccountViewModel @Inject constructor(
             return@launch
         }
 
-        val effectiveBalance: BigDecimal = when (s.type) {
-            AccountType.DEPOSIT -> {
+        val isSavingsType = s.type == AccountType.SAVINGS
+        val isDepositType = s.type == AccountType.DEPOSIT
+
+        val effectiveBalance: BigDecimal = when {
+            isDepositType || isSavingsType -> {
                 val deposit = s.deposit ?: run {
                     _uiState.update { it.copy(error = EditAccountError.DepositParamsMissing) }
                     return@launch
@@ -94,13 +103,16 @@ class EditAccountViewModel @Inject constructor(
                     _uiState.update { it.copy(error = EditAccountError.DepositRateInvalid) }
                     return@launch
                 }
-                if (!deposit.endDate.isAfter(deposit.startDate)) {
-                    _uiState.update { it.copy(error = EditAccountError.DepositDateInvalid) }
-                    return@launch
-                }
-                if (accountId == null && deposit.endDate.isBefore(LocalDate.now())) {
-                    _uiState.update { it.copy(error = EditAccountError.DepositEndDatePast) }
-                    return@launch
+                if (isDepositType) {
+                    val endDate = deposit.endDate
+                    if (endDate == null || !endDate.isAfter(deposit.startDate)) {
+                        _uiState.update { it.copy(error = EditAccountError.DepositDateInvalid) }
+                        return@launch
+                    }
+                    if (accountId == null && endDate.isBefore(LocalDate.now())) {
+                        _uiState.update { it.copy(error = EditAccountError.DepositEndDatePast) }
+                        return@launch
+                    }
                 }
                 deposit.initialAmount
             }
@@ -125,7 +137,7 @@ class EditAccountViewModel @Inject constructor(
         )
         val id = if (accountId != null) accountId else savedId
 
-        if (s.type == AccountType.DEPOSIT && s.deposit != null) {
+        if ((isDepositType || isSavingsType) && s.deposit != null) {
             depositRepo.save(s.deposit.copy(accountId = id))
         }
 
