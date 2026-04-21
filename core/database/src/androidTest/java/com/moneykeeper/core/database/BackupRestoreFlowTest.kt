@@ -138,11 +138,25 @@ class BackupRestoreFlowTest {
 
         // ── Step 5: restore from backup ───────────────────────────────────────
         // Password value is irrelevant — the fake KeyDerivation always returns masterKey.
+        // After restore, the DB stays OPEN — only the .restore-pending file is written.
+        // The live DB is untouched until restartProcess() does the atomic swap.
         val restoreResult = backupRepo.restoreBackup(backupUri, "ignored".toCharArray())
         assertTrue("restoreBackup must succeed, got: $restoreResult",
             restoreResult is RestoreResult.Success)
 
-        // ── Step 6: re-open DB (mirrors the process restart the app normally does) ──
+        // ── Step 6: simulate restartProcess() — close + atomic file swap + re-open ──
+        // In production this is done on the Main thread just before exitProcess(0).
+        databaseProvider.close()
+        val dbFile = context.getDatabasePath(AppDatabase.DB_NAME)
+        val pending = java.io.File(dbFile.parentFile!!, "${dbFile.name}.restore-pending")
+        assertTrue("restore-pending file must exist", pending.exists())
+        java.io.File(dbFile.parentFile!!, "${dbFile.name}-wal").delete()
+        java.io.File(dbFile.parentFile!!, "${dbFile.name}-shm").delete()
+        java.nio.file.Files.move(
+            pending.toPath(), dbFile.toPath(),
+            java.nio.file.StandardCopyOption.ATOMIC_MOVE,
+            java.nio.file.StandardCopyOption.REPLACE_EXISTING,
+        )
         databaseProvider.initialize(dbKey.copyOf())
 
         // ── Step 7: assertions ────────────────────────────────────────────────
