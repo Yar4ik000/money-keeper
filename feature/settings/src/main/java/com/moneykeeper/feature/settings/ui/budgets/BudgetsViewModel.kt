@@ -8,6 +8,7 @@ import com.moneykeeper.core.domain.model.BudgetPeriod
 import com.moneykeeper.core.domain.model.Category
 import com.moneykeeper.core.domain.model.CategoryType
 import com.moneykeeper.core.domain.model.TransactionType
+import com.moneykeeper.core.domain.model.TransactionWithMeta
 import com.moneykeeper.core.domain.repository.AccountRepository
 import com.moneykeeper.core.domain.repository.BudgetRepository
 import com.moneykeeper.core.domain.repository.CategoryRepository
@@ -59,13 +60,7 @@ class BudgetsViewModel @Inject constructor(
 
         BudgetsUiState(
             items = budgets.map { budget ->
-                val spent = txWithMeta
-                    .filter { meta ->
-                        meta.transaction.type == TransactionType.EXPENSE &&
-                        (budget.categoryIds.isEmpty() || meta.transaction.categoryId in budget.categoryIds) &&
-                        (budget.accountIds.isEmpty() || meta.transaction.accountId in budget.accountIds)
-                    }
-                    .fold(BigDecimal.ZERO) { acc, meta -> acc + meta.transaction.amount }
+                val spent = calculateBudgetSpent(budget, txWithMeta)
 
                 val budgetCategories = if (budget.categoryIds.isEmpty()) emptyList()
                     else budget.categoryIds.mapNotNull { catById[it] }
@@ -92,3 +87,22 @@ class BudgetsViewModel @Inject constructor(
 
     fun delete(id: Long) = viewModelScope.launch { budgetRepo.delete(id) }
 }
+
+/**
+ * Sums expense amounts that belong to [budget]. A transaction is counted only if:
+ * - type is EXPENSE
+ * - the source account's currency matches the budget's currency
+ * - category matches (or budget targets all categories)
+ * - account matches (or budget targets all accounts)
+ */
+internal fun calculateBudgetSpent(
+    budget: Budget,
+    txWithMeta: List<TransactionWithMeta>,
+): BigDecimal = txWithMeta
+    .filter { meta ->
+        meta.transaction.type == TransactionType.EXPENSE &&
+        meta.accountCurrency == budget.currency &&
+        (budget.categoryIds.isEmpty() || meta.transaction.categoryId in budget.categoryIds) &&
+        (budget.accountIds.isEmpty() || meta.transaction.accountId in budget.accountIds)
+    }
+    .fold(BigDecimal.ZERO) { acc, meta -> acc + meta.transaction.amount }

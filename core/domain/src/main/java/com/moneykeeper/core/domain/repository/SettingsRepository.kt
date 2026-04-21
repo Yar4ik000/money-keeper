@@ -13,6 +13,8 @@ data class AppSettings(
     val onboardingCompleted: Boolean = false,
     /** Minutes before auto-lock when app goes to background. -1 = disabled, 0 = immediate. */
     val autoLockTimeoutMinutes: Int = -1,
+    /** Allow screenshots and screen recording. When false, FLAG_SECURE is set. */
+    val allowScreenshots: Boolean = true,
 )
 
 interface SettingsRepository {

@@ -63,6 +63,9 @@ import com.moneykeeper.core.ui.util.categoryIconVector
 import com.moneykeeper.core.ui.util.parseHexColor
 import com.moneykeeper.feature.settings.R
 import java.math.BigDecimal
+import kotlin.math.roundToInt
+
+private val SUPPORTED_CURRENCIES = listOf("RUB", "USD", "EUR", "GBP", "CNY", "BYN", "KZT")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -126,10 +129,12 @@ private fun BudgetCard(
     onEdit: () -> Unit,
     onDelete: () -> Unit,
 ) {
-    val progress = if (item.budget.amount > BigDecimal.ZERO)
-        (item.spent / item.budget.amount).toFloat().coerceIn(0f, 1f)
-    else 0f
+    val rawRatio = if (item.budget.amount > BigDecimal.ZERO)
+        item.spent.toDouble() / item.budget.amount.toDouble()
+    else 0.0
+    val progress = rawRatio.toFloat().coerceIn(0f, 1f)
     val overBudget = item.spent > item.budget.amount
+    val percent = (rawRatio * 100).roundToInt()
 
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -142,7 +147,15 @@ private fun BudgetCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                Text("${item.spent.toPlainString()} / ${item.budget.amount.toPlainString()}")
+                Column(horizontalAlignment = Alignment.End) {
+                    Text("${item.spent.toPlainString()} / ${item.budget.amount.toPlainString()} ${item.budget.currency}")
+                    Text(
+                        text = "$percent%",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (overBudget) Color(0xFFD32F2F)
+                                else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
                 IconButton(onClick = onEdit) {
                     Icon(Icons.Default.Edit, contentDescription = null)
                 }
@@ -171,6 +184,9 @@ private fun BudgetDialog(
     var amount by rememberSaveable(existing) { mutableStateOf(existing?.amount?.toPlainString() ?: "") }
     var period by remember(existing) { mutableStateOf(existing?.period ?: BudgetPeriod.MONTHLY) }
     var periodExpanded by remember { mutableStateOf(false) }
+    var currency by remember(existing) { mutableStateOf(existing?.currency ?: "RUB") }
+    var currencyExpanded by remember { mutableStateOf(false) }
+    val filteredAccounts = accounts.filter { it.currency == currency }
 
     // Category multi-select
     val initialAllCategories = remember(existing) { existing?.categoryIds?.isEmpty() ?: true }
@@ -232,6 +248,36 @@ private fun BudgetDialog(
                     }
                 }
 
+                // ── Currency ───────────────────────────────────────────────────
+                ExposedDropdownMenuBox(
+                    expanded = currencyExpanded,
+                    onExpandedChange = { currencyExpanded = it },
+                ) {
+                    OutlinedTextField(
+                        value = currency,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text(stringResource(R.string.budgets_currency)) },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(currencyExpanded) },
+                        modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth(),
+                    )
+                    ExposedDropdownMenu(expanded = currencyExpanded, onDismissRequest = { currencyExpanded = false }) {
+                        SUPPORTED_CURRENCIES.forEach { code ->
+                            DropdownMenuItem(
+                                text = { Text(code) },
+                                onClick = {
+                                    if (code != currency) {
+                                        currency = code
+                                        val newAllowed = accounts.filter { it.currency == code }.map { it.id }.toSet()
+                                        selectedAccountIds = selectedAccountIds.intersect(newAllowed)
+                                    }
+                                    currencyExpanded = false
+                                },
+                            )
+                        }
+                    }
+                }
+
                 // ── Categories ─────────────────────────────────────────────────
                 if (categories.isNotEmpty()) {
                     Text(
@@ -286,7 +332,7 @@ private fun BudgetDialog(
                 }
 
                 // ── Accounts ───────────────────────────────────────────────────
-                if (accounts.isNotEmpty()) {
+                if (filteredAccounts.isNotEmpty()) {
                     Text(
                         text = stringResource(R.string.budgets_accounts),
                         style = MaterialTheme.typography.labelMedium,
@@ -305,7 +351,7 @@ private fun BudgetDialog(
                         Text(stringResource(R.string.budgets_all_accounts))
                     }
                     if (!allAccounts) {
-                        accounts.forEach { account ->
+                        filteredAccounts.forEach { account ->
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier.fillMaxWidth().padding(start = 16.dp),
@@ -338,7 +384,7 @@ private fun BudgetDialog(
                             categoryIds = catIds,
                             amount = amt,
                             period = period,
-                            currency = existing?.currency ?: "RUB",
+                            currency = currency,
                             accountIds = accIds,
                         )
                     )

@@ -15,6 +15,9 @@
   Для каждого bump VERSION нужен либо `AutoMigration(from=N-1, to=N)` в аннотации
   `@Database`, либо ручной `Migration(N-1, N)` в `AppDatabase.MIGRATIONS`.
 
+- [ ] **Добавили новую логику?**
+  Надо добавить соответствующие обычные тесты и если логика нетривиальная то runtime
+
 - [ ] **`MigrationsTest` зелёный?**
   ```
   ./gradlew :core:database:connectedAndroidTest

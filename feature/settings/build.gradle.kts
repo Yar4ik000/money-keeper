@@ -37,4 +37,6 @@ dependencies {
     implementation(libs.lifecycle.runtime.compose)
     implementation(libs.coroutines.android)
     implementation("androidx.compose.foundation:foundation")
+
+    testImplementation(libs.junit)
 }

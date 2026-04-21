@@ -24,6 +24,7 @@ import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Repeat
+import androidx.compose.material.icons.outlined.Screenshot
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -201,6 +202,18 @@ fun SettingsScreen(
                 supportingContent = { Text(stringResource(R.string.settings_autolock_subtitle)) },
                 trailingContent = { Text(autoLockLabel, style = MaterialTheme.typography.bodyMedium) },
                 modifier = Modifier.clickable { showAutoLockDialog = true },
+            )
+
+            ListItem(
+                leadingContent = { Icon(Icons.Outlined.Screenshot, contentDescription = null) },
+                headlineContent = { Text(stringResource(R.string.settings_block_screenshots)) },
+                supportingContent = { Text(stringResource(R.string.settings_block_screenshots_subtitle)) },
+                trailingContent = {
+                    Switch(
+                        checked = !settings.allowScreenshots,
+                        onCheckedChange = { viewModel.setAllowScreenshots(!it) },
+                    )
+                },
             )
 
             if (securityViewModel.isBiometricAvailable) {

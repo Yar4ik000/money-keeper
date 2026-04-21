@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.fragment.app.FragmentActivity
 import androidx.activity.viewModels
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.moneykeeper.app.navigation.MoneyKeeperNavHost
@@ -32,6 +33,16 @@ class MainActivity : FragmentActivity() {
         window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
         setContent {
             val settings by mainViewModel.settings.collectAsStateWithLifecycle()
+            LaunchedEffect(settings.allowScreenshots) {
+                if (settings.allowScreenshots) {
+                    window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                } else {
+                    window.setFlags(
+                        WindowManager.LayoutParams.FLAG_SECURE,
+                        WindowManager.LayoutParams.FLAG_SECURE,
+                    )
+                }
+            }
             val themeMode = when (settings.themeMode) {
                 "light" -> ThemeMode.LIGHT
                 "dark" -> ThemeMode.DARK

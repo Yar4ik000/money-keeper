@@ -38,6 +38,8 @@ class SettingsViewModel @Inject constructor(
 
     fun setAutoLockTimeout(minutes: Int) = update { copy(autoLockTimeoutMinutes = minutes) }
 
+    fun setAllowScreenshots(allow: Boolean) = update { copy(allowScreenshots = allow) }
+
     private fun update(block: AppSettings.() -> AppSettings) {
         viewModelScope.launch { settingsRepo.updateSettings(settings.value.block()) }
     }

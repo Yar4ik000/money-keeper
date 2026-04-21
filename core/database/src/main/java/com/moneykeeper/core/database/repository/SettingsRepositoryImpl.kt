@@ -33,6 +33,7 @@ class SettingsRepositoryImpl @Inject constructor(
         val CURRENCY_CODE            = stringPreferencesKey("currency_code")
         val ONBOARDING_COMPLETED     = booleanPreferencesKey("onboarding_completed")
         val AUTO_LOCK_TIMEOUT_MINUTES = intPreferencesKey("auto_lock_timeout_minutes")
+        val ALLOW_SCREENSHOTS        = booleanPreferencesKey("allow_screenshots")
     }
 
     override val settings: Flow<AppSettings> = context.dataStore.data.map { prefs ->
@@ -46,6 +47,7 @@ class SettingsRepositoryImpl @Inject constructor(
             currencyCode                = prefs[Keys.CURRENCY_CODE] ?: "RUB",
             onboardingCompleted         = prefs[Keys.ONBOARDING_COMPLETED] ?: false,
             autoLockTimeoutMinutes      = prefs[Keys.AUTO_LOCK_TIMEOUT_MINUTES] ?: -1,
+            allowScreenshots            = prefs[Keys.ALLOW_SCREENSHOTS] ?: true,
         )
     }
 
@@ -60,6 +62,7 @@ class SettingsRepositoryImpl @Inject constructor(
             prefs[Keys.CURRENCY_CODE]             = settings.currencyCode
             prefs[Keys.ONBOARDING_COMPLETED]      = settings.onboardingCompleted
             prefs[Keys.AUTO_LOCK_TIMEOUT_MINUTES] = settings.autoLockTimeoutMinutes
+            prefs[Keys.ALLOW_SCREENSHOTS]         = settings.allowScreenshots
         }
     }
 }

@@ -21,6 +21,7 @@ keystore.properties
 secrets.properties
 CLAUDE.md
 screen.png
+icon.jpg
 
 # Временные файлы сборки (они огромные и ИИ они не нужны)
 .gradle/

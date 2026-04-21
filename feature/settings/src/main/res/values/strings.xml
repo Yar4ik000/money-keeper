@@ -31,6 +31,8 @@
     <string name="settings_autolock_never">Никогда</string>
     <string name="settings_autolock_immediate">Сразу</string>
     <string name="settings_autolock_minutes">%1$d мин.</string>
+    <string name="settings_block_screenshots">Блокировать скриншоты</string>
+    <string name="settings_block_screenshots_subtitle">Запретить снимки и запись экрана в приложении</string>
 
     <string name="settings_categories">Категории</string>
     <string name="settings_categories_subtitle">Управление категориями операций</string>
@@ -70,6 +72,7 @@
     <string name="budgets_period_monthly">Ежемесячно</string>
     <string name="budgets_period_weekly">Еженедельно</string>
     <string name="budgets_accounts">Счета</string>
+    <string name="budgets_currency">Валюта</string>
     <string name="budgets_all_accounts">Все счета</string>
     <string name="budgets_all_categories">Все категории</string>
 
