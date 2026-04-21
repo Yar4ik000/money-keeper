@@ -137,11 +137,14 @@ fun ForecastCurrencyTotals(
                     )
                 }
             }
-            val sign = if (delta >= BigDecimal.ZERO) "+" else ""
+            val isGain = delta >= BigDecimal.ZERO
+            val labelRes = if (isGain) R.string.forecast_delta_gain else R.string.forecast_delta_loss
+            val amountText = if (isGain) "+" + delta.formatAsCurrency(currency)
+                             else delta.abs().formatAsCurrency(currency)
             Text(
-                text = stringResource(R.string.forecast_delta, sign + delta.formatAsCurrency(currency)),
+                text = stringResource(labelRes, amountText),
                 style = MaterialTheme.typography.bodySmall,
-                color = if (delta >= BigDecimal.ZERO) IncomeColor else MaterialTheme.colorScheme.error,
+                color = if (isGain) IncomeColor else MaterialTheme.colorScheme.error,
                 modifier = Modifier.padding(top = 4.dp),
             )
         }

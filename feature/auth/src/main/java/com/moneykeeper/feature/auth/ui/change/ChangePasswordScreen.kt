@@ -9,7 +9,10 @@ import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.autofill.ContentType
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentType
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -77,7 +80,10 @@ fun ChangePasswordScreen(
                 label = { Text(stringResource(R.string.change_old_label)) },
                 singleLine = true,
                 visualTransformation = if (oldVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                keyboardOptions = pwOptions, modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = pwOptions,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .semantics { contentType = ContentType.Password },
                 isError = uiState.error == ChangeError.WrongOldPassword,
                 trailingIcon = {
                     IconButton(onClick = { oldVisible = !oldVisible }) {
@@ -91,7 +97,10 @@ fun ChangePasswordScreen(
                 label = { Text(stringResource(R.string.change_new_label)) },
                 singleLine = true,
                 visualTransformation = if (newVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                keyboardOptions = pwOptions, modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = pwOptions,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .semantics { contentType = ContentType.NewPassword },
                 trailingIcon = {
                     IconButton(onClick = { newVisible = !newVisible }) {
                         Icon(if (newVisible) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility, contentDescription = null)
@@ -104,7 +113,10 @@ fun ChangePasswordScreen(
                 label = { Text(stringResource(R.string.change_confirm_label)) },
                 singleLine = true,
                 visualTransformation = if (confirmVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                keyboardOptions = pwOptions, modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = pwOptions,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .semantics { contentType = ContentType.NewPassword },
                 isError = uiState.error == ChangeError.Mismatch,
                 trailingIcon = {
                     IconButton(onClick = { confirmVisible = !confirmVisible }) {
