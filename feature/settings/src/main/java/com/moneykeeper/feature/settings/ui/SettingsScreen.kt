@@ -63,6 +63,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.fragment.app.FragmentActivity
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.moneykeeper.feature.auth.ui.gate.rememberProtectedAction
 import com.moneykeeper.feature.settings.R
 import com.moneykeeper.feature.settings.ui.security.SecurityViewModel
 
@@ -74,7 +75,7 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onCategories: () -> Unit,
     onBackup: () -> Unit,
-    onChangePassword: () -> Unit,
+    onChangePin: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel(),
     securityViewModel: SecurityViewModel = hiltViewModel(),
 ) {
@@ -83,6 +84,15 @@ fun SettingsScreen(
     val enrollError by securityViewModel.enrollError.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
+
+    val allowScreenshotsAction = rememberProtectedAction(
+        key = "screenshots",
+        onGranted = { viewModel.setAllowScreenshots(true) },
+    )
+    val disableBiometricAction = rememberProtectedAction(
+        key = "biometric_disable",
+        onGranted = { securityViewModel.disableBiometric() },
+    )
 
     LaunchedEffect(enrollError) {
         enrollError?.let {
@@ -219,9 +229,9 @@ fun SettingsScreen(
 
             ListItem(
                 leadingContent = { Icon(Icons.Outlined.Lock, contentDescription = null) },
-                headlineContent = { Text(stringResource(R.string.settings_change_password)) },
-                supportingContent = { Text(stringResource(R.string.settings_change_password_subtitle)) },
-                modifier = Modifier.clickable(onClick = onChangePassword),
+                headlineContent = { Text(stringResource(R.string.settings_change_pin)) },
+                supportingContent = { Text(stringResource(R.string.settings_change_pin_subtitle)) },
+                modifier = Modifier.clickable(onClick = onChangePin),
             )
 
             val autoLockLabel = when (settings.autoLockTimeoutMinutes) {
@@ -245,7 +255,10 @@ fun SettingsScreen(
                 trailingContent = {
                     Switch(
                         checked = !settings.allowScreenshots,
-                        onCheckedChange = { viewModel.setAllowScreenshots(!it) },
+                        onCheckedChange = { block ->
+                            if (block) viewModel.setAllowScreenshots(false)  // turning on — no auth needed
+                            else allowScreenshotsAction()                     // turning off — requires auth
+                        },
                     )
                 },
             )
@@ -261,7 +274,7 @@ fun SettingsScreen(
                             checked = isBiometricEnrolled,
                             onCheckedChange = { enabled ->
                                 if (enabled && activity != null) securityViewModel.enrollBiometric(activity)
-                                else securityViewModel.disableBiometric()
+                                else disableBiometricAction()  // requires auth
                             },
                         )
                     },

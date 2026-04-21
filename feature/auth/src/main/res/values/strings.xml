@@ -59,6 +59,19 @@
     <string name="unlock_pin_title">Введите PIN-код</string>
     <string name="unlock_pin_error_wrong">Неверный PIN</string>
 
+    <!-- ChangePinScreen -->
+    <string name="change_pin_title">Сменить PIN-код</string>
+    <string name="change_pin_current_step_title">Введите текущий PIN</string>
+    <string name="change_pin_new_step_title">Введите новый PIN</string>
+    <string name="change_pin_confirm_step_title">Подтвердите новый PIN</string>
+    <string name="change_pin_error_wrong_current">Неверный PIN</string>
+
+    <!-- ProtectedActionGate -->
+    <string name="protected_action_pin_title">Подтверждение</string>
+    <string name="protected_action_pin_subtitle">Введите PIN для продолжения</string>
+    <string name="protected_action_biometric_title">Подтвердите действие</string>
+    <string name="protected_action_use_pin">Использовать PIN</string>
+
     <!-- MigrationScreen -->
     <string name="migration_title">Новый способ входа</string>
     <string name="migration_subtitle">В этой версии ежедневный PIN-код отделён от пароля резервных копий. Введите текущий пароль — это понадобится один раз.</string>

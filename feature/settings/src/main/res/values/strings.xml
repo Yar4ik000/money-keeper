@@ -22,8 +22,8 @@
     <string name="settings_notification_time_value">%1$02d:%2$02d</string>
 
     <string name="settings_section_security">Безопасность</string>
-    <string name="settings_change_password">Сменить пароль</string>
-    <string name="settings_change_password_subtitle">Изменить мастер-пароль приложения</string>
+    <string name="settings_change_pin">Сменить PIN-код</string>
+    <string name="settings_change_pin_subtitle">Изменить PIN-код для входа в приложение</string>
     <string name="settings_biometric">Биометрическая разблокировка</string>
     <string name="settings_biometric_subtitle">Вход по отпечатку пальца или Face ID</string>
     <string name="settings_autolock">Автоматическая блокировка</string>
