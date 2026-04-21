@@ -151,22 +151,67 @@ class ForecastEngineTest {
     // ─── Deposit still active at targetDate ─────────────────────────────────
 
     @Test
-    fun active_deposit_accrues_interest_to_deposit_account() {
+    fun capitalized_active_deposit_accrues_interest_to_deposit_account() {
+        // Capitalized term deposit adds interest to principal each period, so the user's
+        // visible balance grows before maturity.
         val depositAcc = account(1L, BigDecimal("50000"), type = AccountType.DEPOSIT)
         val dep = deposit(
             accountId = 1L,
             principal = BigDecimal("50000"),
             rate = BigDecimal("10"),
             endDate = today.plusYears(1),
+            capitalized = true,
         )
         val target = today.plusMonths(3)
         val result = engine.calculate(listOf(depositAcc), listOf(dep), emptyList(), target, today)
 
         val forecast = result.accountForecasts[0]
-        // Should be more than principal due to accrued interest
         assertTrue(forecast.forecastedBalance > BigDecimal("50000"))
-        // No deposit maturity event (deposit hasn't ended)
         assertTrue(result.events.filterIsInstance<TimelineEvent.DepositMaturity>().isEmpty())
+    }
+
+    @Test
+    fun non_capitalized_term_deposit_balance_stays_flat_before_maturity() {
+        // Without capitalization, interest is paid in a lump sum at endDate.
+        // Before maturity the user's available balance is still just the principal.
+        val depositAcc = account(1L, BigDecimal("50000"), type = AccountType.DEPOSIT)
+        val dep = deposit(
+            accountId = 1L,
+            principal = BigDecimal("50000"),
+            rate = BigDecimal("10"),
+            endDate = today.plusYears(1),
+            capitalized = false,
+        )
+        val target = today.plusMonths(3)
+        val result = engine.calculate(listOf(depositAcc), listOf(dep), emptyList(), target, today)
+
+        val forecast = result.accountForecasts[0]
+        assertEquals(0, BigDecimal("50000").compareTo(forecast.forecastedBalance))
+        assertEquals(0, BigDecimal.ZERO.compareTo(forecast.delta))
+        assertTrue(result.events.filterIsInstance<TimelineEvent.DepositMaturity>().isEmpty())
+    }
+
+    @Test
+    fun open_ended_deposit_accrues_interest_regardless_of_capitalization() {
+        // Open-ended (no endDate) deposits behave like a SAVINGS account —
+        // interest is always visible in the balance.
+        val depositAcc = account(1L, BigDecimal("50000"), type = AccountType.DEPOSIT)
+        val dep = Deposit(
+            accountId = 1L,
+            initialAmount = BigDecimal("50000"),
+            interestRate = BigDecimal("10"),
+            startDate = today,
+            endDate = null,
+            isCapitalized = false,
+            capitalizationPeriod = null,
+            payoutAccountId = null,
+            isActive = true,
+        )
+        val target = today.plusMonths(3)
+        val result = engine.calculate(listOf(depositAcc), listOf(dep), emptyList(), target, today)
+
+        val forecast = result.accountForecasts[0]
+        assertTrue(forecast.forecastedBalance > BigDecimal("50000"))
     }
 
     // ─── Currency totals grouping ─────────────────────────────────────────────
