@@ -62,8 +62,8 @@ import com.moneykeeper.core.domain.model.AccountType
 import com.moneykeeper.core.domain.model.CapPeriod
 import com.moneykeeper.core.domain.model.Deposit
 import com.moneykeeper.core.ui.util.ACCOUNT_ICON_OPTIONS
+import com.moneykeeper.core.ui.util.AmountTextField
 import com.moneykeeper.core.ui.util.accountIconVector
-import com.moneykeeper.core.ui.util.ThousandsVisualTransformation
 import com.moneykeeper.feature.accounts.R
 import com.moneykeeper.feature.accounts.ui.list.parseColor
 import java.math.BigDecimal
@@ -210,14 +210,17 @@ fun EditAccountScreen(
 
             // Initial balance (hidden for DEPOSIT/SAVINGS — balance = deposit.initialAmount)
             if (state.type != AccountType.DEPOSIT && state.type != AccountType.SAVINGS) {
-                OutlinedTextField(
+                val isEditingExisting = accountId != null
+                AmountTextField(
                     value = state.balanceInput,
                     onValueChange = viewModel::onBalanceInputChange,
                     label = { Text(stringResource(R.string.edit_account_initial_balance)) },
                     placeholder = { Text("0") },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    visualTransformation = ThousandsVisualTransformation,
+                    readOnly = isEditingExisting,
+                    enabled = !isEditingExisting,
+                    supportingText = if (isEditingExisting) {
+                        { Text(stringResource(R.string.edit_account_balance_locked_hint)) }
+                    } else null,
                     modifier = Modifier.fillMaxWidth(),
                 )
             }

@@ -33,6 +33,8 @@
     <string name="settings_autolock_minutes">%1$d мин.</string>
     <string name="settings_block_screenshots">Блокировать скриншоты</string>
     <string name="settings_block_screenshots_subtitle">Запретить снимки и запись экрана в приложении</string>
+    <string name="settings_notifications_system">Разрешения в системе</string>
+    <string name="settings_notifications_system_subtitle">Открыть настройки уведомлений Android</string>
 
     <string name="settings_categories">Категории</string>
     <string name="settings_categories_subtitle">Управление категориями операций</string>
@@ -73,6 +75,15 @@
     <string name="budgets_period_weekly">Еженедельно</string>
     <string name="budgets_accounts">Счета</string>
     <string name="budgets_currency">Валюта</string>
+    <string name="budgets_warning_threshold">Жёлтый порог, %</string>
+    <string name="budgets_critical_threshold">Красный порог, %</string>
+    <string name="budgets_threshold_global_hint">Пусто — использовать глобальный (%1$d / %2$d)</string>
+    <string name="budgets_thresholds_global_title">Пороги по умолчанию</string>
+    <string name="budgets_thresholds_global_subtitle">Применяются ко всем бюджетам без персональных порогов</string>
+    <string name="settings_section_budgets">Бюджеты</string>
+    <string name="budgets_delete_confirm_title">Удалить бюджет?</string>
+    <string name="budgets_delete_confirm_message">«%1$s» будет удалён. Действие необратимо.</string>
+    <string name="common_delete">Удалить</string>
     <string name="budgets_all_accounts">Все счета</string>
     <string name="budgets_all_categories">Все категории</string>
 

@@ -163,4 +163,30 @@ class AccountDaoTest {
         dao.update(entity.copy(name = "NewName"))
         assertEquals("NewName", dao.getById(id)!!.name)
     }
+
+    @Test
+    fun unarchive_restoresAccountIntoActiveList() = runTest {
+        val id = dao.upsert(account("ToArchive"))
+        dao.archive(id)
+        assertFalse(dao.observeActive().first().any { it.id == id })
+
+        dao.unarchive(id)
+        assertTrue(dao.observeActive().first().any { it.id == id })
+        assertFalse(dao.getById(id)!!.isArchived)
+    }
+
+    @Test
+    fun updateSortOrders_setsPositionsInOrder() = runTest {
+        val a = dao.upsert(account("A", sortOrder = 5))
+        val b = dao.upsert(account("B", sortOrder = 5))
+        val c = dao.upsert(account("C", sortOrder = 5))
+
+        dao.updateSortOrders(listOf(c, a, b)) // requested display order: C, A, B
+
+        val active = dao.observeActive().first()
+        assertEquals(listOf("C", "A", "B"), active.map { it.name })
+        assertEquals(0, dao.getById(c)!!.sortOrder)
+        assertEquals(1, dao.getById(a)!!.sortOrder)
+        assertEquals(2, dao.getById(b)!!.sortOrder)
+    }
 }

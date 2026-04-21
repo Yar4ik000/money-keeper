@@ -75,23 +75,33 @@ fun ForecastSummaryTable(
                         overflow = TextOverflow.Ellipsis,
                         style = MaterialTheme.typography.bodyMedium,
                     )
-                    Text(
-                        text = item.currentBalance.formatAsCurrency(item.account.currency),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Text(
-                        text = " → ",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Text(
-                        text = item.forecastedBalance.formatAsCurrency(item.account.currency),
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium,
-                        color = if (item.delta >= BigDecimal.ZERO) IncomeColor
-                                else MaterialTheme.colorScheme.error,
-                    )
+                    if (item.delta.signum() == 0) {
+                        // Nothing changes for this account — show a single balance so
+                        // "120 000 → 120 000" doesn't visually imply a movement that isn't there.
+                        Text(
+                            text = item.currentBalance.formatAsCurrency(item.account.currency),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium,
+                        )
+                    } else {
+                        Text(
+                            text = item.currentBalance.formatAsCurrency(item.account.currency),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(
+                            text = " → ",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(
+                            text = item.forecastedBalance.formatAsCurrency(item.account.currency),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium,
+                            color = if (item.delta > BigDecimal.ZERO) IncomeColor
+                                    else MaterialTheme.colorScheme.error,
+                        )
+                    }
                 }
             }
         }
@@ -106,44 +116,61 @@ fun ForecastCurrencyTotals(
     delta: BigDecimal,
     modifier: Modifier = Modifier,
 ) {
+    val hasChange = delta.signum() != 0
     Card(modifier = modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp)) {
-            Row(Modifier.fillMaxWidth()) {
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        stringResource(R.string.forecast_now),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Text(
-                        currentBalance.formatAsCurrency(currency),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Medium,
-                    )
+            if (hasChange) {
+                Row(Modifier.fillMaxWidth()) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            stringResource(R.string.forecast_now),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(
+                            currentBalance.formatAsCurrency(currency),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Medium,
+                        )
+                    }
+                    Spacer(Modifier.width(16.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            stringResource(R.string.forecast_at_date),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(
+                            forecastedBalance.formatAsCurrency(currency),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Medium,
+                            color = if (delta > BigDecimal.ZERO) IncomeColor
+                                    else MaterialTheme.colorScheme.error,
+                        )
+                    }
                 }
-                Spacer(Modifier.width(16.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        stringResource(R.string.forecast_at_date),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Text(
-                        forecastedBalance.formatAsCurrency(currency),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Medium,
-                        color = if (delta >= BigDecimal.ZERO) IncomeColor
-                                else MaterialTheme.colorScheme.error,
-                    )
-                }
+                val isGain = delta > BigDecimal.ZERO
+                val labelRes = if (isGain) R.string.forecast_delta_gain else R.string.forecast_delta_loss
+                val amountText = if (isGain) "+" + delta.formatAsCurrency(currency)
+                                 else delta.abs().formatAsCurrency(currency)
+                Text(
+                    text = stringResource(labelRes, amountText),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (isGain) IncomeColor else MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(top = 4.dp),
+                )
+            } else {
+                Text(
+                    stringResource(R.string.forecast_now),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    currentBalance.formatAsCurrency(currency),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Medium,
+                )
             }
-            val sign = if (delta >= BigDecimal.ZERO) "+" else ""
-            Text(
-                text = stringResource(R.string.forecast_delta, sign + delta.formatAsCurrency(currency)),
-                style = MaterialTheme.typography.bodySmall,
-                color = if (delta >= BigDecimal.ZERO) IncomeColor else MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(top = 4.dp),
-            )
         }
     }
 }

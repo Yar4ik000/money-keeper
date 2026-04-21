@@ -14,6 +14,8 @@ data class BudgetEntity(
     val period: BudgetPeriod,
     val currency: String,
     val accountIds: String? = null, // null = all accounts; "1,2,3" = specific IDs
+    val warningThreshold: Int? = null,  // null = use global default
+    val criticalThreshold: Int? = null, // null = use global default
 )
 
 fun BudgetEntity.toDomain() = Budget(
@@ -23,6 +25,8 @@ fun BudgetEntity.toDomain() = Budget(
     period = period,
     currency = currency,
     accountIds = accountIds?.split(",")?.mapNotNull { it.toLongOrNull() }?.toSet() ?: emptySet(),
+    warningThreshold = warningThreshold,
+    criticalThreshold = criticalThreshold,
 )
 
 fun Budget.toEntity() = BudgetEntity(
@@ -32,4 +36,6 @@ fun Budget.toEntity() = BudgetEntity(
     period = period,
     currency = currency,
     accountIds = accountIds.takeIf { it.isNotEmpty() }?.joinToString(","),
+    warningThreshold = warningThreshold,
+    criticalThreshold = criticalThreshold,
 )

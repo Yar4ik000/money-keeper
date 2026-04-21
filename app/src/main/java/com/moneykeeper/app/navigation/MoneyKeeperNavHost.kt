@@ -7,6 +7,8 @@ import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Analytics
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Savings
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -15,8 +17,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -78,9 +83,13 @@ private val bottomNavItems = listOf(
 )
 
 @Composable
-private fun MoneyKeeperBottomBar(navController: NavHostController) {
+private fun MoneyKeeperBottomBar(
+    navController: NavHostController,
+    badgeViewModel: BudgetsBadgeViewModel = hiltViewModel(),
+) {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination
+    val budgetsBadge by badgeViewModel.badge.collectAsStateWithLifecycle()
     NavigationBar {
         bottomNavItems.forEach { item ->
             val selected = currentDestination
@@ -96,7 +105,25 @@ private fun MoneyKeeperBottomBar(navController: NavHostController) {
                         launchSingleTop = true
                     }
                 },
-                icon = { Icon(item.icon, contentDescription = null) },
+                icon = {
+                    if (item.screen == Screen.Budgets && budgetsBadge != BudgetsBadge.NONE) {
+                        BadgedBox(
+                            badge = {
+                                Badge(
+                                    containerColor = when (budgetsBadge) {
+                                        BudgetsBadge.CRITICAL -> Color(0xFFD32F2F)
+                                        BudgetsBadge.WARNING  -> Color(0xFFF9A825)
+                                        else                  -> Color.Transparent
+                                    },
+                                )
+                            },
+                        ) {
+                            Icon(item.icon, contentDescription = null)
+                        }
+                    } else {
+                        Icon(item.icon, contentDescription = null)
+                    }
+                },
                 label = { Text(stringResource(item.labelRes)) },
             )
         }

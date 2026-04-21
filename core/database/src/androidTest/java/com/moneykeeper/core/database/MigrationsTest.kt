@@ -6,6 +6,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.moneykeeper.core.database.migration.MIGRATION_2_3
 import com.moneykeeper.core.database.migration.MIGRATION_4_5
+import com.moneykeeper.core.database.migration.MIGRATION_5_6
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
@@ -267,6 +268,47 @@ class MigrationsTest {
         db.query("SELECT categoryIds FROM budgets").use { c ->
             assertTrue(c.moveToFirst())
             assertNull("NULL categoryIds means all categories", c.getString(0))
+        }
+    }
+
+    // ── 5 → 6 (manual migration: add nullable threshold columns) ──────────────
+
+    @Test
+    fun migrate_5_to_6_addsNullableThresholdColumnsToBudgets() {
+        helper.createDatabase(TEST_DB, 5).apply {
+            execSQL(INSERT_CATEGORY)
+            execSQL("""
+                INSERT INTO budgets (categoryIds, amount, period, currency, accountIds)
+                VALUES ('1', '4000.00', 'MONTHLY', 'RUB', NULL)
+            """.trimIndent())
+            close()
+        }
+
+        val db = helper.runMigrationsAndValidate(TEST_DB, 6, true, MIGRATION_5_6)
+
+        db.query("SELECT amount, warningThreshold, criticalThreshold FROM budgets").use { c ->
+            assertTrue("Budget row must survive migration 5→6", c.moveToFirst())
+            assertEquals("4000.00", c.getString(0))
+            assertNull("warningThreshold must default to NULL", c.getString(1))
+            assertNull("criticalThreshold must default to NULL", c.getString(2))
+        }
+    }
+
+    @Test
+    fun migrate_5_to_6_thresholdColumnsAcceptValues() {
+        helper.createDatabase(TEST_DB, 5).apply { close() }
+        val db = helper.runMigrationsAndValidate(TEST_DB, 6, true, MIGRATION_5_6)
+
+        db.execSQL("""
+            INSERT INTO budgets
+                (categoryIds, amount, period, currency, accountIds, warningThreshold, criticalThreshold)
+            VALUES ('1,2', '8000.00', 'MONTHLY', 'RUB', NULL, 60, 85)
+        """.trimIndent())
+
+        db.query("SELECT warningThreshold, criticalThreshold FROM budgets").use { c ->
+            assertTrue(c.moveToFirst())
+            assertEquals(60, c.getInt(0))
+            assertEquals(85, c.getInt(1))
         }
     }
 

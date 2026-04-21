@@ -4,6 +4,8 @@
     <string name="history_search_hint">Поиск по заметкам…</string>
     <string name="history_empty">Операций нет</string>
     <string name="history_delete_selected">Удалить</string>
+    <string name="history_delete_confirm_title">Удалить выбранные операции?</string>
+    <string name="history_delete_confirm_message">Будет удалено %1$d операций. Действие необратимо.</string>
 
     <!-- Filter bottom sheet -->
     <string name="filter_title">Фильтр</string>

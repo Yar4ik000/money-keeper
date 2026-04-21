@@ -30,6 +30,11 @@ class AccountRepositoryImpl(private val dao: AccountDao) : AccountRepository {
 
     override suspend fun archive(id: Long) = dao.archive(id)
 
+    override suspend fun unarchive(id: Long) = dao.unarchive(id)
+
+    override suspend fun updateSortOrders(orderedIds: List<Long>) =
+        dao.updateSortOrders(orderedIds)
+
     override suspend fun delete(id: Long) {
         dao.getById(id)?.let { dao.delete(it) }
     }

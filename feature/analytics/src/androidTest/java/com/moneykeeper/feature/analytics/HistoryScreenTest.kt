@@ -2,8 +2,10 @@ package com.moneykeeper.feature.analytics
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.moneykeeper.core.domain.analytics.PeriodSummaryByCurrency
 import com.moneykeeper.core.domain.model.Transaction
@@ -117,6 +119,75 @@ class HistoryScreenTest {
         }
         // Totals row should be visible
         composeTestRule.onNodeWithText("История").assertIsDisplayed()
+    }
+
+    @Test
+    fun historyScreen_deleteButton_showsConfirmDialogBeforeDelete() {
+        var deleteCalled = false
+        val meta = makeTransactionWithMeta(categoryName = "Продукты", amount = BigDecimal("500"))
+        val group = TransactionGroup(
+            date = LocalDate.now(),
+            items = listOf(meta),
+            dayTotals = listOf(CurrencyAmount("RUB", BigDecimal("-500"))),
+        )
+        composeTestRule.setContent {
+            HistoryScreen(
+                uiState = HistoryUiState.Success(
+                    groups = listOf(group),
+                    totalsByCurrency = emptyList(),
+                    filter = HistoryFilter(),
+                    isSelectionMode = true,
+                    selectedIds = setOf(1L),
+                ),
+                onTransactionClick = {},
+                onBack = {},
+                onFilterUpdate = noop,
+                onEnterSelectionMode = {},
+                onToggleSelection = {},
+                onDeleteSelected = { deleteCalled = true },
+                onClearSelection = {},
+            )
+        }
+
+        // Bottom-bar "Удалить" button shows an AlertDialog instead of deleting immediately
+        composeTestRule.onAllNodesWithText("Удалить")[0].performClick()
+        composeTestRule.onNodeWithText("Удалить выбранные операции?").assertIsDisplayed()
+        // Callback must NOT fire before the user confirms
+        assert(!deleteCalled)
+    }
+
+    @Test
+    fun historyScreen_deleteConfirmDialog_cancelDoesNotInvokeCallback() {
+        var deleteCalled = false
+        val meta = makeTransactionWithMeta(categoryName = "Продукты", amount = BigDecimal("500"))
+        val group = TransactionGroup(
+            date = LocalDate.now(),
+            items = listOf(meta),
+            dayTotals = listOf(CurrencyAmount("RUB", BigDecimal("-500"))),
+        )
+        composeTestRule.setContent {
+            HistoryScreen(
+                uiState = HistoryUiState.Success(
+                    groups = listOf(group),
+                    totalsByCurrency = emptyList(),
+                    filter = HistoryFilter(),
+                    isSelectionMode = true,
+                    selectedIds = setOf(1L),
+                ),
+                onTransactionClick = {},
+                onBack = {},
+                onFilterUpdate = noop,
+                onEnterSelectionMode = {},
+                onToggleSelection = {},
+                onDeleteSelected = { deleteCalled = true },
+                onClearSelection = {},
+            )
+        }
+
+        composeTestRule.onAllNodesWithText("Удалить")[0].performClick()
+        composeTestRule.onNodeWithText("Отмена").performClick()
+        composeTestRule.onNodeWithText("Удалить выбранные операции?").assertDoesNotExist()
+        assert(!deleteCalled)
     }
 
     private fun makeTransactionWithMeta(

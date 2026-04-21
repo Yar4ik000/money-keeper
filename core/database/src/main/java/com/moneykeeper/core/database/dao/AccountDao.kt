@@ -47,6 +47,17 @@ interface AccountDao {
     @Query("UPDATE accounts SET isArchived = 1 WHERE id = :id")
     suspend fun archive(id: Long)
 
+    @Query("UPDATE accounts SET isArchived = 0 WHERE id = :id")
+    suspend fun unarchive(id: Long)
+
+    @Query("UPDATE accounts SET sortOrder = :order WHERE id = :id")
+    suspend fun setSortOrder(id: Long, order: Int)
+
+    @androidx.room.Transaction
+    suspend fun updateSortOrders(idsInOrder: List<Long>) {
+        idsInOrder.forEachIndexed { index, id -> setSortOrder(id, index) }
+    }
+
     @Delete
     suspend fun delete(account: AccountEntity)
 }

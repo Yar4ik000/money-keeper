@@ -102,8 +102,19 @@ class ForecastEngine @Inject constructor() {
                     description = "Окончание вклада: $depositAccountName",
                 )
             } else {
-                val interest = DepositCalculator.projectedBalance(deposit, targetDate) - deposit.initialAmount
-                balances.merge(deposit.accountId, interest, BigDecimal::add)
+                // Deposit does not mature by targetDate. Reflect accrued interest only when
+                // the user actually sees it in their available balance:
+                //   - Open-ended account (no endDate, e.g. SAVINGS) — interest is credited ongoing
+                //   - Capitalized term deposit — interest is added to principal each period
+                // For a non-capitalized term deposit with a fixed endDate, interest accumulates
+                // on the bank's side but isn't paid out until endDate, so the user's visible
+                // balance stays at the principal amount.
+                val showAccruedInterest = endDate == null || deposit.isCapitalized
+                if (showAccruedInterest) {
+                    val interest =
+                        DepositCalculator.projectedBalance(deposit, targetDate) - deposit.initialAmount
+                    balances.merge(deposit.accountId, interest, BigDecimal::add)
+                }
             }
         }
 

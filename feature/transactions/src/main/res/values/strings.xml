@@ -7,6 +7,7 @@
 
     <!-- Add / Edit transaction form fields -->
     <string name="tx_account">Счёт</string>
+    <string name="tx_amount">Сумма</string>
     <string name="tx_category_none">Прочее</string>
     <string name="tx_to_account">Счёт назначения</string>
     <string name="tx_category">Категория</string>
@@ -16,7 +17,6 @@
     <string name="tx_save">Сохранить</string>
 
     <!-- Numeric keyboard -->
-    <string name="keyboard_ok">OK</string>
 
     <!-- Account types (for AccountPicker subtitle) -->
     <string name="account_type_card">Карта</string>
@@ -43,6 +43,7 @@
     <string name="recurring_freq_weekly">Еженедельно</string>
     <string name="recurring_freq_monthly">Ежемесячно</string>
     <string name="recurring_freq_yearly">Ежегодно</string>
+    <string name="recurring_edit_hint">Изменения применятся только к будущим операциям. Уже созданные транзакции останутся как есть.</string>
 
     <!-- Categories screen -->
     <string name="categories_title">Категории</string>

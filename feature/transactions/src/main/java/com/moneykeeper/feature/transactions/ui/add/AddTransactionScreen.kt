@@ -46,9 +46,9 @@ import com.moneykeeper.core.domain.model.RecurringRule
 import com.moneykeeper.core.domain.model.TransactionType
 import com.moneykeeper.core.ui.locale.AppLocale
 import com.moneykeeper.feature.transactions.R
+import com.moneykeeper.core.ui.util.AmountTextField
 import com.moneykeeper.feature.transactions.ui.components.AccountPicker
 import com.moneykeeper.feature.transactions.ui.components.CategoryPicker
-import com.moneykeeper.feature.transactions.ui.components.NumericKeyboard
 import com.moneykeeper.feature.transactions.ui.components.RecurringRuleSheet
 import com.moneykeeper.feature.transactions.ui.components.TransactionTypeSelector
 import com.moneykeeper.feature.transactions.ui.components.frequencyRes
@@ -69,7 +69,7 @@ fun AddTransactionRoute(
     AddTransactionScreen(
         uiState = state,
         onTypeChange = viewModel::onTypeChange,
-        onKeyPress = viewModel::onKeyPress,
+        onAmountInputChange = viewModel::onAmountInputChange,
         onAccountSelect = viewModel::onAccountSelect,
         onToAccountSelect = viewModel::onToAccountSelect,
         onCategorySelect = viewModel::onCategorySelect,
@@ -89,7 +89,7 @@ fun AddTransactionRoute(
 fun AddTransactionScreen(
     uiState: AddTransactionUiState,
     onTypeChange: (TransactionType) -> Unit,
-    onKeyPress: (KeyboardKey) -> Unit,
+    onAmountInputChange: (String) -> Unit,
     onAccountSelect: (Account) -> Unit,
     onToAccountSelect: (Account) -> Unit,
     onCategorySelect: (Category) -> Unit,
@@ -151,12 +151,6 @@ fun AddTransactionScreen(
                 },
             )
         },
-        bottomBar = {
-            NumericKeyboard(
-                onKey = onKeyPress,
-                onOk = onSave,
-            )
-        },
         snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { padding ->
         Column(
@@ -172,13 +166,12 @@ fun AddTransactionScreen(
                 onSelect = onTypeChange,
             )
 
-            Text(
-                text = uiState.amount.formatTxAmount(),
-                style = MaterialTheme.typography.displaySmall,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
+            AmountTextField(
+                value = uiState.amountInput,
+                onValueChange = onAmountInputChange,
+                label = { Text(stringResource(R.string.tx_amount)) },
+                placeholder = { Text("0") },
+                modifier = Modifier.fillMaxWidth(),
             )
 
             // Account field

@@ -76,6 +76,7 @@ fun BudgetsScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     var editingBudget by remember { mutableStateOf<Budget?>(null) }
     var dialogOpen by remember { mutableStateOf(false) }
+    var budgetPendingDelete by remember { mutableStateOf<Budget?>(null) }
 
     Scaffold(
         topBar = {
@@ -101,8 +102,10 @@ fun BudgetsScreen(
             items(state.items, key = { it.budget.id }) { item ->
                 BudgetCard(
                     item = item,
+                    globalWarning = state.defaultWarningThreshold,
+                    globalCritical = state.defaultCriticalThreshold,
                     onEdit = { editingBudget = item.budget; dialogOpen = true },
-                    onDelete = { viewModel.delete(item.budget.id) },
+                    onDelete = { budgetPendingDelete = item.budget },
                 )
             }
         }
@@ -113,6 +116,8 @@ fun BudgetsScreen(
             categories = state.categories,
             accounts = state.accounts,
             existing = editingBudget,
+            globalWarning = state.defaultWarningThreshold,
+            globalCritical = state.defaultCriticalThreshold,
             onConfirm = { budget ->
                 viewModel.save(budget)
                 dialogOpen = false
@@ -121,11 +126,41 @@ fun BudgetsScreen(
             onDismiss = { dialogOpen = false; editingBudget = null },
         )
     }
+
+    budgetPendingDelete?.let { budget ->
+        AlertDialog(
+            onDismissRequest = { budgetPendingDelete = null },
+            title = { Text(stringResource(R.string.budgets_delete_confirm_title)) },
+            text = {
+                Text(stringResource(R.string.budgets_delete_confirm_message, state.items
+                    .firstOrNull { it.budget.id == budget.id }
+                    ?.categoryNames ?: ""))
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.delete(budget.id)
+                    budgetPendingDelete = null
+                }) {
+                    Text(
+                        stringResource(R.string.common_delete),
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { budgetPendingDelete = null }) {
+                    Text(stringResource(android.R.string.cancel))
+                }
+            },
+        )
+    }
 }
 
 @Composable
 private fun BudgetCard(
     item: BudgetWithSpent,
+    globalWarning: Int,
+    globalCritical: Int,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
 ) {
@@ -133,8 +168,20 @@ private fun BudgetCard(
         item.spent.toDouble() / item.budget.amount.toDouble()
     else 0.0
     val progress = rawRatio.toFloat().coerceIn(0f, 1f)
-    val overBudget = item.spent > item.budget.amount
     val percent = (rawRatio * 100).roundToInt()
+
+    val warning = item.budget.warningThreshold ?: globalWarning
+    val critical = item.budget.criticalThreshold ?: globalCritical
+    val barColor = when {
+        percent >= critical -> Color(0xFFD32F2F) // red
+        percent >= warning  -> Color(0xFFF9A825) // yellow/amber
+        else                -> Color(0xFF4CAF50) // green
+    }
+    val percentColor = when {
+        percent >= critical -> Color(0xFFD32F2F)
+        percent >= warning  -> Color(0xFFF9A825)
+        else                -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
 
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -152,8 +199,7 @@ private fun BudgetCard(
                     Text(
                         text = "$percent%",
                         style = MaterialTheme.typography.bodySmall,
-                        color = if (overBudget) Color(0xFFD32F2F)
-                                else MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = percentColor,
                     )
                 }
                 IconButton(onClick = onEdit) {
@@ -166,7 +212,7 @@ private fun BudgetCard(
             LinearProgressIndicator(
                 progress = { progress },
                 modifier = Modifier.fillMaxWidth(),
-                color = if (overBudget) Color(0xFFD32F2F) else Color(0xFF4CAF50),
+                color = barColor,
             )
         }
     }
@@ -178,6 +224,8 @@ private fun BudgetDialog(
     categories: List<Category>,
     accounts: List<Account>,
     existing: Budget?,
+    globalWarning: Int,
+    globalCritical: Int,
     onConfirm: (Budget) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -186,6 +234,12 @@ private fun BudgetDialog(
     var periodExpanded by remember { mutableStateOf(false) }
     var currency by remember(existing) { mutableStateOf(existing?.currency ?: "RUB") }
     var currencyExpanded by remember { mutableStateOf(false) }
+    var warningInput by rememberSaveable(existing) {
+        mutableStateOf(existing?.warningThreshold?.toString() ?: "")
+    }
+    var criticalInput by rememberSaveable(existing) {
+        mutableStateOf(existing?.criticalThreshold?.toString() ?: "")
+    }
     val filteredAccounts = accounts.filter { it.currency == currency }
 
     // Category multi-select
@@ -277,6 +331,34 @@ private fun BudgetDialog(
                         }
                     }
                 }
+
+                // ── Thresholds (optional per-budget override) ─────────────────
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    OutlinedTextField(
+                        value = warningInput,
+                        onValueChange = { v -> if (v.all { it.isDigit() }) warningInput = v },
+                        label = { Text(stringResource(R.string.budgets_warning_threshold)) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        modifier = Modifier.weight(1f),
+                    )
+                    OutlinedTextField(
+                        value = criticalInput,
+                        onValueChange = { v -> if (v.all { it.isDigit() }) criticalInput = v },
+                        label = { Text(stringResource(R.string.budgets_critical_threshold)) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                Text(
+                    text = stringResource(R.string.budgets_threshold_global_hint, globalWarning, globalCritical),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
 
                 // ── Categories ─────────────────────────────────────────────────
                 if (categories.isNotEmpty()) {
@@ -386,6 +468,8 @@ private fun BudgetDialog(
                             period = period,
                             currency = currency,
                             accountIds = accIds,
+                            warningThreshold = warningInput.toIntOrNull()?.coerceIn(0, 999),
+                            criticalThreshold = criticalInput.toIntOrNull()?.coerceIn(0, 999),
                         )
                     )
                 },

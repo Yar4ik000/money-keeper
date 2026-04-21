@@ -12,6 +12,7 @@ import com.moneykeeper.core.domain.model.TransactionWithMeta
 import com.moneykeeper.core.domain.repository.AccountRepository
 import com.moneykeeper.core.domain.repository.BudgetRepository
 import com.moneykeeper.core.domain.repository.CategoryRepository
+import com.moneykeeper.core.domain.repository.SettingsRepository
 import com.moneykeeper.core.domain.repository.TransactionRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
@@ -36,6 +37,8 @@ data class BudgetsUiState(
     val items: List<BudgetWithSpent> = emptyList(),
     val categories: List<Category> = emptyList(),
     val accounts: List<Account> = emptyList(),
+    val defaultWarningThreshold: Int = 70,
+    val defaultCriticalThreshold: Int = 90,
 )
 
 @HiltViewModel
@@ -44,6 +47,7 @@ class BudgetsViewModel @Inject constructor(
     private val categoryRepo: CategoryRepository,
     private val accountRepo: AccountRepository,
     private val transactionRepo: TransactionRepository,
+    private val settingsRepo: SettingsRepository,
 ) : ViewModel() {
 
     val state: StateFlow<BudgetsUiState> = combine(
@@ -54,7 +58,8 @@ class BudgetsViewModel @Inject constructor(
             from = LocalDate.now().with(TemporalAdjusters.firstDayOfMonth()),
             to = LocalDate.now().with(TemporalAdjusters.lastDayOfMonth()),
         ),
-    ) { budgets, categories, accounts, txWithMeta ->
+        settingsRepo.settings,
+    ) { budgets, categories, accounts, txWithMeta, settings ->
         val catById = categories.associateBy { it.id }
         val accountById = accounts.associateBy { it.id }
 
@@ -80,6 +85,8 @@ class BudgetsViewModel @Inject constructor(
             },
             categories = categories,
             accounts = accounts,
+            defaultWarningThreshold = settings.budgetWarningThreshold,
+            defaultCriticalThreshold = settings.budgetCriticalThreshold,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), BudgetsUiState())
 

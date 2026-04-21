@@ -7,7 +7,8 @@
     <string name="forecast_cancel">Отмена</string>
     <string name="forecast_now">Сейчас</string>
     <string name="forecast_at_date">К дате</string>
-    <string name="forecast_delta">Прирост: %s</string>
+    <string name="forecast_delta_gain">Прирост: %s</string>
+    <string name="forecast_delta_loss">Убыток: %s</string>
     <string name="forecast_by_account">По счетам</string>
     <string name="forecast_events_title">Ожидаемые события</string>
     <string name="forecast_no_events">Нет запланированных событий</string>
