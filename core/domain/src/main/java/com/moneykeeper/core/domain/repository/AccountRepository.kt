@@ -13,6 +13,7 @@ interface AccountRepository {
     suspend fun save(account: Account): Long
     suspend fun archive(id: Long)
     suspend fun unarchive(id: Long)
+    suspend fun updateSortOrders(orderedIds: List<Long>)
     suspend fun delete(id: Long)
     suspend fun adjustBalance(id: Long, delta: BigDecimal)
 }

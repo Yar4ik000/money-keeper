@@ -16,6 +16,12 @@
     <string name="accounts_show_archived">Показать архивные</string>
     <string name="accounts_hide_archived">Скрыть архивные</string>
     <string name="accounts_archived_badge">архив</string>
+    <string name="accounts_reorder">Изменить порядок</string>
+    <string name="accounts_reorder_title">Порядок счетов</string>
+    <string name="accounts_reorder_save">Сохранить</string>
+    <string name="accounts_reorder_cancel">Отмена</string>
+    <string name="accounts_move_up">Вверх</string>
+    <string name="accounts_move_down">Вниз</string>
 
     <!-- Section headers (by account type) -->
     <string name="accounts_section_cards">Карты</string>
