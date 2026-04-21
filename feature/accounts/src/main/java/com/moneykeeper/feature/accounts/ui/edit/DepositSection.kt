@@ -53,7 +53,7 @@ import com.moneykeeper.core.domain.model.CapPeriod
 import com.moneykeeper.core.domain.model.Deposit
 import com.moneykeeper.core.domain.model.RateTier
 import com.moneykeeper.core.ui.locale.AppLocale
-import com.moneykeeper.core.ui.util.ThousandsVisualTransformation
+import com.moneykeeper.core.ui.util.AmountTextField
 import com.moneykeeper.feature.accounts.R
 import com.moneykeeper.feature.accounts.ui.list.formatAmount
 import java.math.BigDecimal
@@ -110,7 +110,7 @@ fun DepositSection(
         )
 
         // Amount
-        OutlinedTextField(
+        AmountTextField(
             value = amountText,
             onValueChange = { v ->
                 val filtered = v.replace(",", ".").filter { it.isDigit() || it == '.' }
@@ -126,9 +126,6 @@ fun DepositSection(
             supportingText = if (error is EditAccountError.DepositAmountInvalid) {
                 { Text(stringResource(R.string.error_deposit_amount_invalid)) }
             } else null,
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-            visualTransformation = ThousandsVisualTransformation,
             modifier = Modifier.fillMaxWidth(),
         )
 

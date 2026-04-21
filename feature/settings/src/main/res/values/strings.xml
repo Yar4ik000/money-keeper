@@ -81,6 +81,9 @@
     <string name="budgets_thresholds_global_title">Пороги по умолчанию</string>
     <string name="budgets_thresholds_global_subtitle">Применяются ко всем бюджетам без персональных порогов</string>
     <string name="settings_section_budgets">Бюджеты</string>
+    <string name="budgets_delete_confirm_title">Удалить бюджет?</string>
+    <string name="budgets_delete_confirm_message">«%1$s» будет удалён. Действие необратимо.</string>
+    <string name="common_delete">Удалить</string>
     <string name="budgets_all_accounts">Все счета</string>
     <string name="budgets_all_categories">Все категории</string>
 

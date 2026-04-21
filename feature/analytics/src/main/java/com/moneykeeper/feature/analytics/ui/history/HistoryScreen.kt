@@ -13,6 +13,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -24,6 +25,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -77,6 +79,7 @@ fun HistoryScreen(
 ) {
     var showFilterSheet by remember { mutableStateOf(false) }
     var showSearchBar by remember { mutableStateOf(false) }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
     val success = uiState as? HistoryUiState.Success
 
     Scaffold(
@@ -122,7 +125,7 @@ fun HistoryScreen(
                         horizontalArrangement = Arrangement.End,
                     ) {
                         Button(
-                            onClick = onDeleteSelected,
+                            onClick = { showDeleteConfirm = true },
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.error,
                             ),
@@ -243,6 +246,34 @@ fun HistoryScreen(
                 showFilterSheet = false
             },
             onDismiss = { showFilterSheet = false },
+        )
+    }
+
+    if (showDeleteConfirm && success != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            title = { Text(stringResource(R.string.history_delete_confirm_title)) },
+            text = {
+                Text(stringResource(R.string.history_delete_confirm_message, success.selectedIds.size))
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteConfirm = false
+                        onDeleteSelected()
+                    },
+                ) {
+                    Text(
+                        stringResource(R.string.history_delete_selected),
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirm = false }) {
+                    Text(stringResource(android.R.string.cancel))
+                }
+            },
         )
     }
 }

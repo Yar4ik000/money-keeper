@@ -8,7 +8,7 @@ import java.math.BigDecimal
 import java.time.LocalDate
 
 data class AddTransactionUiState(
-    val amountInput: String = "0",
+    val amountInput: String = "",
     val type: TransactionType = TransactionType.EXPENSE,
     val selectedAccount: Account? = null,
     val selectedToAccount: Account? = null,
@@ -29,10 +29,4 @@ sealed interface AddTxError {
     data object AmountRequired : AddTxError
     data object AccountRequired : AddTxError
     data object ToAccountRequired : AddTxError
-}
-
-sealed interface KeyboardKey {
-    data class Digit(val value: String) : KeyboardKey
-    data object Dot : KeyboardKey
-    data object Backspace : KeyboardKey
 }

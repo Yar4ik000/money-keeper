@@ -76,6 +76,7 @@ fun BudgetsScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     var editingBudget by remember { mutableStateOf<Budget?>(null) }
     var dialogOpen by remember { mutableStateOf(false) }
+    var budgetPendingDelete by remember { mutableStateOf<Budget?>(null) }
 
     Scaffold(
         topBar = {
@@ -104,7 +105,7 @@ fun BudgetsScreen(
                     globalWarning = state.defaultWarningThreshold,
                     globalCritical = state.defaultCriticalThreshold,
                     onEdit = { editingBudget = item.budget; dialogOpen = true },
-                    onDelete = { viewModel.delete(item.budget.id) },
+                    onDelete = { budgetPendingDelete = item.budget },
                 )
             }
         }
@@ -123,6 +124,34 @@ fun BudgetsScreen(
                 editingBudget = null
             },
             onDismiss = { dialogOpen = false; editingBudget = null },
+        )
+    }
+
+    budgetPendingDelete?.let { budget ->
+        AlertDialog(
+            onDismissRequest = { budgetPendingDelete = null },
+            title = { Text(stringResource(R.string.budgets_delete_confirm_title)) },
+            text = {
+                Text(stringResource(R.string.budgets_delete_confirm_message, state.items
+                    .firstOrNull { it.budget.id == budget.id }
+                    ?.categoryNames ?: ""))
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.delete(budget.id)
+                    budgetPendingDelete = null
+                }) {
+                    Text(
+                        stringResource(R.string.common_delete),
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { budgetPendingDelete = null }) {
+                    Text(stringResource(android.R.string.cancel))
+                }
+            },
         )
     }
 }

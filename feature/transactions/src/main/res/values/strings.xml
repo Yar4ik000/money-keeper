@@ -7,6 +7,7 @@
 
     <!-- Add / Edit transaction form fields -->
     <string name="tx_account">Счёт</string>
+    <string name="tx_amount">Сумма</string>
     <string name="tx_category_none">Прочее</string>
     <string name="tx_to_account">Счёт назначения</string>
     <string name="tx_category">Категория</string>
@@ -16,7 +17,6 @@
     <string name="tx_save">Сохранить</string>
 
     <!-- Numeric keyboard -->
-    <string name="keyboard_ok">OK</string>
 
     <!-- Account types (for AccountPicker subtitle) -->
     <string name="account_type_card">Карта</string>

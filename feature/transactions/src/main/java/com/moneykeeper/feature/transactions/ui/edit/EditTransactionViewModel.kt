@@ -15,7 +15,6 @@ import com.moneykeeper.core.domain.repository.TransactionRepository
 import com.moneykeeper.feature.transactions.domain.TransactionSaver
 import com.moneykeeper.feature.transactions.ui.add.AddTxError
 import com.moneykeeper.feature.transactions.ui.add.AddTransactionUiState
-import com.moneykeeper.feature.transactions.ui.add.KeyboardKey
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -83,13 +82,7 @@ class EditTransactionViewModel @Inject constructor(
     fun onTypeChange(type: TransactionType) =
         _uiState.update { it.copy(type = type, selectedCategory = null, error = null) }
 
-    fun onKeyPress(key: KeyboardKey) {
-        val current = _uiState.value.amountInput
-        val new = when (key) {
-            is KeyboardKey.Digit -> if (current == "0") key.value else "$current${key.value}"
-            is KeyboardKey.Dot -> if ('.' in current) current else "$current."
-            is KeyboardKey.Backspace -> if (current.length > 1) current.dropLast(1) else "0"
-        }
+    fun onAmountInputChange(new: String) {
         _uiState.update { it.copy(amountInput = new, error = null) }
     }
 

@@ -63,13 +63,10 @@ class AddTransactionViewModel @Inject constructor(
     fun onTypeChange(type: TransactionType) =
         _uiState.update { it.copy(type = type, selectedCategory = null, error = null) }
 
-    fun onKeyPress(key: KeyboardKey) {
-        val current = _uiState.value.amountInput
-        val new = when (key) {
-            is KeyboardKey.Digit -> if (current == "0") key.value else "$current${key.value}"
-            is KeyboardKey.Dot -> if ('.' in current) current else "$current."
-            is KeyboardKey.Backspace -> if (current.length > 1) current.dropLast(1) else "0"
-        }
+    fun onAmountInputChange(new: String) {
+        // Upstream (AmountTextField) already filters to digits + single dot + 2 decimals.
+        // Empty means "nothing entered yet" — the field shows a "0" placeholder; save
+        // validation handles the zero-amount case via AddTxError.AmountRequired.
         _uiState.update { it.copy(amountInput = new, error = null) }
     }
 

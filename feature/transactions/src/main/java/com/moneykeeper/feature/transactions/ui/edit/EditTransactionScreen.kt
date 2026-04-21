@@ -17,7 +17,7 @@ fun EditTransactionRoute(
     AddTransactionScreen(
         uiState = state,
         onTypeChange = viewModel::onTypeChange,
-        onKeyPress = viewModel::onKeyPress,
+        onAmountInputChange = viewModel::onAmountInputChange,
         onAccountSelect = viewModel::onAccountSelect,
         onToAccountSelect = viewModel::onToAccountSelect,
         onCategorySelect = viewModel::onCategorySelect,
