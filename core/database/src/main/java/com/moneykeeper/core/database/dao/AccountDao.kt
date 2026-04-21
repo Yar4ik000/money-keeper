@@ -47,6 +47,9 @@ interface AccountDao {
     @Query("UPDATE accounts SET isArchived = 1 WHERE id = :id")
     suspend fun archive(id: Long)
 
+    @Query("UPDATE accounts SET isArchived = 0 WHERE id = :id")
+    suspend fun unarchive(id: Long)
+
     @Delete
     suspend fun delete(account: AccountEntity)
 }

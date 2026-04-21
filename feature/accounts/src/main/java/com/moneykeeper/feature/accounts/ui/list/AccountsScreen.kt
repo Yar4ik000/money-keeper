@@ -21,6 +21,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.outlined.Visibility
+import androidx.compose.material.icons.outlined.VisibilityOff
 import com.moneykeeper.core.ui.util.accountIconVector
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -72,10 +74,25 @@ fun AccountsScreen(
     onEditAccount: (Long) -> Unit,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val showArchived by viewModel.showArchived.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text(stringResource(R.string.accounts_title)) })
+            TopAppBar(
+                title = { Text(stringResource(R.string.accounts_title)) },
+                actions = {
+                    IconButton(onClick = { viewModel.setShowArchived(!showArchived) }) {
+                        Icon(
+                            imageVector = if (showArchived) Icons.Outlined.VisibilityOff
+                                          else Icons.Outlined.Visibility,
+                            contentDescription = stringResource(
+                                if (showArchived) R.string.accounts_hide_archived
+                                else R.string.accounts_show_archived,
+                            ),
+                        )
+                    }
+                },
+            )
         },
         floatingActionButton = {
             FloatingActionButton(onClick = onAddAccount) {
@@ -96,6 +113,7 @@ fun AccountsScreen(
                 onAccountClick = onAccountClick,
                 onEditAccount = onEditAccount,
                 onArchive = { viewModel.archiveAccount(it) },
+                onUnarchive = { viewModel.unarchiveAccount(it) },
                 modifier = Modifier.padding(padding),
             )
         }
@@ -108,6 +126,7 @@ private fun AccountsList(
     onAccountClick: (Long) -> Unit,
     onEditAccount: (Long) -> Unit,
     onArchive: (Long) -> Unit,
+    onUnarchive: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val depositMap = state.deposits.associateBy { it.accountId }
@@ -144,6 +163,7 @@ private fun AccountsList(
                     onClick = { onAccountClick(account.id) },
                     onEdit = { onEditAccount(account.id) },
                     onArchive = { onArchive(account.id) },
+                    onUnarchive = { onUnarchive(account.id) },
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                 )
             }
@@ -193,6 +213,7 @@ private fun AccountCard(
     onClick: () -> Unit,
     onEdit: () -> Unit,
     onArchive: () -> Unit,
+    onUnarchive: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
@@ -228,7 +249,28 @@ private fun AccountCard(
             Spacer(Modifier.width(12.dp))
 
             Column(Modifier.weight(1f)) {
-                Text(account.name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        account.name,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium,
+                        color = if (account.isArchived)
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        else MaterialTheme.colorScheme.onSurface,
+                    )
+                    if (account.isArchived) {
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = stringResource(R.string.accounts_archived_badge),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                .padding(horizontal = 6.dp, vertical = 1.dp),
+                        )
+                    }
+                }
                 Text(
                     stringResource(accountTypeRes(account.type)),
                     style = MaterialTheme.typography.bodySmall,
@@ -260,10 +302,17 @@ private fun AccountCard(
                             text = { Text(stringResource(R.string.account_detail_edit)) },
                             onClick = { menuExpanded = false; onEdit() },
                         )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.accounts_archive)) },
-                            onClick = { menuExpanded = false; onArchive() },
-                        )
+                        if (account.isArchived) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.accounts_unarchive)) },
+                                onClick = { menuExpanded = false; onUnarchive() },
+                            )
+                        } else {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.accounts_archive)) },
+                                onClick = { menuExpanded = false; onArchive() },
+                            )
+                        }
                     }
                 }
             }

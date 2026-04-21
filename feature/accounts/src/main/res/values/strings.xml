@@ -12,6 +12,10 @@
     <string name="accounts_total_balance">Общий баланс</string>
     <string name="accounts_add">Добавить счёт</string>
     <string name="accounts_archive">Архивировать</string>
+    <string name="accounts_unarchive">Восстановить</string>
+    <string name="accounts_show_archived">Показать архивные</string>
+    <string name="accounts_hide_archived">Скрыть архивные</string>
+    <string name="accounts_archived_badge">архив</string>
 
     <!-- Section headers (by account type) -->
     <string name="accounts_section_cards">Карты</string>
