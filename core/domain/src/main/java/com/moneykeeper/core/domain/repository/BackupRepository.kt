@@ -4,7 +4,7 @@ import android.app.Activity
 import android.net.Uri
 
 interface BackupRepository {
-    suspend fun createBackup(uri: Uri): BackupResult
+    suspend fun createBackup(uri: Uri, password: CharArray): BackupResult
     suspend fun getBackupInfo(uri: Uri): BackupInfoResult
     suspend fun restoreBackup(uri: Uri, password: CharArray): RestoreResult
     fun restartProcess(activity: Activity)
@@ -14,6 +14,7 @@ data class BackupInfo(
     val createdAt: String,
     val databaseVersion: Int,
     val appVersionCode: Int,
+    val backupVersion: Int = 1,
 )
 
 sealed interface BackupResult {

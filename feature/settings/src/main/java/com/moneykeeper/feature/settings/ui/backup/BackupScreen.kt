@@ -72,7 +72,7 @@ fun BackupScreen(
         it?.let { viewModel.exportCsv(it) }
     }
     val backupLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) {
-        it?.let { viewModel.createBackup(it) }
+        it?.let { viewModel.onBackupUriPicked(it) }
     }
     val restoreLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) {
         it?.let { viewModel.onBackupFilePicked(it) }
@@ -139,9 +139,17 @@ fun BackupScreen(
         }
     }
 
+    if (state.pendingBackupUri != null) {
+        ExportPasswordDialog(
+            onSubmit = { viewModel.submitBackupPassword(it) },
+            onDismiss = { viewModel.cancelBackup() },
+        )
+    }
+
     if (state.pendingRestoreUri != null) {
         RestorePasswordDialog(
             createdAt = state.pendingRestoreCreatedAt,
+            backupVersion = state.pendingRestoreBackupVersion,
             wrongPassword = state.wrongPassword,
             onSubmit = { viewModel.submitRestorePassword(it) },
             onDismiss = { viewModel.cancelRestore() },
@@ -164,13 +172,82 @@ fun BackupScreen(
 }
 
 @Composable
+private fun ExportPasswordDialog(
+    onSubmit: (CharArray) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var password by rememberSaveable { mutableStateOf("") }
+    var confirm by rememberSaveable { mutableStateOf("") }
+    var error by remember { mutableStateOf<Int?>(null) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.backup_password_dialog_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(stringResource(R.string.backup_password_save_reminder))
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = { password = it; error = null },
+                    label = { Text(stringResource(R.string.backup_password_hint)) },
+                    isError = error == R.string.backup_password_too_short,
+                    supportingText = if (error == R.string.backup_password_too_short) {
+                        { Text(stringResource(R.string.backup_password_too_short)) }
+                    } else null,
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .semantics { contentType = ContentType.NewPassword },
+                    singleLine = true,
+                )
+                OutlinedTextField(
+                    value = confirm,
+                    onValueChange = { confirm = it; error = null },
+                    label = { Text(stringResource(R.string.backup_password_confirm_hint)) },
+                    isError = error == R.string.backup_password_mismatch,
+                    supportingText = if (error == R.string.backup_password_mismatch) {
+                        { Text(stringResource(R.string.backup_password_mismatch)) }
+                    } else null,
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .semantics { contentType = ContentType.NewPassword },
+                    singleLine = true,
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    when {
+                        password.length < 8 -> error = R.string.backup_password_too_short
+                        password != confirm -> error = R.string.backup_password_mismatch
+                        else -> { onSubmit(password.toCharArray()); password = ""; confirm = "" }
+                    }
+                },
+                enabled = password.isNotEmpty(),
+            ) { Text(stringResource(android.R.string.ok)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(android.R.string.cancel)) }
+        },
+    )
+}
+
+@Composable
 private fun RestorePasswordDialog(
     createdAt: String?,
+    backupVersion: Int,
     wrongPassword: Boolean,
     onSubmit: (CharArray) -> Unit,
     onDismiss: () -> Unit,
 ) {
     var password by rememberSaveable { mutableStateOf("") }
+
+    val hintRes = if (backupVersion >= 2) R.string.restore_password_hint_v2
+                  else R.string.restore_password_hint_v1
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -183,7 +260,7 @@ private fun RestorePasswordDialog(
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it },
-                    label = { Text(stringResource(R.string.restore_password_hint)) },
+                    label = { Text(stringResource(hintRes)) },
                     isError = wrongPassword,
                     supportingText = if (wrongPassword) {
                         { Text(stringResource(R.string.restore_wrong_password)) }

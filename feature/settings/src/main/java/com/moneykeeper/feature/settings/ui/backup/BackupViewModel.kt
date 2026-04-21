@@ -21,8 +21,10 @@ data class BackupUiState(
     val isLoading: Boolean = false,
     val message: String? = null,
     val error: String? = null,
+    val pendingBackupUri: Uri? = null,
     val pendingRestoreUri: Uri? = null,
     val pendingRestoreCreatedAt: String? = null,
+    val pendingRestoreBackupVersion: Int = 1,
     val wrongPassword: Boolean = false,
     val restoreCompleted: Boolean = false,
 )
@@ -43,19 +45,28 @@ class BackupViewModel @Inject constructor(
             .onFailure { t -> _state.update { it.copy(isLoading = false, error = t.message ?: "Ошибка экспорта") } }
     }
 
-    fun createBackup(uri: Uri) = viewModelScope.launch {
-        _state.update { it.copy(isLoading = true, message = null, error = null) }
-        when (val result = backupRepo.createBackup(uri)) {
+    fun onBackupUriPicked(uri: Uri) {
+        _state.update { it.copy(pendingBackupUri = uri) }
+    }
+
+    fun submitBackupPassword(password: CharArray) = viewModelScope.launch {
+        val uri = _state.value.pendingBackupUri ?: return@launch
+        _state.update { it.copy(isLoading = true, pendingBackupUri = null, message = null, error = null) }
+        when (val result = backupRepo.createBackup(uri, password)) {
             is BackupResult.Success -> _state.update { it.copy(isLoading = false, message = "Резервная копия создана") }
             is BackupResult.Error -> _state.update { it.copy(isLoading = false, error = result.message) }
         }
+    }
+
+    fun cancelBackup() {
+        _state.update { it.copy(pendingBackupUri = null) }
     }
 
     fun onBackupFilePicked(uri: Uri) = viewModelScope.launch {
         _state.update { it.copy(isLoading = true, message = null, error = null) }
         when (val info = backupRepo.getBackupInfo(uri)) {
             is BackupInfoResult.Ready ->
-                _state.update { it.copy(isLoading = false, pendingRestoreUri = uri, pendingRestoreCreatedAt = info.info.createdAt) }
+                _state.update { it.copy(isLoading = false, pendingRestoreUri = uri, pendingRestoreCreatedAt = info.info.createdAt, pendingRestoreBackupVersion = info.info.backupVersion) }
             is BackupInfoResult.IncompatibleVersion ->
                 _state.update { it.copy(isLoading = false, error = info.message) }
             is BackupInfoResult.Error ->

@@ -36,14 +36,17 @@ class AuthGateViewModel @Inject constructor(
     }
 
     private fun computeInitialState(): AuthState = when {
-        !keyStorage.isInitialized() -> AuthState.Uninitialized
-        masterKeyHolder.isSet()     -> AuthState.Unlocked
-        else                        -> AuthState.Locked
+        keyStorage.isV2Initialized() -> {
+            if (masterKeyHolder.isSet()) AuthState.Unlocked else AuthState.Locked
+        }
+        keyStorage.isInitialized()   -> AuthState.PinSetupRequired  // v1 data, needs migration
+        else                         -> AuthState.Uninitialized
     }
 
-    fun onPasswordSet()   { _state.value = AuthState.Unlocked }
-    fun onUnlocked()      { _state.value = AuthState.Unlocked }
+    fun onPasswordSet()     { _state.value = AuthState.Unlocked }
+    fun onMigrated()        { _state.value = AuthState.Unlocked }
+    fun onUnlocked()        { _state.value = AuthState.Unlocked }
     fun onPasswordChanged() { /* остаёмся Unlocked */ }
     fun onCorrupted(message: String) { _state.value = AuthState.DataCorrupted(message) }
-    fun onWiped()         { _state.value = AuthState.Uninitialized }
+    fun onWiped()           { _state.value = AuthState.Uninitialized }
 }

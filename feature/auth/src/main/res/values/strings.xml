@@ -44,4 +44,26 @@
     <string name="biometric_unlock_title">Войдите в Money Keeper</string>
     <string name="biometric_cancel">Использовать пароль</string>
     <string name="biometric_use_password">Использовать пароль</string>
+
+    <!-- SetupPinScreen -->
+    <string name="setup_pin_title">Создайте PIN-код</string>
+    <string name="setup_pin_subtitle">4–6 цифр. Будет использоваться для ежедневного входа в приложение.</string>
+    <string name="setup_pin_confirm_title">Подтвердите PIN-код</string>
+    <string name="setup_pin_confirm_subtitle">Введите PIN ещё раз для подтверждения</string>
+    <string name="setup_pin_error_mismatch">PIN-коды не совпадают</string>
+    <string name="setup_pin_error_too_short">Минимум 4 цифры</string>
+    <string name="setup_pin_button_create">Создать</string>
+    <string name="setup_pin_button_confirm">Подтвердить</string>
+
+    <!-- UnlockPinScreen -->
+    <string name="unlock_pin_title">Введите PIN-код</string>
+    <string name="unlock_pin_error_wrong">Неверный PIN</string>
+
+    <!-- MigrationScreen -->
+    <string name="migration_title">Новый способ входа</string>
+    <string name="migration_subtitle">В этой версии ежедневный PIN-код отделён от пароля резервных копий. Введите текущий пароль — это понадобится один раз.</string>
+    <string name="migration_password_label">Текущий пароль</string>
+    <string name="migration_button">Продолжить</string>
+    <string name="migration_error_wrong">Неверный пароль</string>
+    <string name="migration_error_corrupted">Данные повреждены. Восстановите из резервной копии.</string>
 </resources>

@@ -3,6 +3,7 @@ package com.moneykeeper.feature.auth.ui.corrupted
 import androidx.lifecycle.ViewModel
 import com.moneykeeper.core.database.DatabaseProvider
 import com.moneykeeper.core.database.security.DatabaseKeyStorage
+import com.moneykeeper.core.database.security.KeystoreMasterKeyWrapper
 import com.moneykeeper.feature.auth.domain.MasterKeyHolder
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,6 +16,7 @@ class DataCorruptedViewModel @Inject constructor(
     private val keyStorage: DatabaseKeyStorage,
     private val masterKeyHolder: MasterKeyHolder,
     private val databaseProvider: DatabaseProvider,
+    private val keystoreWrapper: KeystoreMasterKeyWrapper,
 ) : ViewModel() {
 
     private val _wiped = MutableStateFlow(false)
@@ -23,6 +25,7 @@ class DataCorruptedViewModel @Inject constructor(
     fun wipeAndReset() {
         databaseProvider.close()
         masterKeyHolder.clear()
+        keystoreWrapper.deleteKey()
         keyStorage.wipe()
         _wiped.update { true }
     }

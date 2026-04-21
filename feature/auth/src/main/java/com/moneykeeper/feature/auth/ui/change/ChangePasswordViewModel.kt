@@ -3,6 +3,7 @@ package com.moneykeeper.feature.auth.ui.change
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.moneykeeper.core.database.security.DatabaseKeyStorage
+import com.moneykeeper.core.database.security.KeystoreMasterKeyWrapper
 import com.moneykeeper.feature.auth.domain.BiometricEnrollment
 import com.moneykeeper.feature.auth.domain.MasterKeyDerivation
 import com.moneykeeper.feature.auth.domain.MasterKeyHolder
@@ -24,6 +25,7 @@ class ChangePasswordViewModel @Inject constructor(
     private val derivation: MasterKeyDerivation,
     private val masterKeyHolder: MasterKeyHolder,
     private val biometricEnrollment: BiometricEnrollment,
+    private val keystoreWrapper: KeystoreMasterKeyWrapper,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ChangeUiState())
@@ -68,6 +70,11 @@ class ChangePasswordViewModel @Inject constructor(
             dbKey.fill(0)
 
             masterKeyHolder.set(newDerived)
+
+            // If v2 (PIN + Keystore) is active, re-wrap master_key so PIN unlock stays valid
+            if (keystoreWrapper.isInitialized()) {
+                keystoreWrapper.wrap(newDerived)
+            }
             newDerived.fill(0)
 
             if (biometricEnrollment.isEnrolled()) {

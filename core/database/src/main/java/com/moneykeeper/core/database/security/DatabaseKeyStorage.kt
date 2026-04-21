@@ -149,6 +149,45 @@ class DatabaseKeyStorage @Inject constructor(
 
     fun hasBiometricWrap(): Boolean = prefs.contains(KEY_BIO_WRAPPED_KEY)
 
+    // --- v2: Keystore-wrapped master_key (hardware-backed, no password required) ---
+
+    fun hasWrappedMkV2(): Boolean = prefs.contains(KEY_WRAPPED_MK_V2)
+
+    fun writeWrappedMkV2(ciphertext: ByteArray, iv: ByteArray) {
+        prefs.edit()
+            .putString(KEY_WRAPPED_MK_V2,    Base64.encodeToString(ciphertext, Base64.NO_WRAP))
+            .putString(KEY_WRAPPED_MK_IV_V2, Base64.encodeToString(iv, Base64.NO_WRAP))
+            .apply()
+    }
+
+    fun readWrappedMkV2(): EncryptedDbKey? {
+        val ct = prefs.getString(KEY_WRAPPED_MK_V2,    null) ?: return null
+        val iv = prefs.getString(KEY_WRAPPED_MK_IV_V2, null) ?: return null
+        return EncryptedDbKey(Base64.decode(ct, Base64.NO_WRAP), Base64.decode(iv, Base64.NO_WRAP))
+    }
+
+    // --- v2: app PIN (4-6 digits, verified app-side, Argon2id hash) ---
+
+    fun hasPinHash(): Boolean = prefs.contains(KEY_PIN_HASH)
+
+    fun writePinHash(hash: ByteArray, salt: ByteArray) {
+        prefs.edit()
+            .putString(KEY_PIN_HASH, Base64.encodeToString(hash, Base64.NO_WRAP))
+            .putString(KEY_PIN_SALT, Base64.encodeToString(salt, Base64.NO_WRAP))
+            .apply()
+    }
+
+    fun readPinData(): PinData? {
+        val h = prefs.getString(KEY_PIN_HASH, null) ?: return null
+        val s = prefs.getString(KEY_PIN_SALT, null) ?: return null
+        return PinData(Base64.decode(h, Base64.NO_WRAP), Base64.decode(s, Base64.NO_WRAP))
+    }
+
+    /** v2 is fully initialised when both Keystore-wrapped master key AND pin hash are present. */
+    fun isV2Initialized(): Boolean = hasWrappedMkV2() && hasPinHash()
+
+    data class PinData(val hash: ByteArray, val salt: ByteArray)
+
     data class EncryptedDbKey(val ciphertext: ByteArray, val iv: ByteArray)
 
     data class KdfParams(val iterations: Int, val memoryKb: Int, val parallelism: Int) {
@@ -175,6 +214,11 @@ class DatabaseKeyStorage @Inject constructor(
         const val KEY_BIO_WRAP_IV      = "bio_wrap_iv_v1"
         const val KEY_FAILED_ATTEMPTS  = "failed_unlock_attempts_v1"
         const val KEY_LOCKOUT_UNTIL_MS = "lockout_until_ms_v1"
+        // v2 keys — added in v1.3.0
+        const val KEY_WRAPPED_MK_V2    = "wrapped_mk_v2"
+        const val KEY_WRAPPED_MK_IV_V2 = "wrapped_mk_iv_v2"
+        const val KEY_PIN_HASH         = "pin_hash_v1"
+        const val KEY_PIN_SALT         = "pin_salt_v1"
         const val LOCKOUT_THRESHOLD    = 5   // start blocking after 5 failures
         const val WIPE_THRESHOLD       = 10  // wipe all data after 10 consecutive failures
     }

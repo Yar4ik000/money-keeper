@@ -70,7 +70,8 @@ class BackupRestoreFlowTest {
         keyStorage.writeKdfParams(
             DatabaseKeyStorage.KdfParams(iterations = 1, memoryKb = 64, parallelism = 1)
         )
-        // KDF salt is created lazily by readOrCreateKdfSalt() on the first createBackup() call.
+        // createBackup() now generates a fresh random salt per backup (no longer reuses the
+        // app-unlock salt). The KdfParams above are only used by restoreBackup to fetch db_key.
 
         // Remove any leftover DB files so the first initialize() creates a fresh database.
         deleteDbFiles()
@@ -118,7 +119,7 @@ class BackupRestoreFlowTest {
 
         // ── Step 2: create backup ─────────────────────────────────────────────
         val backupUri = Uri.fromFile(backupFile)
-        val backupResult = backupRepo.createBackup(backupUri)
+        val backupResult = backupRepo.createBackup(backupUri, "test-backup-password".toCharArray())
         assertTrue("createBackup must succeed, got: $backupResult",
             backupResult is BackupResult.Success)
         assertTrue("Backup file must be written to disk", backupFile.exists())

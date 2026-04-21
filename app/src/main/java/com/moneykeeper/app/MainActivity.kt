@@ -16,8 +16,9 @@ import com.moneykeeper.core.ui.theme.ThemeMode
 import com.moneykeeper.feature.auth.state.AuthGateViewModel
 import com.moneykeeper.feature.auth.state.AuthState
 import com.moneykeeper.feature.auth.ui.corrupted.DataCorruptedScreen
-import com.moneykeeper.feature.auth.ui.setup.SetupPasswordScreen
-import com.moneykeeper.feature.auth.ui.unlock.UnlockScreen
+import com.moneykeeper.feature.auth.ui.migration.MigrationScreen
+import com.moneykeeper.feature.auth.ui.setup.SetupPinScreen
+import com.moneykeeper.feature.auth.ui.unlock.UnlockPinScreen
 import com.moneykeeper.feature.settings.ui.onboarding.OnboardingScreen
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -53,10 +54,14 @@ class MainActivity : FragmentActivity() {
                 val authState by authGateViewModel.state.collectAsStateWithLifecycle()
 
                 when (authState) {
-                    AuthState.Uninitialized -> SetupPasswordScreen(
-                        onPasswordSet = authGateViewModel::onPasswordSet,
+                    AuthState.Uninitialized -> SetupPinScreen(
+                        onPinSet = authGateViewModel::onPasswordSet,
                     )
-                    AuthState.Locked -> UnlockScreen(
+                    AuthState.PinSetupRequired -> MigrationScreen(
+                        onMigrated  = authGateViewModel::onMigrated,
+                        onCorrupted = authGateViewModel::onCorrupted,
+                    )
+                    AuthState.Locked -> UnlockPinScreen(
                         onUnlocked  = authGateViewModel::onUnlocked,
                         onCorrupted = authGateViewModel::onCorrupted,
                     )

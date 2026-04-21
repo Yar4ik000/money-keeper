@@ -44,6 +44,7 @@ private data class BackupManifest(
     val createdAt: String,
     val kdf: KdfSpec,
     @SerialName("dbEncIv") val dbEncIv: String,
+    val backupVersion: Int = 1,
 ) {
     @Serializable
     @Keep
@@ -71,18 +72,22 @@ class BackupRepositoryImpl @Inject constructor(
 
     private val json = Json { ignoreUnknownKeys = true }
 
-    override suspend fun createBackup(uri: Uri): BackupResult = withContext(Dispatchers.IO) {
+    override suspend fun createBackup(uri: Uri, password: CharArray): BackupResult = withContext(Dispatchers.IO) {
         val tempPlain = File(context.cacheDir, "backup_plain_${System.currentTimeMillis()}.db")
         try {
-            val masterKey = masterKeyProvider.requireKey()
+            exportPlainDump(tempPlain)
+
+            val kdfSalt = ByteArray(16).also { SecureRandom().nextBytes(it) }
+            val backupKey = keyDerivation.derive(
+                password = password,
+                salt = kdfSalt,
+                iterations = 3,
+                memoryKb = 32768,
+                parallelism = 2,
+            )
             try {
-                exportPlainDump(tempPlain)
-
                 val iv = ByteArray(12).also { SecureRandom().nextBytes(it) }
-                val cipherText = aesGcmEncrypt(tempPlain.readBytes(), masterKey, iv)
-
-                val kdfParams = keyStorage.readKdfParams()
-                val kdfSalt = keyStorage.readOrCreateKdfSalt()
+                val cipherText = aesGcmEncrypt(tempPlain.readBytes(), backupKey, iv)
 
                 val appVersion = try {
                     context.packageManager.getPackageInfo(context.packageName, 0).longVersionCode.toInt()
@@ -94,11 +99,12 @@ class BackupRepositoryImpl @Inject constructor(
                     createdAt = Instant.now().toString(),
                     kdf = BackupManifest.KdfSpec(
                         salt = Base64.encodeToString(kdfSalt, Base64.NO_WRAP),
-                        iterations = kdfParams.iterations,
-                        memoryKb = kdfParams.memoryKb,
-                        parallelism = kdfParams.parallelism,
+                        iterations = 3,
+                        memoryKb = 32768,
+                        parallelism = 2,
                     ),
                     dbEncIv = Base64.encodeToString(iv, Base64.NO_WRAP),
+                    backupVersion = 2,
                 )
 
                 context.contentResolver.openOutputStream(uri)?.use { out ->
@@ -113,7 +119,8 @@ class BackupRepositoryImpl @Inject constructor(
                 }
                 BackupResult.Success
             } finally {
-                masterKey.fill(0)
+                backupKey.fill(0)
+                password.fill(0.toChar())
             }
         } catch (e: Exception) {
             BackupResult.Error(e.message ?: "Ошибка создания резервной копии")
@@ -139,6 +146,7 @@ class BackupRepositoryImpl @Inject constructor(
                     createdAt = manifest.createdAt,
                     databaseVersion = manifest.databaseVersion,
                     appVersionCode = appVersion,
+                    backupVersion = manifest.backupVersion,
                 )
             )
         } catch (e: Exception) {
