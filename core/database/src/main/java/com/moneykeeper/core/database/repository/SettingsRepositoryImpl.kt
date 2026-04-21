@@ -34,6 +34,8 @@ class SettingsRepositoryImpl @Inject constructor(
         val ONBOARDING_COMPLETED     = booleanPreferencesKey("onboarding_completed")
         val AUTO_LOCK_TIMEOUT_MINUTES = intPreferencesKey("auto_lock_timeout_minutes")
         val ALLOW_SCREENSHOTS        = booleanPreferencesKey("allow_screenshots")
+        val BUDGET_WARNING_THRESHOLD  = intPreferencesKey("budget_warning_threshold")
+        val BUDGET_CRITICAL_THRESHOLD = intPreferencesKey("budget_critical_threshold")
     }
 
     override val settings: Flow<AppSettings> = context.dataStore.data.map { prefs ->
@@ -48,6 +50,8 @@ class SettingsRepositoryImpl @Inject constructor(
             onboardingCompleted         = prefs[Keys.ONBOARDING_COMPLETED] ?: false,
             autoLockTimeoutMinutes      = prefs[Keys.AUTO_LOCK_TIMEOUT_MINUTES] ?: -1,
             allowScreenshots            = prefs[Keys.ALLOW_SCREENSHOTS] ?: true,
+            budgetWarningThreshold      = prefs[Keys.BUDGET_WARNING_THRESHOLD] ?: 70,
+            budgetCriticalThreshold     = prefs[Keys.BUDGET_CRITICAL_THRESHOLD] ?: 90,
         )
     }
 
@@ -63,6 +67,8 @@ class SettingsRepositoryImpl @Inject constructor(
             prefs[Keys.ONBOARDING_COMPLETED]      = settings.onboardingCompleted
             prefs[Keys.AUTO_LOCK_TIMEOUT_MINUTES] = settings.autoLockTimeoutMinutes
             prefs[Keys.ALLOW_SCREENSHOTS]         = settings.allowScreenshots
+            prefs[Keys.BUDGET_WARNING_THRESHOLD]  = settings.budgetWarningThreshold
+            prefs[Keys.BUDGET_CRITICAL_THRESHOLD] = settings.budgetCriticalThreshold
         }
     }
 }

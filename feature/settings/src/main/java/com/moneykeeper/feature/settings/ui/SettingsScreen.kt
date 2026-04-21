@@ -4,10 +4,13 @@ import android.content.Intent
 import android.provider.Settings
 import android.widget.Toast
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.core.content.FileProvider
 import java.io.File
@@ -26,6 +29,7 @@ import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.NotificationsActive
 import androidx.compose.material.icons.outlined.Repeat
+import androidx.compose.material.icons.outlined.Savings
 import androidx.compose.material.icons.outlined.Screenshot
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -34,6 +38,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
@@ -54,6 +59,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.fragment.app.FragmentActivity
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -89,6 +95,7 @@ fun SettingsScreen(
     var showThemeDialog by remember { mutableStateOf(false) }
     var showCurrencyDialog by remember { mutableStateOf(false) }
     var showAutoLockDialog by remember { mutableStateOf(false) }
+    var showBudgetThresholdsDialog by remember { mutableStateOf(false) }
 
     val themeLabel = when (settings.themeMode) {
         "light" -> stringResource(R.string.theme_light)
@@ -190,6 +197,21 @@ fun SettingsScreen(
                 headlineContent = { Text(stringResource(R.string.settings_categories)) },
                 supportingContent = { Text(stringResource(R.string.settings_categories_subtitle)) },
                 modifier = Modifier.clickable(onClick = onCategories),
+            )
+
+            HorizontalDivider()
+            SectionHeader(stringResource(R.string.settings_section_budgets))
+
+            ListItem(
+                leadingContent = { Icon(Icons.Outlined.Savings, contentDescription = null) },
+                headlineContent = { Text(stringResource(R.string.budgets_thresholds_global_title)) },
+                supportingContent = {
+                    Text(
+                        "${stringResource(R.string.budgets_thresholds_global_subtitle)} · " +
+                                "${settings.budgetWarningThreshold}% / ${settings.budgetCriticalThreshold}%"
+                    )
+                },
+                modifier = Modifier.clickable { showBudgetThresholdsDialog = true },
             )
 
             HorizontalDivider()
@@ -403,6 +425,55 @@ fun SettingsScreen(
             },
             confirmButton = {
                 TextButton(onClick = { showAutoLockDialog = false }) { Text(stringResource(android.R.string.cancel)) }
+            },
+        )
+    }
+
+    if (showBudgetThresholdsDialog) {
+        var warningInput by remember { mutableStateOf(settings.budgetWarningThreshold.toString()) }
+        var criticalInput by remember { mutableStateOf(settings.budgetCriticalThreshold.toString()) }
+        AlertDialog(
+            onDismissRequest = { showBudgetThresholdsDialog = false },
+            title = { Text(stringResource(R.string.budgets_thresholds_global_title)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = stringResource(R.string.budgets_thresholds_global_subtitle),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(
+                            value = warningInput,
+                            onValueChange = { v -> if (v.all { it.isDigit() } && v.length <= 3) warningInput = v },
+                            label = { Text(stringResource(R.string.budgets_warning_threshold)) },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
+                            modifier = Modifier.weight(1f),
+                        )
+                        OutlinedTextField(
+                            value = criticalInput,
+                            onValueChange = { v -> if (v.all { it.isDigit() } && v.length <= 3) criticalInput = v },
+                            label = { Text(stringResource(R.string.budgets_critical_threshold)) },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val w = warningInput.toIntOrNull() ?: 70
+                    val c = criticalInput.toIntOrNull() ?: 90
+                    viewModel.setBudgetThresholds(w, c)
+                    showBudgetThresholdsDialog = false
+                }) { Text(stringResource(android.R.string.ok)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showBudgetThresholdsDialog = false }) {
+                    Text(stringResource(android.R.string.cancel))
+                }
             },
         )
     }

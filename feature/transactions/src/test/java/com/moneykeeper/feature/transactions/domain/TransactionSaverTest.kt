@@ -32,6 +32,8 @@ class TransactionSaverTest {
         override suspend fun getById(id: Long) = null
         override suspend fun save(account: com.moneykeeper.core.domain.model.Account) = 0L
         override suspend fun archive(id: Long) = Unit
+        override suspend fun unarchive(id: Long) = Unit
+        override suspend fun updateSortOrders(orderedIds: List<Long>) = Unit
         override suspend fun delete(id: Long) = Unit
         override suspend fun adjustBalance(id: Long, delta: BigDecimal) {
             balances[id] = (balances[id] ?: BigDecimal.ZERO) + delta

@@ -40,6 +40,13 @@ class SettingsViewModel @Inject constructor(
 
     fun setAllowScreenshots(allow: Boolean) = update { copy(allowScreenshots = allow) }
 
+    fun setBudgetThresholds(warning: Int, critical: Int) = update {
+        copy(
+            budgetWarningThreshold = warning.coerceIn(0, 999),
+            budgetCriticalThreshold = critical.coerceIn(0, 999),
+        )
+    }
+
     private fun update(block: AppSettings.() -> AppSettings) {
         viewModelScope.launch { settingsRepo.updateSettings(settings.value.block()) }
     }

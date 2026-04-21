@@ -75,6 +75,12 @@
     <string name="budgets_period_weekly">Еженедельно</string>
     <string name="budgets_accounts">Счета</string>
     <string name="budgets_currency">Валюта</string>
+    <string name="budgets_warning_threshold">Жёлтый порог, %</string>
+    <string name="budgets_critical_threshold">Красный порог, %</string>
+    <string name="budgets_threshold_global_hint">Пусто — использовать глобальный (%1$d / %2$d)</string>
+    <string name="budgets_thresholds_global_title">Пороги по умолчанию</string>
+    <string name="budgets_thresholds_global_subtitle">Применяются ко всем бюджетам без персональных порогов</string>
+    <string name="settings_section_budgets">Бюджеты</string>
     <string name="budgets_all_accounts">Все счета</string>
     <string name="budgets_all_categories">Все категории</string>
 

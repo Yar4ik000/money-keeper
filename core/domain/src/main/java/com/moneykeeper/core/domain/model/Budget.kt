@@ -9,6 +9,8 @@ data class Budget(
     val period: BudgetPeriod,
     val currency: String,
     val accountIds: Set<Long> = emptySet(), // empty = all accounts
+    val warningThreshold: Int? = null,  // per-budget override in %; null = use global default
+    val criticalThreshold: Int? = null,
 )
 
 enum class BudgetPeriod { MONTHLY, WEEKLY }
