@@ -44,6 +44,7 @@ private data class BackupManifest(
     val createdAt: String,
     val kdf: KdfSpec,
     @SerialName("dbEncIv") val dbEncIv: String,
+    val backupVersion: Int = 1,
 ) {
     @Serializable
     @Keep
@@ -71,18 +72,22 @@ class BackupRepositoryImpl @Inject constructor(
 
     private val json = Json { ignoreUnknownKeys = true }
 
-    override suspend fun createBackup(uri: Uri): BackupResult = withContext(Dispatchers.IO) {
+    override suspend fun createBackup(uri: Uri, password: CharArray): BackupResult = withContext(Dispatchers.IO) {
         val tempPlain = File(context.cacheDir, "backup_plain_${System.currentTimeMillis()}.db")
         try {
-            val masterKey = masterKeyProvider.requireKey()
+            exportPlainDump(tempPlain)
+
+            val kdfSalt = ByteArray(16).also { SecureRandom().nextBytes(it) }
+            val backupKey = keyDerivation.derive(
+                password = password,
+                salt = kdfSalt,
+                iterations = 3,
+                memoryKb = 32768,
+                parallelism = 2,
+            )
             try {
-                exportPlainDump(tempPlain)
-
                 val iv = ByteArray(12).also { SecureRandom().nextBytes(it) }
-                val cipherText = aesGcmEncrypt(tempPlain.readBytes(), masterKey, iv)
-
-                val kdfParams = keyStorage.readKdfParams()
-                val kdfSalt = keyStorage.readOrCreateKdfSalt()
+                val cipherText = aesGcmEncrypt(tempPlain.readBytes(), backupKey, iv)
 
                 val appVersion = try {
                     context.packageManager.getPackageInfo(context.packageName, 0).longVersionCode.toInt()
@@ -94,11 +99,12 @@ class BackupRepositoryImpl @Inject constructor(
                     createdAt = Instant.now().toString(),
                     kdf = BackupManifest.KdfSpec(
                         salt = Base64.encodeToString(kdfSalt, Base64.NO_WRAP),
-                        iterations = kdfParams.iterations,
-                        memoryKb = kdfParams.memoryKb,
-                        parallelism = kdfParams.parallelism,
+                        iterations = 3,
+                        memoryKb = 32768,
+                        parallelism = 2,
                     ),
                     dbEncIv = Base64.encodeToString(iv, Base64.NO_WRAP),
+                    backupVersion = 2,
                 )
 
                 context.contentResolver.openOutputStream(uri)?.use { out ->
@@ -113,7 +119,8 @@ class BackupRepositoryImpl @Inject constructor(
                 }
                 BackupResult.Success
             } finally {
-                masterKey.fill(0)
+                backupKey.fill(0)
+                password.fill(0.toChar())
             }
         } catch (e: Exception) {
             BackupResult.Error(e.message ?: "Ошибка создания резервной копии")
@@ -139,6 +146,7 @@ class BackupRepositoryImpl @Inject constructor(
                     createdAt = manifest.createdAt,
                     databaseVersion = manifest.databaseVersion,
                     appVersionCode = appVersion,
+                    backupVersion = manifest.backupVersion,
                 )
             )
         } catch (e: Exception) {
@@ -175,7 +183,12 @@ class BackupRepositoryImpl @Inject constructor(
                 password.fill(0.toChar())
             }
 
-            databaseProvider.close()
+            // Keep the database open while we prepare the replacement file.
+            // Closing the DB here triggers DatabaseProvider.state → Idle, which
+            // AuthGateViewModel translates to AuthState.Locked, destroying the
+            // BackupViewModel's viewModelScope mid-operation and preventing the
+            // "Restart" dialog from ever appearing. The actual close + atomic file
+            // swap happens inside restartProcess(), just before exitProcess(0).
             val dbFile = context.getDatabasePath(AppDatabase.DB_NAME)
             val dbParent = dbFile.parentFile ?: error("DB parent dir is null")
             val pending = File(dbParent, "${dbFile.name}.restore-pending")
@@ -186,16 +199,10 @@ class BackupRepositoryImpl @Inject constructor(
                 importPlainIntoEncrypted(tempPlain, pending, currentDbKey)
             } catch (e: Exception) {
                 pending.delete()
-                // Re-open the original DB so the app stays functional after import failure
-                databaseProvider.initialize(currentDbKey)
                 return@withContext RestoreResult.Error("Ошибка импорта: ${e.message.orEmpty()}")
             } finally {
                 currentDbKey.fill(0)
             }
-
-            File(dbParent, "${dbFile.name}-wal").delete()
-            File(dbParent, "${dbFile.name}-shm").delete()
-            Files.move(pending.toPath(), dbFile.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
 
             RestoreResult.Success
         } catch (e: Exception) {
@@ -230,6 +237,24 @@ class BackupRepositoryImpl @Inject constructor(
     }
 
     override fun restartProcess(activity: Activity) {
+        // If a restore is pending, atomically swap the DB file now.
+        // This runs on the Main thread, but rename() is a single syscall (~µs) and
+        // the process is about to die anyway, so blocking here is harmless.
+        val dbFile = context.getDatabasePath(AppDatabase.DB_NAME)
+        val pending = File(dbFile.parentFile!!, "${dbFile.name}.restore-pending")
+        if (pending.exists()) {
+            try {
+                databaseProvider.close()
+                File(dbFile.parentFile!!, "${dbFile.name}-wal").delete()
+                File(dbFile.parentFile!!, "${dbFile.name}-shm").delete()
+                Files.move(
+                    pending.toPath(), dbFile.toPath(),
+                    StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING,
+                )
+            } catch (_: Exception) {
+                pending.delete() // failed swap — original DB survives
+            }
+        }
         val launch = context.packageManager.getLaunchIntentForPackage(context.packageName)!!
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
         activity.startActivity(launch)

@@ -1,35 +1,11 @@
 <resources>
-    <!-- SetupPasswordScreen -->
-    <string name="setup_title">Создайте пароль</string>
-    <string name="setup_subtitle">Этот пароль защищает все ваши данные. Без него восстановить данные из резервной копии невозможно.</string>
-    <string name="setup_password_label">Пароль</string>
-    <string name="setup_confirm_label">Повторите пароль</string>
-    <string name="setup_understand_checkbox">Я понимаю, что без этого пароля не смогу восстановить данные из резервной копии</string>
-    <string name="setup_button_create">Создать</string>
-    <string name="setup_error_mismatch">Пароли не совпадают</string>
-    <string name="setup_error_too_short">Пароль должен быть не менее 6 символов</string>
+    <!-- SetupPinScreen / generic errors -->
     <string name="setup_error_unknown">Что-то пошло не так. Попробуйте ещё раз.</string>
 
-    <!-- UnlockScreen -->
-    <string name="unlock_title">Введите пароль</string>
-    <string name="unlock_password_label">Пароль</string>
-    <string name="unlock_button">Войти</string>
+    <!-- UnlockPinScreen / UnlockPinViewModel -->
     <string name="unlock_button_biometric">Войти отпечатком пальца</string>
-    <string name="unlock_error_wrong_password">Неверный пароль</string>
-    <string name="unlock_error_biometric_stale">Биометрия устарела. Войдите паролем и настройте биометрию заново.</string>
+    <string name="unlock_error_biometric_stale">Биометрия устарела. Войдите PIN-кодом и настройте биометрию заново.</string>
     <string name="unlock_error_locked_out">Слишком много попыток. Повторите через %1$d сек.</string>
-
-    <!-- ChangePasswordScreen -->
-    <string name="change_title">Сменить пароль</string>
-    <string name="change_old_label">Текущий пароль</string>
-    <string name="change_new_label">Новый пароль</string>
-    <string name="change_confirm_label">Повторите новый пароль</string>
-    <string name="change_button">Сменить пароль</string>
-    <string name="change_error_wrong_old">Неверный текущий пароль</string>
-    <string name="change_error_corrupted">Ошибка чтения ключей. Данные повреждены.</string>
-    <string name="change_backup_warning_title">Старые резервные копии</string>
-    <string name="change_backup_warning_body">Резервные копии, созданные до смены пароля, по-прежнему расшифровываются старым паролем. Запомните его, если они вам нужны.</string>
-    <string name="change_backup_warning_ok">Понятно</string>
 
     <!-- DataCorruptedScreen -->
     <string name="corrupted_title">Данные повреждены</string>
@@ -44,4 +20,40 @@
     <string name="biometric_unlock_title">Войдите в Money Keeper</string>
     <string name="biometric_cancel">Использовать пароль</string>
     <string name="biometric_use_password">Использовать пароль</string>
+
+    <!-- SetupPinScreen -->
+    <string name="setup_pin_title">Создайте PIN-код</string>
+    <string name="setup_pin_subtitle">4 цифры. Будет использоваться для ежедневного входа в приложение.</string>
+    <string name="setup_pin_confirm_title">Подтвердите PIN-код</string>
+    <string name="setup_pin_confirm_subtitle">Введите PIN ещё раз для подтверждения</string>
+    <string name="setup_pin_error_mismatch">PIN-коды не совпадают</string>
+    <string name="setup_pin_error_too_short">Минимум 4 цифры</string>
+    <string name="setup_pin_button_create">Создать</string>
+    <string name="setup_pin_button_confirm">Подтвердить</string>
+
+    <!-- UnlockPinScreen -->
+    <string name="unlock_pin_title">Введите PIN-код</string>
+    <string name="unlock_pin_error_wrong">Неверный PIN</string>
+    <string name="unlock_pin_failed_attempts">Неверных попыток: %d</string>
+
+    <!-- ChangePinScreen -->
+    <string name="change_pin_title">Сменить PIN-код</string>
+    <string name="change_pin_current_step_title">Введите текущий PIN</string>
+    <string name="change_pin_new_step_title">Введите новый PIN</string>
+    <string name="change_pin_confirm_step_title">Подтвердите новый PIN</string>
+    <string name="change_pin_error_wrong_current">Неверный PIN</string>
+
+    <!-- ProtectedActionGate -->
+    <string name="protected_action_pin_title">Подтверждение</string>
+    <string name="protected_action_pin_subtitle">Введите PIN для продолжения</string>
+    <string name="protected_action_biometric_title">Подтвердите действие</string>
+    <string name="protected_action_use_pin">Использовать PIN</string>
+
+    <!-- MigrationScreen -->
+    <string name="migration_title">Новый способ входа</string>
+    <string name="migration_subtitle">В этой версии ежедневный PIN-код отделён от пароля резервных копий. Введите текущий пароль — это понадобится один раз.</string>
+    <string name="migration_password_label">Текущий пароль</string>
+    <string name="migration_button">Продолжить</string>
+    <string name="migration_error_wrong">Неверный пароль</string>
+    <string name="migration_error_corrupted">Данные повреждены. Восстановите из резервной копии.</string>
 </resources>

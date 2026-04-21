@@ -32,6 +32,33 @@ class BiometricAuthenticator @Inject constructor(
                 BiometricManager.BIOMETRIC_SUCCESS
 
     /**
+     * Показывает BiometricPrompt для подтверждения личности (без CryptoObject).
+     * Возвращает true при успехе, false при отмене или ошибке.
+     */
+    suspend fun confirmIdentity(activity: FragmentActivity): Boolean =
+        suspendCancellableCoroutine { cont ->
+            val prompt = BiometricPrompt(
+                activity,
+                ContextCompat.getMainExecutor(activity),
+                object : BiometricPrompt.AuthenticationCallback() {
+                    override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                        cont.resume(true)
+                    }
+                    override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                        cont.resume(false)
+                    }
+                    override fun onAuthenticationFailed() {}
+                }
+            )
+            val info = BiometricPrompt.PromptInfo.Builder()
+                .setTitle(context.getString(com.moneykeeper.feature.auth.R.string.protected_action_biometric_title))
+                .setNegativeButtonText(context.getString(com.moneykeeper.feature.auth.R.string.protected_action_use_pin))
+                .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG)
+                .build()
+            prompt.authenticate(info)
+        }
+
+    /**
      * Показывает BiometricPrompt и возвращает расшифрованный master_key, или null если отменено.
      * Бросает [KeyPermanentlyInvalidatedException] если ключ Keystore инвалидирован.
      */

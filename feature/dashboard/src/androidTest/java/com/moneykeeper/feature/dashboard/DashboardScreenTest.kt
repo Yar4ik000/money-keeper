@@ -13,6 +13,7 @@ import com.moneykeeper.core.domain.model.TransactionWithMeta
 import com.moneykeeper.core.domain.model.Transaction
 import com.moneykeeper.core.domain.money.CurrencyAmount
 import com.moneykeeper.core.domain.money.MultiCurrencyTotal
+import com.moneykeeper.core.ui.util.formatAsCurrency
 import com.moneykeeper.feature.dashboard.ui.DashboardScreen
 import com.moneykeeper.feature.dashboard.ui.DashboardUiState
 import com.moneykeeper.feature.dashboard.ui.DepositWithDaysLeft
@@ -45,8 +46,8 @@ class DashboardScreenTest {
                 onTransactionClick = {},
             )
         }
-        // 0,00 ₽ formatted
-        composeTestRule.onNodeWithText("0,00 ₽").assertIsDisplayed()
+        val expected = BigDecimal.ZERO.formatAsCurrency("RUB")
+        composeTestRule.onNodeWithText(expected).assertIsDisplayed()
     }
 
     @Test
@@ -68,7 +69,8 @@ class DashboardScreenTest {
                 onTransactionClick = {},
             )
         }
-        composeTestRule.onNodeWithText("150 000,00 ₽").assertIsDisplayed()
+        val expected = BigDecimal("150000").formatAsCurrency("RUB")
+        composeTestRule.onNodeWithText(expected).assertIsDisplayed()
     }
 
     @Test

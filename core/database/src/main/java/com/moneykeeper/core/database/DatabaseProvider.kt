@@ -37,6 +37,13 @@ class DatabaseProvider @Inject constructor(
         if (db != null) return
 
         System.loadLibrary("sqlcipher")
+
+        // Apply any pending restore before Room opens the database. This handles the case
+        // where restoreBackup() wrote the .restore-pending file but the process crashed
+        // before restartProcess() could do the atomic swap — on the next cold start, the
+        // restore is applied here transparently without requiring user intervention.
+        applyPendingRestoreIfNeeded()
+
         // SupportOpenHelperFactory keeps a reference, not a copy, of the key byte array.
         // The caller zeros dbKey after initialize() returns (security hygiene), which would
         // corrupt any subsequent pool connection opened by SQLCipher. Use a dedicated copy
@@ -55,6 +62,24 @@ class DatabaseProvider @Inject constructor(
 
         db = database
         _state.value = State.Initialized
+    }
+
+    private fun applyPendingRestoreIfNeeded() {
+        val dbFile = context.getDatabasePath(AppDatabase.DB_NAME)
+        val dbParent = dbFile.parentFile ?: return
+        val pending = java.io.File(dbParent, "${dbFile.name}.restore-pending")
+        if (!pending.exists()) return
+        try {
+            java.io.File(dbParent, "${dbFile.name}-wal").delete()
+            java.io.File(dbParent, "${dbFile.name}-shm").delete()
+            java.nio.file.Files.move(
+                pending.toPath(), dbFile.toPath(),
+                java.nio.file.StandardCopyOption.ATOMIC_MOVE,
+                java.nio.file.StandardCopyOption.REPLACE_EXISTING,
+            )
+        } catch (_: Exception) {
+            pending.delete() // Failed swap — open whatever DB exists; discard corrupt pending file.
+        }
     }
 
     @Synchronized

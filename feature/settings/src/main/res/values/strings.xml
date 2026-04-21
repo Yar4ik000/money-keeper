@@ -22,8 +22,8 @@
     <string name="settings_notification_time_value">%1$02d:%2$02d</string>
 
     <string name="settings_section_security">Безопасность</string>
-    <string name="settings_change_password">Сменить пароль</string>
-    <string name="settings_change_password_subtitle">Изменить мастер-пароль приложения</string>
+    <string name="settings_change_pin">Сменить PIN-код</string>
+    <string name="settings_change_pin_subtitle">Изменить PIN-код для входа в приложение</string>
     <string name="settings_biometric">Биометрическая разблокировка</string>
     <string name="settings_biometric_subtitle">Вход по отпечатку пальца или Face ID</string>
     <string name="settings_autolock">Автоматическая блокировка</string>
@@ -57,9 +57,21 @@
     <string name="backup_restore_desc">Восстановить данные из резервной копии</string>
     <string name="backup_restore_action">Восстановить</string>
 
+    <string name="backup_password_dialog_title">Пароль для резервной копии</string>
+    <string name="backup_password_hint">Пароль</string>
+    <string name="backup_password_confirm_hint">Повторите пароль</string>
+    <string name="backup_password_save_reminder">Запишите пароль — он понадобится при восстановлении</string>
+    <string name="backup_password_offline_warning">Пароль к файлу можно подбирать без ограничений попыток. Если данные важны — используйте длинный пароль.</string>
+    <string name="backup_password_too_short">Минимум 8 символов</string>
+    <string name="backup_password_no_upper">Добавьте хотя бы одну заглавную букву</string>
+    <string name="backup_password_no_lower">Добавьте хотя бы одну строчную букву</string>
+    <string name="backup_password_no_digit">Добавьте хотя бы одну цифру</string>
+    <string name="backup_password_mismatch">Пароли не совпадают</string>
+
     <string name="restore_password_title">Пароль резервной копии</string>
     <string name="restore_backup_date">Дата создания: %1$s</string>
-    <string name="restore_password_hint">Пароль от приложения на момент создания копии</string>
+    <string name="restore_password_hint_v1">Мастер-пароль приложения на момент создания копии</string>
+    <string name="restore_password_hint_v2">Пароль, заданный при создании этой копии</string>
     <string name="restore_wrong_password">Неверный пароль</string>
     <string name="restore_done_title">Восстановление завершено</string>
     <string name="restore_done_message">Данные восстановлены. Для применения изменений необходимо перезапустить приложение.</string>
@@ -84,6 +96,8 @@
     <string name="budgets_delete_confirm_title">Удалить бюджет?</string>
     <string name="budgets_delete_confirm_message">«%1$s» будет удалён. Действие необратимо.</string>
     <string name="common_delete">Удалить</string>
+    <string name="common_cancel">Отмена</string>
+    <string name="common_ok">ОК</string>
     <string name="budgets_all_accounts">Все счета</string>
     <string name="budgets_all_categories">Все категории</string>
 

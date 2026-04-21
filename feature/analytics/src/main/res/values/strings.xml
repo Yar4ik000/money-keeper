@@ -49,4 +49,6 @@
     <string name="category_analytics_total">Итого за период</string>
     <string name="category_analytics_monthly_trend">Тренд по месяцам</string>
     <string name="category_analytics_transactions">Операции</string>
+    <string name="action_cancel">Отмена</string>
+    <string name="action_ok">ОК</string>
 </resources>

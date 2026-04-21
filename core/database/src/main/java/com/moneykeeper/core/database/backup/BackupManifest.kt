@@ -9,7 +9,11 @@ import kotlinx.serialization.Serializable
  *
  * Структура архива:
  *   manifest.json  — этот класс, JSON
- *   database.enc   — AES-GCM(master_key, sqlite_dump)
+ *   database.enc   — AES-GCM(backup_key, sqlite_dump)
+ *
+ * backupVersion:
+ *   1 (v1.x) — ключ шифрования = master_key (производный от пароля приложения)
+ *   2 (v1.3+) — ключ шифрования = Argon2id(backup_password, kdf.salt, kdf.params)
  */
 @Serializable
 data class BackupManifest(
@@ -18,6 +22,7 @@ data class BackupManifest(
     val createdAt: String,      // ISO-8601, например "2026-04-19T10:30:00Z"
     val kdf: KdfSpec,
     val dbEncIv: String,        // base64 IV для расшифровки database.enc
+    val backupVersion: Int = 1,
 ) {
     @Serializable
     data class KdfSpec(

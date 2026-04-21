@@ -70,7 +70,8 @@ class BackupRestoreFlowTest {
         keyStorage.writeKdfParams(
             DatabaseKeyStorage.KdfParams(iterations = 1, memoryKb = 64, parallelism = 1)
         )
-        // KDF salt is created lazily by readOrCreateKdfSalt() on the first createBackup() call.
+        // createBackup() now generates a fresh random salt per backup (no longer reuses the
+        // app-unlock salt). The KdfParams above are only used by restoreBackup to fetch db_key.
 
         // Remove any leftover DB files so the first initialize() creates a fresh database.
         deleteDbFiles()
@@ -118,7 +119,7 @@ class BackupRestoreFlowTest {
 
         // ── Step 2: create backup ─────────────────────────────────────────────
         val backupUri = Uri.fromFile(backupFile)
-        val backupResult = backupRepo.createBackup(backupUri)
+        val backupResult = backupRepo.createBackup(backupUri, "test-backup-password".toCharArray())
         assertTrue("createBackup must succeed, got: $backupResult",
             backupResult is BackupResult.Success)
         assertTrue("Backup file must be written to disk", backupFile.exists())
@@ -137,11 +138,25 @@ class BackupRestoreFlowTest {
 
         // ── Step 5: restore from backup ───────────────────────────────────────
         // Password value is irrelevant — the fake KeyDerivation always returns masterKey.
+        // After restore, the DB stays OPEN — only the .restore-pending file is written.
+        // The live DB is untouched until restartProcess() does the atomic swap.
         val restoreResult = backupRepo.restoreBackup(backupUri, "ignored".toCharArray())
         assertTrue("restoreBackup must succeed, got: $restoreResult",
             restoreResult is RestoreResult.Success)
 
-        // ── Step 6: re-open DB (mirrors the process restart the app normally does) ──
+        // ── Step 6: simulate restartProcess() — close + atomic file swap + re-open ──
+        // In production this is done on the Main thread just before exitProcess(0).
+        databaseProvider.close()
+        val dbFile = context.getDatabasePath(AppDatabase.DB_NAME)
+        val pending = java.io.File(dbFile.parentFile!!, "${dbFile.name}.restore-pending")
+        assertTrue("restore-pending file must exist", pending.exists())
+        java.io.File(dbFile.parentFile!!, "${dbFile.name}-wal").delete()
+        java.io.File(dbFile.parentFile!!, "${dbFile.name}-shm").delete()
+        java.nio.file.Files.move(
+            pending.toPath(), dbFile.toPath(),
+            java.nio.file.StandardCopyOption.ATOMIC_MOVE,
+            java.nio.file.StandardCopyOption.REPLACE_EXISTING,
+        )
         databaseProvider.initialize(dbKey.copyOf())
 
         // ── Step 7: assertions ────────────────────────────────────────────────
@@ -150,6 +165,39 @@ class BackupRestoreFlowTest {
             afterRestore.any { it.name == "Alpha" })
         assertFalse("Beta must be absent — it was created after the backup",
             afterRestore.any { it.name == "Beta" })
+    }
+
+    @Test
+    fun crashAfterRestoreWrite_coldStart_appliesPendingRestore() = runTest {
+        val accountDao = databaseProvider.require().accountDao()
+
+        // ── Step 1: baseline account present before backup ────────────────────
+        accountDao.upsert(testAccount("Alpha", "#FF0000"))
+        val backupResult = backupRepo.createBackup(Uri.fromFile(backupFile), "test-backup-password".toCharArray())
+        assertTrue("createBackup must succeed", backupResult is BackupResult.Success)
+
+        // ── Step 2: insert post-backup account ────────────────────────────────
+        accountDao.upsert(testAccount("Beta", "#0000FF"))
+
+        // ── Step 3: restore backup — writes .restore-pending, does NOT restart ─
+        val restoreResult = backupRepo.restoreBackup(Uri.fromFile(backupFile), "ignored".toCharArray())
+        assertTrue("restoreBackup must succeed", restoreResult is RestoreResult.Success)
+
+        val dbFile = context.getDatabasePath(AppDatabase.DB_NAME)
+        val pending = java.io.File(dbFile.parentFile!!, "${dbFile.name}.restore-pending")
+        assertTrue(".restore-pending must exist", pending.exists())
+
+        // ── Step 4: simulate crash — close DB without calling restartProcess() ─
+        databaseProvider.close()
+
+        // ── Step 5: cold start — initialize() must detect and apply the pending ─
+        databaseProvider.initialize(dbKey.copyOf())
+
+        // ── Step 6: verify restore was applied ────────────────────────────────
+        val accounts = databaseProvider.require().accountDao().observeActive().first()
+        assertTrue("Alpha must survive cold-start restore", accounts.any { it.name == "Alpha" })
+        assertFalse("Beta must be absent — created after backup", accounts.any { it.name == "Beta" })
+        assertFalse(".restore-pending must be cleaned up", pending.exists())
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

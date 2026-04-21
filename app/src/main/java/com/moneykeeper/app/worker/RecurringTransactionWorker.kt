@@ -4,8 +4,8 @@ import android.content.Context
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import com.moneykeeper.core.database.DatabaseProvider
 import com.moneykeeper.core.domain.usecase.GenerateRecurringTransactionsUseCase
-import com.moneykeeper.feature.auth.domain.MasterKeyHolder
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 
@@ -13,12 +13,12 @@ import dagger.assisted.AssistedInject
 class RecurringTransactionWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted params: WorkerParameters,
-    private val masterKeyHolder: MasterKeyHolder,
+    private val databaseProvider: DatabaseProvider,
     private val generateUseCase: GenerateRecurringTransactionsUseCase,
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
-        if (!masterKeyHolder.isSet()) return Result.retry()
+        if (databaseProvider.state.value !is DatabaseProvider.State.Initialized) return Result.retry()
         generateUseCase()
         return Result.success()
     }

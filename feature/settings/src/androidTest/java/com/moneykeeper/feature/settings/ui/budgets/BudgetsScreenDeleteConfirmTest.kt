@@ -80,7 +80,7 @@ private fun HarnessDialog(onConfirm: () -> Unit) {
             },
             dismissButton = {
                 TextButton(onClick = { open = false }) {
-                    Text(stringResource(android.R.string.cancel))
+                    Text(stringResource(R.string.common_cancel))
                 }
             },
         )
