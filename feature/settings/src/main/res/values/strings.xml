@@ -61,7 +61,11 @@
     <string name="backup_password_hint">Пароль</string>
     <string name="backup_password_confirm_hint">Повторите пароль</string>
     <string name="backup_password_save_reminder">Запишите пароль — он понадобится при восстановлении</string>
+    <string name="backup_password_offline_warning">Пароль к файлу можно подбирать без ограничений попыток. Если данные важны — используйте длинный пароль.</string>
     <string name="backup_password_too_short">Минимум 8 символов</string>
+    <string name="backup_password_no_upper">Добавьте хотя бы одну заглавную букву</string>
+    <string name="backup_password_no_lower">Добавьте хотя бы одну строчную букву</string>
+    <string name="backup_password_no_digit">Добавьте хотя бы одну цифру</string>
     <string name="backup_password_mismatch">Пароли не совпадают</string>
 
     <string name="restore_password_title">Пароль резервной копии</string>
@@ -92,6 +96,8 @@
     <string name="budgets_delete_confirm_title">Удалить бюджет?</string>
     <string name="budgets_delete_confirm_message">«%1$s» будет удалён. Действие необратимо.</string>
     <string name="common_delete">Удалить</string>
+    <string name="common_cancel">Отмена</string>
+    <string name="common_ok">ОК</string>
     <string name="budgets_all_accounts">Все счета</string>
     <string name="budgets_all_categories">Все категории</string>
 

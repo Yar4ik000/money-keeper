@@ -48,63 +48,79 @@ fun ChangePinScreen(
             )
         },
     ) { padding ->
-        Column(
-            modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .navigationBarsPadding(),
         ) {
-            val stepTitle = when {
-                uiState.step == ChangePinStep.CURRENT -> stringResource(R.string.change_pin_current_step_title)
-                confirmMode -> stringResource(R.string.change_pin_confirm_step_title)
-                else -> stringResource(R.string.change_pin_new_step_title)
+            // ── Info block — top-anchored ─────────────────────────────────────
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.TopCenter)
+                    .padding(top = 40.dp, start = 32.dp, end = 32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                val stepTitle = when {
+                    uiState.step == ChangePinStep.CURRENT -> stringResource(R.string.change_pin_current_step_title)
+                    confirmMode -> stringResource(R.string.change_pin_confirm_step_title)
+                    else -> stringResource(R.string.change_pin_new_step_title)
+                }
+                Text(stepTitle, style = MaterialTheme.typography.headlineMedium)
+                Spacer(Modifier.height(40.dp))
+
+                PinDots(count = pin.length)
+
+                Box(
+                    modifier = Modifier.height(32.dp).padding(top = 8.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    when {
+                        uiState.isLoading -> CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            strokeWidth = 2.dp,
+                        )
+                        uiState.error != null -> Text(
+                            text = when (uiState.error) {
+                                ChangePinError.WrongCurrentPin -> stringResource(R.string.change_pin_error_wrong_current)
+                                ChangePinError.TooShort        -> stringResource(R.string.setup_pin_error_too_short)
+                                ChangePinError.Mismatch        -> stringResource(R.string.setup_pin_error_mismatch)
+                                else                           -> ""
+                            },
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                }
             }
-            Text(stepTitle, style = MaterialTheme.typography.headlineSmall)
-            Spacer(Modifier.height(32.dp))
 
-            PinDots(count = pin.length, maxLength = 6)
-
-            uiState.error?.let { error ->
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = when (error) {
-                        ChangePinError.WrongCurrentPin -> stringResource(R.string.change_pin_error_wrong_current)
-                        ChangePinError.TooShort        -> stringResource(R.string.setup_pin_error_too_short)
-                        ChangePinError.Mismatch        -> stringResource(R.string.setup_pin_error_mismatch)
-                    },
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-
-            Spacer(Modifier.height(24.dp))
-
+            // ── Keypad block — bottom-anchored ────────────────────────────────
             PinKeypad(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 40.dp),
                 onDigit = { digit ->
-                    if (pin.length < 6) { pin += digit; viewModel.clearError() }
-                },
-                onDelete = { if (pin.isNotEmpty()) pin = pin.dropLast(1) },
-                onConfirm = {
-                    if (pin.length >= 4) {
-                        when {
-                            uiState.step == ChangePinStep.CURRENT -> {
-                                viewModel.verifyCurrentPin(pin.toCharArray())
-                                pin = ""
-                            }
-                            !confirmMode -> { firstPin = pin; pin = ""; confirmMode = true }
-                            else -> {
-                                viewModel.submitNewPin(firstPin.toCharArray(), pin.toCharArray())
-                                firstPin = ""; pin = ""
+                    if (pin.length < 4) {
+                        pin += digit
+                        viewModel.clearError()
+                        if (pin.length == 4) {
+                            when {
+                                uiState.step == ChangePinStep.CURRENT -> {
+                                    viewModel.verifyCurrentPin(pin.toCharArray())
+                                    pin = ""
+                                }
+                                !confirmMode -> { firstPin = pin; pin = ""; confirmMode = true }
+                                else -> {
+                                    viewModel.submitNewPin(firstPin.toCharArray(), pin.toCharArray())
+                                    firstPin = ""; pin = ""
+                                }
                             }
                         }
                     }
                 },
-                confirmEnabled = pin.length >= 4 && !uiState.isLoading,
+                onDelete = { if (pin.isNotEmpty()) pin = pin.dropLast(1) },
             )
-
-            if (uiState.isLoading) {
-                Spacer(Modifier.height(16.dp))
-                CircularProgressIndicator(modifier = Modifier.size(32.dp))
-            }
         }
     }
 }

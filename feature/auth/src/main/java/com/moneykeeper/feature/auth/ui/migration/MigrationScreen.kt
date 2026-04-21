@@ -145,7 +145,7 @@ private fun PinSetupStep(
         )
         Spacer(Modifier.height(32.dp))
 
-        PinDots(count = pin.length, maxLength = 6)
+        PinDots(count = pin.length)
 
         (error as? MigrationError.PinMismatch)?.let {
             Spacer(Modifier.height(8.dp))
@@ -159,16 +159,16 @@ private fun PinSetupStep(
         Spacer(Modifier.height(24.dp))
         PinKeypad(
             onDigit = { digit ->
-                if (pin.length < 6) { pin += digit; onClearError() }
-            },
-            onDelete = { if (pin.isNotEmpty()) pin = pin.dropLast(1) },
-            onConfirm = {
-                if (pin.length >= 4) {
-                    if (!confirmMode) { firstPin = pin; pin = ""; confirmMode = true }
-                    else { onSubmit(firstPin.toCharArray(), pin.toCharArray()); firstPin = ""; pin = "" }
+                if (pin.length < 4) {
+                    pin += digit
+                    onClearError()
+                    if (pin.length == 4) {
+                        if (!confirmMode) { firstPin = pin; pin = ""; confirmMode = true }
+                        else { onSubmit(firstPin.toCharArray(), pin.toCharArray()); firstPin = ""; pin = "" }
+                    }
                 }
             },
-            confirmEnabled = pin.length >= 4 && !isLoading,
+            onDelete = { if (pin.isNotEmpty()) pin = pin.dropLast(1) },
         )
     }
 }

@@ -38,7 +38,7 @@ class SetupPinViewModel @Inject constructor(
             if (!pin.contentEquals(confirmation)) {
                 _uiState.update { it.copy(error = SetupPinError.Mismatch) }; return@launch
             }
-            if (pin.size < PinVerifier.MIN_LENGTH) {
+            if (pin.size != PinVerifier.PIN_LENGTH) {
                 _uiState.update { it.copy(error = SetupPinError.TooShort) }; return@launch
             }
             _uiState.update { it.copy(isLoading = true, error = null) }

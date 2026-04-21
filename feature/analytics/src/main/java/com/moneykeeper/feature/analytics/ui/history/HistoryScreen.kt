@@ -271,7 +271,7 @@ fun HistoryScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteConfirm = false }) {
-                    Text(stringResource(android.R.string.cancel))
+                    Text(stringResource(R.string.action_cancel))
                 }
             },
         )

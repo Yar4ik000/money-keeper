@@ -10,7 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun PinDots(count: Int, maxLength: Int = 6) {
+fun PinDots(count: Int, maxLength: Int = 4) {
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         repeat(maxLength) { index ->
             Surface(

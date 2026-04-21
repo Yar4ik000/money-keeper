@@ -339,10 +339,10 @@ fun SettingsScreen(
                 TextButton(onClick = {
                     viewModel.updateNotificationTime(timePickerState.hour, timePickerState.minute)
                     showTimePicker = false
-                }) { Text(stringResource(android.R.string.ok)) }
+                }) { Text(stringResource(R.string.common_ok)) }
             },
             dismissButton = {
-                TextButton(onClick = { showTimePicker = false }) { Text(stringResource(android.R.string.cancel)) }
+                TextButton(onClick = { showTimePicker = false }) { Text(stringResource(R.string.common_cancel)) }
             },
         )
     }
@@ -373,7 +373,7 @@ fun SettingsScreen(
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showThemeDialog = false }) { Text(stringResource(android.R.string.cancel)) }
+                TextButton(onClick = { showThemeDialog = false }) { Text(stringResource(R.string.common_cancel)) }
             },
         )
     }
@@ -403,7 +403,7 @@ fun SettingsScreen(
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showCurrencyDialog = false }) { Text(stringResource(android.R.string.cancel)) }
+                TextButton(onClick = { showCurrencyDialog = false }) { Text(stringResource(R.string.common_cancel)) }
             },
         )
     }
@@ -437,7 +437,7 @@ fun SettingsScreen(
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showAutoLockDialog = false }) { Text(stringResource(android.R.string.cancel)) }
+                TextButton(onClick = { showAutoLockDialog = false }) { Text(stringResource(R.string.common_cancel)) }
             },
         )
     }
@@ -481,11 +481,11 @@ fun SettingsScreen(
                     val c = criticalInput.toIntOrNull() ?: 90
                     viewModel.setBudgetThresholds(w, c)
                     showBudgetThresholdsDialog = false
-                }) { Text(stringResource(android.R.string.ok)) }
+                }) { Text(stringResource(R.string.common_ok)) }
             },
             dismissButton = {
                 TextButton(onClick = { showBudgetThresholdsDialog = false }) {
-                    Text(stringResource(android.R.string.cancel))
+                    Text(stringResource(R.string.common_cancel))
                 }
             },
         )

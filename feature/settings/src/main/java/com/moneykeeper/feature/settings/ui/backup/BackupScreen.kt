@@ -13,14 +13,18 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Backup
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Restore
 import androidx.compose.material.icons.outlined.TableChart
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -29,11 +33,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -172,13 +176,26 @@ fun BackupScreen(
 }
 
 @Composable
-private fun ExportPasswordDialog(
+internal fun ExportPasswordDialog(
     onSubmit: (CharArray) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    var password by rememberSaveable { mutableStateOf("") }
-    var confirm by rememberSaveable { mutableStateOf("") }
+    // Use remember (not rememberSaveable) so passwords never land in the savedInstanceState
+    // bundle, which the system may write to disk.
+    var password by remember { mutableStateOf("") }
+    var confirm by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<Int?>(null) }
+
+    DisposableEffect(Unit) {
+        onDispose { password = ""; confirm = "" }
+    }
+
+    val passwordErrors = setOf(
+        R.string.backup_password_too_short,
+        R.string.backup_password_no_upper,
+        R.string.backup_password_no_lower,
+        R.string.backup_password_no_digit,
+    )
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -186,13 +203,26 @@ private fun ExportPasswordDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(stringResource(R.string.backup_password_save_reminder))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Icon(
+                        Icons.Outlined.Info,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        stringResource(R.string.backup_password_offline_warning),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it; error = null },
                     label = { Text(stringResource(R.string.backup_password_hint)) },
-                    isError = error == R.string.backup_password_too_short,
-                    supportingText = if (error == R.string.backup_password_too_short) {
-                        { Text(stringResource(R.string.backup_password_too_short)) }
+                    isError = error in passwordErrors,
+                    supportingText = if (error in passwordErrors) {
+                        { Text(stringResource(error!!)) }
                     } else null,
                     visualTransformation = PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -221,17 +251,20 @@ private fun ExportPasswordDialog(
         confirmButton = {
             TextButton(
                 onClick = {
-                    when {
-                        password.length < 8 -> error = R.string.backup_password_too_short
-                        password != confirm -> error = R.string.backup_password_mismatch
-                        else -> { onSubmit(password.toCharArray()); password = ""; confirm = "" }
+                    when (BackupPasswordValidator.validate(password, confirm)) {
+                        BackupPasswordValidator.Error.TOO_SHORT -> error = R.string.backup_password_too_short
+                        BackupPasswordValidator.Error.NO_UPPER  -> error = R.string.backup_password_no_upper
+                        BackupPasswordValidator.Error.NO_LOWER  -> error = R.string.backup_password_no_lower
+                        BackupPasswordValidator.Error.NO_DIGIT  -> error = R.string.backup_password_no_digit
+                        BackupPasswordValidator.Error.MISMATCH  -> error = R.string.backup_password_mismatch
+                        null -> { onSubmit(password.toCharArray()); password = ""; confirm = "" }
                     }
                 },
                 enabled = password.isNotEmpty(),
-            ) { Text(stringResource(android.R.string.ok)) }
+            ) { Text(stringResource(R.string.common_ok)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(android.R.string.cancel)) }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) }
         },
     )
 }
@@ -244,7 +277,11 @@ private fun RestorePasswordDialog(
     onSubmit: (CharArray) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    var password by rememberSaveable { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+
+    DisposableEffect(Unit) {
+        onDispose { password = "" }
+    }
 
     val hintRes = if (backupVersion >= 2) R.string.restore_password_hint_v2
                   else R.string.restore_password_hint_v1
@@ -278,10 +315,10 @@ private fun RestorePasswordDialog(
             TextButton(
                 onClick = { onSubmit(password.toCharArray()); password = "" },
                 enabled = password.isNotEmpty(),
-            ) { Text(stringResource(android.R.string.ok)) }
+            ) { Text(stringResource(R.string.common_ok)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(android.R.string.cancel)) }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) }
         },
     )
 }

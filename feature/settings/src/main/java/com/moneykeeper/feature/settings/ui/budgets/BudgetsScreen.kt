@@ -149,7 +149,7 @@ fun BudgetsScreen(
             },
             dismissButton = {
                 TextButton(onClick = { budgetPendingDelete = null }) {
-                    Text(stringResource(android.R.string.cancel))
+                    Text(stringResource(R.string.common_cancel))
                 }
             },
         )
@@ -474,10 +474,10 @@ private fun BudgetDialog(
                     )
                 },
                 enabled = amount.toBigDecimalOrNull() != null,
-            ) { Text(stringResource(android.R.string.ok)) }
+            ) { Text(stringResource(R.string.common_ok)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(android.R.string.cancel)) }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) }
         },
     )
 }

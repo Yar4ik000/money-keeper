@@ -3,6 +3,7 @@ package com.moneykeeper.feature.auth.ui.unlock
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Fingerprint
+import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -26,79 +27,119 @@ fun UnlockPinScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val activity = LocalContext.current as FragmentActivity
 
-    LaunchedEffect(uiState.unlocked) {
-        if (uiState.unlocked) onUnlocked()
-    }
-    LaunchedEffect(uiState.corruptedMessage) {
-        uiState.corruptedMessage?.let { onCorrupted(it) }
-    }
+    LaunchedEffect(uiState.unlocked) { if (uiState.unlocked) onUnlocked() }
+    LaunchedEffect(uiState.corruptedMessage) { uiState.corruptedMessage?.let { onCorrupted(it) } }
 
     var pin by remember { mutableStateOf("") }
+    val isLockedOut = uiState.error is UnlockPinError.LockedOut
 
-    Column(
-        modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+    LaunchedEffect(isLockedOut) { if (!isLockedOut) pin = "" }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .statusBarsPadding()
+            .navigationBarsPadding(),
     ) {
-        Text(
-            text = stringResource(R.string.unlock_pin_title),
-            style = MaterialTheme.typography.headlineSmall,
-        )
-        Spacer(Modifier.height(32.dp))
-
-        PinDots(count = pin.length, maxLength = 6)
-
-        uiState.error?.let { error ->
-            Spacer(Modifier.height(8.dp))
+        // ── Info block — anchored to top ──────────────────────────────────────
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.TopCenter)
+                .padding(top = 72.dp, start = 32.dp, end = 32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
             Text(
-                text = when (error) {
-                    is UnlockPinError.WrongPin      -> stringResource(R.string.unlock_pin_error_wrong)
-                    is UnlockPinError.BiometricStale -> stringResource(R.string.unlock_error_biometric_stale)
-                    is UnlockPinError.LockedOut     -> stringResource(R.string.unlock_error_locked_out, error.secondsRemaining)
-                },
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall,
+                text = stringResource(R.string.unlock_pin_title),
+                style = MaterialTheme.typography.headlineMedium,
             )
-        }
 
-        Spacer(Modifier.height(24.dp))
-
-        PinKeypad(
-            onDigit = { digit ->
-                if (pin.length < 6) {
-                    pin += digit
-                    // auto-submit at MAX_LENGTH
-                    if (pin.length == 6) {
-                        viewModel.onPinSubmit(pin.toCharArray())
-                        pin = ""
+            // Fixed-height row for failed-attempt warning — avoids layout shift
+            Box(
+                modifier = Modifier
+                    .height(28.dp)
+                    .padding(top = 6.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (uiState.failedAttempts > 0 && !isLockedOut) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            Icons.Outlined.Warning,
+                            contentDescription = null,
+                            modifier = Modifier.size(13.dp),
+                            tint = MaterialTheme.colorScheme.error,
+                        )
+                        Text(
+                            stringResource(R.string.unlock_pin_failed_attempts, uiState.failedAttempts),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                        )
                     }
                 }
-            },
-            onDelete = { if (pin.isNotEmpty()) pin = pin.dropLast(1) },
-            onConfirm = {
-                if (pin.length >= 4) {
-                    viewModel.onPinSubmit(pin.toCharArray())
-                    pin = ""
-                }
-            },
-            confirmEnabled = pin.length >= 4 && !uiState.isLoading,
-        )
+            }
 
-        if (viewModel.isBiometricAvailable) {
-            Spacer(Modifier.height(16.dp))
-            OutlinedButton(
-                onClick = { viewModel.onBiometricClick(activity) },
-                enabled = !uiState.isLoading,
+            Spacer(Modifier.height(36.dp))
+            PinDots(count = pin.length)
+
+            // Fixed-height slot for error text or loading indicator — dots never shift
+            Box(
+                modifier = Modifier
+                    .height(32.dp)
+                    .padding(top = 8.dp),
+                contentAlignment = Alignment.Center,
             ) {
-                Icon(Icons.Outlined.Fingerprint, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text(stringResource(R.string.unlock_button_biometric))
+                when {
+                    uiState.isLoading -> CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.dp,
+                    )
+                    uiState.error != null -> Text(
+                        text = when (val e = uiState.error) {
+                            is UnlockPinError.WrongPin       -> stringResource(R.string.unlock_pin_error_wrong)
+                            is UnlockPinError.BiometricStale -> stringResource(R.string.unlock_error_biometric_stale)
+                            is UnlockPinError.LockedOut      -> stringResource(R.string.unlock_error_locked_out, e.secondsRemaining)
+                            else                             -> ""
+                        },
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
             }
         }
 
-        if (uiState.isLoading) {
-            Spacer(Modifier.height(16.dp))
-            CircularProgressIndicator(modifier = Modifier.size(32.dp))
+        // ── Keypad block — anchored to bottom ─────────────────────────────────
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 40.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            PinKeypad(
+                onDigit = { digit ->
+                    if (!isLockedOut && pin.length < 4) {
+                        pin += digit
+                        if (pin.length == 4) {
+                            viewModel.onPinSubmit(pin.toCharArray())
+                            pin = ""
+                        }
+                    }
+                },
+                onDelete = { if (!isLockedOut && pin.isNotEmpty()) pin = pin.dropLast(1) },
+            )
+            if (viewModel.isBiometricAvailable) {
+                Spacer(Modifier.height(16.dp))
+                OutlinedButton(
+                    onClick = { viewModel.onBiometricClick(activity) },
+                    enabled = !uiState.isLoading && !isLockedOut,
+                ) {
+                    Icon(Icons.Outlined.Fingerprint, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(R.string.unlock_button_biometric))
+                }
+            }
         }
     }
 }

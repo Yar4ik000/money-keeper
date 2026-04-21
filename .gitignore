@@ -24,6 +24,7 @@ screen.png
 icon.jpg
 screen1.jpg
 screen2.jpg
+screens
 
 # Временные файлы сборки (они огромные и ИИ они не нужны)
 .gradle/

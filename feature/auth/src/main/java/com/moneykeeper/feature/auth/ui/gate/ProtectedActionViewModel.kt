@@ -29,7 +29,7 @@ class ProtectedActionViewModel @Inject constructor(
     fun start(activity: FragmentActivity) = viewModelScope.launch {
         if (hasBiometric) {
             val confirmed = biometricAuthenticator.confirmIdentity(activity)
-            if (confirmed) { _state.value = ProtectedActionState.Granted; return@launch }
+            if (confirmed) { _state.value = ProtectedActionState.Granted(); return@launch }
         }
         _state.value = ProtectedActionState.AwaitingPin()
     }
@@ -37,7 +37,7 @@ class ProtectedActionViewModel @Inject constructor(
     fun verifyPin(pin: CharArray) = viewModelScope.launch {
         val ok = pinVerifier.verify(pin)
         pin.fill(0.toChar())
-        _state.value = if (ok) ProtectedActionState.Granted
+        _state.value = if (ok) ProtectedActionState.Granted()
                        else ProtectedActionState.AwaitingPin(wrongPin = true)
     }
 
@@ -48,5 +48,7 @@ class ProtectedActionViewModel @Inject constructor(
 sealed interface ProtectedActionState {
     data object Idle : ProtectedActionState
     data class AwaitingPin(val wrongPin: Boolean = false) : ProtectedActionState
-    data object Granted : ProtectedActionState
+    // nonce ensures two rapid consecutive grants are distinct values in the StateFlow,
+    // preventing the second from being deduplicated and silently dropped.
+    data class Granted(val nonce: Long = System.nanoTime()) : ProtectedActionState
 }

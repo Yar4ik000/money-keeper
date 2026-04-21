@@ -207,10 +207,10 @@ private fun LocalDatePickerDialog(
             TextButton(onClick = {
                 val millis = pickerState.selectedDateMillis ?: return@TextButton
                 onConfirm(Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalDate())
-            }) { Text(stringResource(android.R.string.ok)) }
+            }) { Text(stringResource(R.string.action_ok)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(android.R.string.cancel)) }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
         },
     ) {
         DatePicker(state = pickerState)

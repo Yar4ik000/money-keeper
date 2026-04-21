@@ -157,10 +157,10 @@ fun TransferScreen(
                         viewModel.onDateChange(date)
                     }
                     showDatePicker = false
-                }) { Text(stringResource(android.R.string.ok)) }
+                }) { Text(stringResource(R.string.common_ok)) }
             },
             dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) { Text(stringResource(android.R.string.cancel)) }
+                TextButton(onClick = { showDatePicker = false }) { Text(stringResource(R.string.common_cancel)) }
             },
         ) { DatePicker(state = pickerState) }
     }

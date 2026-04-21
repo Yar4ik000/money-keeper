@@ -1,5 +1,6 @@
 package com.moneykeeper.core.database.security
 
+import android.os.Build
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import java.security.KeyStore
@@ -15,7 +16,10 @@ import javax.inject.Singleton
  *
  * The Keystore key has setUserAuthenticationRequired(false) — access is controlled by
  * the app's PIN rate-limiter, not the system credential gate. This lets the app have its
- * own 4-6 digit PIN separate from the device screen-lock PIN.
+ * own 4-digit PIN separate from the device screen-lock PIN.
+ *
+ * On devices with a Secure Element (Titan M / similar), the key is placed in StrongBox
+ * for maximum hardware isolation. Devices without StrongBox fall back to the TEE silently.
  *
  * The wrapped master_key is stored in EncryptedSharedPreferences (via DatabaseKeyStorage).
  */
@@ -41,7 +45,7 @@ class KeystoreMasterKeyWrapper @Inject constructor(
 
     fun unwrap(): ByteArray {
         val wrapped = keyStorage.readWrappedMkV2()
-            ?: error("No Keystore-wrapped master key. App must be migrated to v1.3 first.")
+            ?: error("Keystore key '$KEY_ALIAS' not found — app must complete v1.3 migration before unlock.")
         val cipher = decryptCipher(wrapped.iv)
         return cipher.doFinal(wrapped.ciphertext)
     }
@@ -73,7 +77,8 @@ class KeystoreMasterKeyWrapper @Inject constructor(
     private fun ensureKeyExists() {
         val ks = KeyStore.getInstance(KEYSTORE).also { it.load(null) }
         if (ks.containsAlias(KEY_ALIAS)) return
-        val spec = KeyGenParameterSpec.Builder(
+
+        fun baseSpec() = KeyGenParameterSpec.Builder(
             KEY_ALIAS,
             KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT,
         )
@@ -81,7 +86,24 @@ class KeystoreMasterKeyWrapper @Inject constructor(
             .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
             .setKeySize(256)
             .setUserAuthenticationRequired(false)
-            .build()
+
+        // Prefer StrongBox (Secure Element) on API 28+ devices that support it.
+        // Fall back to TEE silently on older devices or those without a Secure Element.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            try {
+                val spec = baseSpec().setIsStrongBoxBacked(true).build()
+                KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, KEYSTORE)
+                    .also { it.init(spec) }
+                    .generateKey()
+                return
+            } catch (_: android.security.keystore.StrongBoxUnavailableException) {
+                // No Secure Element on this device — fall through to TEE.
+            } catch (_: Exception) {
+                // Unexpected error (e.g., StrongBox busy) — fall through to TEE.
+            }
+        }
+
+        val spec = baseSpec().build()
         KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, KEYSTORE)
             .also { it.init(spec) }
             .generateKey()

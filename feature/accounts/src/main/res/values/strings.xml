@@ -1,4 +1,7 @@
 <resources>
+    <string name="common_cancel">Отмена</string>
+    <string name="common_ok">ОК</string>
+
     <!-- Account types -->
     <string name="account_type_card">Карта</string>
     <string name="account_type_cash">Наличные</string>

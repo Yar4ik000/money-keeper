@@ -8,6 +8,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -15,9 +16,9 @@ import androidx.compose.ui.unit.sp
 fun PinKeypad(
     onDigit: (Char) -> Unit,
     onDelete: () -> Unit,
-    onConfirm: () -> Unit,
-    confirmEnabled: Boolean,
-    modifier: Modifier = Modifier,
+    onConfirm: (() -> Unit)? = null,
+    confirmEnabled: Boolean = false,
+    modifier: Modifier = Modifier,  // caller can override positioning (e.g. Alignment.BottomCenter)
 ) {
     val keys = listOf(
         listOf('1', '2', '3'),
@@ -42,18 +43,22 @@ fun PinKeypad(
             DigitButton('0', onClick = { onDigit('0') })
             IconButton(
                 onClick = onDelete,
-                modifier = Modifier.size(72.dp),
+                modifier = Modifier
+                    .size(72.dp)
+                    .testTag("pin_backspace"),
             ) {
                 Icon(Icons.AutoMirrored.Outlined.Backspace, contentDescription = null)
             }
         }
-        Spacer(Modifier.height(8.dp))
-        FilledTonalButton(
-            onClick = onConfirm,
-            enabled = confirmEnabled,
-            modifier = Modifier.width(120.dp),
-        ) {
-            Icon(Icons.Outlined.Check, contentDescription = null)
+        if (onConfirm != null) {
+            Spacer(Modifier.height(8.dp))
+            FilledTonalButton(
+                onClick = onConfirm,
+                enabled = confirmEnabled,
+                modifier = Modifier.width(120.dp),
+            ) {
+                Icon(Icons.Outlined.Check, contentDescription = null)
+            }
         }
     }
 }

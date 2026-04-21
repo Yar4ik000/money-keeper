@@ -167,6 +167,39 @@ class BackupRestoreFlowTest {
             afterRestore.any { it.name == "Beta" })
     }
 
+    @Test
+    fun crashAfterRestoreWrite_coldStart_appliesPendingRestore() = runTest {
+        val accountDao = databaseProvider.require().accountDao()
+
+        // ── Step 1: baseline account present before backup ────────────────────
+        accountDao.upsert(testAccount("Alpha", "#FF0000"))
+        val backupResult = backupRepo.createBackup(Uri.fromFile(backupFile), "test-backup-password".toCharArray())
+        assertTrue("createBackup must succeed", backupResult is BackupResult.Success)
+
+        // ── Step 2: insert post-backup account ────────────────────────────────
+        accountDao.upsert(testAccount("Beta", "#0000FF"))
+
+        // ── Step 3: restore backup — writes .restore-pending, does NOT restart ─
+        val restoreResult = backupRepo.restoreBackup(Uri.fromFile(backupFile), "ignored".toCharArray())
+        assertTrue("restoreBackup must succeed", restoreResult is RestoreResult.Success)
+
+        val dbFile = context.getDatabasePath(AppDatabase.DB_NAME)
+        val pending = java.io.File(dbFile.parentFile!!, "${dbFile.name}.restore-pending")
+        assertTrue(".restore-pending must exist", pending.exists())
+
+        // ── Step 4: simulate crash — close DB without calling restartProcess() ─
+        databaseProvider.close()
+
+        // ── Step 5: cold start — initialize() must detect and apply the pending ─
+        databaseProvider.initialize(dbKey.copyOf())
+
+        // ── Step 6: verify restore was applied ────────────────────────────────
+        val accounts = databaseProvider.require().accountDao().observeActive().first()
+        assertTrue("Alpha must survive cold-start restore", accounts.any { it.name == "Alpha" })
+        assertFalse("Beta must be absent — created after backup", accounts.any { it.name == "Beta" })
+        assertFalse(".restore-pending must be cleaned up", pending.exists())
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private fun testAccount(name: String, colorHex: String) = AccountEntity(

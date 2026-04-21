@@ -25,12 +25,10 @@ class UnlockController @Inject constructor(
     private fun notifyUnlocked() = postUnlockCallbacks.forEach { it.onUnlocked() }
 
     suspend fun unlockWithPassword(password: CharArray): UnlockResult = withContext(Dispatchers.Default) {
-        val lockoutUntil = keyStorage.getLockoutUntilMs()
-        val now = System.currentTimeMillis()
-        if (lockoutUntil > now) {
+        val lockoutUntil = keyStorage.getEffectiveLockoutUntilMs()
+        if (lockoutUntil > System.currentTimeMillis()) {
             password.fill(0.toChar())
-            val secondsLeft = (lockoutUntil - now + 999) / 1000
-            return@withContext UnlockResult.LockedOut(secondsLeft)
+            return@withContext UnlockResult.LockedOut(lockoutUntil)
         }
 
         val derivedKey = try {
@@ -48,8 +46,9 @@ class UnlockController @Inject constructor(
             aesGcmDecrypt(enc.ciphertext, derivedKey, enc.iv)
         } catch (e: AEADBadTagException) {
             derivedKey.fill(0)
-            keyStorage.recordFailedAttempt()
-            return@withContext UnlockResult.WrongPassword
+            val count = keyStorage.recordFailedAttempt()
+            val lockoutUntilMs = keyStorage.getLockoutUntilMs()
+            return@withContext UnlockResult.WrongPassword(count, if (lockoutUntilMs > System.currentTimeMillis()) lockoutUntilMs else 0L)
         }
 
         keyStorage.resetFailedAttempts()
@@ -104,17 +103,17 @@ class UnlockController @Inject constructor(
      * Falls back gracefully if v2 isn't initialized (shouldn't happen post-migration).
      */
     suspend fun unlockWithPin(pin: CharArray): UnlockResult = withContext(Dispatchers.Default) {
-        val lockoutUntil = keyStorage.getLockoutUntilMs()
-        val now = System.currentTimeMillis()
-        if (lockoutUntil > now) {
+        val lockoutUntil = keyStorage.getEffectiveLockoutUntilMs()
+        if (lockoutUntil > System.currentTimeMillis()) {
             pin.fill(0.toChar())
-            return@withContext UnlockResult.LockedOut((lockoutUntil - now + 999) / 1000)
+            return@withContext UnlockResult.LockedOut(lockoutUntil)
         }
 
         if (!pinVerifier.verify(pin)) {
             pin.fill(0.toChar())
-            keyStorage.recordFailedAttempt()
-            return@withContext UnlockResult.WrongPassword
+            val count = keyStorage.recordFailedAttempt()
+            val newLockoutUntil = keyStorage.getLockoutUntilMs()
+            return@withContext UnlockResult.WrongPassword(count, if (newLockoutUntil > System.currentTimeMillis()) newLockoutUntil else 0L)
         }
         pin.fill(0.toChar())
         keyStorage.resetFailedAttempts()
@@ -151,11 +150,12 @@ class UnlockController @Inject constructor(
 
     sealed interface UnlockResult {
         data object Success : UnlockResult
-        data object WrongPassword : UnlockResult
+        /** [failedCount] total consecutive failures; [lockoutUntilMs] > 0 if this failure triggered lockout. */
+        data class WrongPassword(val failedCount: Int, val lockoutUntilMs: Long = 0L) : UnlockResult
         data object BiometricCancelled : UnlockResult
         data object BiometricStale : UnlockResult
         data class DataCorrupted(val message: String) : UnlockResult
-        /** Too many failed attempts — [secondsRemaining] until retry is allowed. */
-        data class LockedOut(val secondsRemaining: Long) : UnlockResult
+        /** Too many failed attempts — retry allowed after [lockoutUntilMs]. */
+        data class LockedOut(val lockoutUntilMs: Long) : UnlockResult
     }
 }

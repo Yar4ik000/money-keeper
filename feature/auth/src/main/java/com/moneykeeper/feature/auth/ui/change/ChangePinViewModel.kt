@@ -30,7 +30,7 @@ class ChangePinViewModel @Inject constructor(
 
     fun submitNewPin(pin: CharArray, confirm: CharArray) = viewModelScope.launch(Dispatchers.Default) {
         try {
-            if (pin.size < PinVerifier.MIN_LENGTH) {
+            if (pin.size != PinVerifier.PIN_LENGTH) {
                 _uiState.update { it.copy(error = ChangePinError.TooShort) }
                 return@launch
             }

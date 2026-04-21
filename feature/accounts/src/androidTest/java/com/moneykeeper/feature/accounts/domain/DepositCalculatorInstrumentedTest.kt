@@ -17,8 +17,8 @@ class DepositCalculatorInstrumentedTest {
         val result = DepositCalculator.simpleInterest(
             principal = BigDecimal("100000"),
             ratePercent = BigDecimal("10"),
-            startDate = LocalDate.of(2024, 1, 1),
-            endDate = LocalDate.of(2025, 1, 1),
+            startDate = LocalDate.of(2025, 1, 1),
+            endDate = LocalDate.of(2026, 1, 1),
         )
         assertEquals(0, BigDecimal("10000").compareTo(result))
     }

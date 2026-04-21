@@ -43,7 +43,7 @@ class MigrationViewModel @Inject constructor(
             pin.fill(0.toChar()); confirmation.fill(0.toChar())
             return@launch
         }
-        if (pin.size < PinVerifier.MIN_LENGTH) {
+        if (pin.size != PinVerifier.PIN_LENGTH) {
             _uiState.update { it.copy(error = MigrationError.PinTooShort) }
             pin.fill(0.toChar()); confirmation.fill(0.toChar())
             return@launch
