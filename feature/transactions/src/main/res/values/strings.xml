@@ -43,6 +43,7 @@
     <string name="recurring_freq_weekly">Еженедельно</string>
     <string name="recurring_freq_monthly">Ежемесячно</string>
     <string name="recurring_freq_yearly">Ежегодно</string>
+    <string name="recurring_edit_hint">Изменения применятся только к будущим операциям. Уже созданные транзакции останутся как есть.</string>
 
     <!-- Categories screen -->
     <string name="categories_title">Категории</string>

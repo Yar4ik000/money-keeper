@@ -210,14 +210,20 @@ fun EditAccountScreen(
 
             // Initial balance (hidden for DEPOSIT/SAVINGS — balance = deposit.initialAmount)
             if (state.type != AccountType.DEPOSIT && state.type != AccountType.SAVINGS) {
+                val isEditingExisting = accountId != null
                 OutlinedTextField(
                     value = state.balanceInput,
                     onValueChange = viewModel::onBalanceInputChange,
                     label = { Text(stringResource(R.string.edit_account_initial_balance)) },
                     placeholder = { Text("0") },
                     singleLine = true,
+                    readOnly = isEditingExisting,
+                    enabled = !isEditingExisting,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     visualTransformation = ThousandsVisualTransformation,
+                    supportingText = if (isEditingExisting) {
+                        { Text(stringResource(R.string.edit_account_balance_locked_hint)) }
+                    } else null,
                     modifier = Modifier.fillMaxWidth(),
                 )
             }

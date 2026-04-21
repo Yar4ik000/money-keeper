@@ -64,6 +64,14 @@ fun RecurringRuleSheet(
                 text = stringResource(R.string.recurring_title),
                 style = MaterialTheme.typography.titleMedium,
             )
+            if (rule != null && rule.id != 0L) {
+                Text(
+                    text = stringResource(R.string.recurring_edit_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp),
+                )
+            }
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
 
             Text(
