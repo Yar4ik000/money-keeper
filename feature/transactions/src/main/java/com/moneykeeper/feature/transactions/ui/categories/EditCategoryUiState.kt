@@ -11,6 +11,7 @@ data class EditCategoryUiState(
     val parentCategoryId: Long? = null,
     val availableParents: List<Category> = emptyList(),
     val saved: Boolean = false,
+    val savedCategoryId: Long? = null,
     val error: EditCategoryError? = null,
 )
 

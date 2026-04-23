@@ -22,13 +22,14 @@
     <string name="account_type_card">Карта</string>
     <string name="account_type_cash">Наличные</string>
     <string name="account_type_deposit">Вклад</string>
-    <string name="account_type_savings">Сбережения</string>
+    <string name="account_type_savings">Накопительный счёт</string>
     <string name="account_type_investment">Инвестиции</string>
     <string name="account_type_other">Другое</string>
 
     <!-- Account / Category picker -->
     <string name="account_picker_title">Выберите счёт</string>
     <string name="account_picker_search">Поиск счёта…</string>
+    <string name="account_picker_add_new">Новый счёт…</string>
     <string name="category_picker_title">Выберите категорию</string>
 
     <!-- Recurring rule sheet -->
@@ -44,12 +45,26 @@
     <string name="recurring_freq_monthly">Ежемесячно</string>
     <string name="recurring_freq_yearly">Ежегодно</string>
     <string name="recurring_edit_hint">Изменения применятся только к будущим операциям. Уже созданные транзакции останутся как есть.</string>
+    <string name="recurring_new_rule_hint">Операция будет создаваться автоматически по расписанию. Частота — тип периода (день/неделя/месяц/год), интервал — шаг. Пример: «Ежемесячно» + интервал 3 = каждые 3 месяца.</string>
+    <string name="recurring_interval_preview_daily">Каждые %1$d дн.</string>
+    <string name="recurring_interval_preview_weekly">Каждые %1$d нед.</string>
+    <string name="recurring_interval_preview_monthly">Каждые %1$d мес.</string>
+    <string name="recurring_interval_preview_yearly">Каждые %1$d лет</string>
+    <string name="recurring_stop_series_title">Повторяющаяся операция</string>
+    <string name="recurring_uncheck_warning">Снятие флага остановит создание новых операций по расписанию. Уже созданные операции останутся без изменений.</string>
+    <string name="recurring_go_back">Назад</string>
 
     <!-- Categories screen -->
     <string name="categories_title">Категории</string>
     <string name="categories_add">Добавить категорию</string>
     <string name="categories_empty">Категорий нет</string>
     <string name="category_subcategory_label">Подкатегория</string>
+    <string name="categories_delete_title">Удалить категорию?</string>
+    <string name="categories_delete_message">«%s» будет удалена. Операции в этой категории сохранятся.</string>
+    <string name="categories_delete_confirm">Удалить</string>
+    <string name="categories_selected_count">%1$d выбрано</string>
+    <string name="categories_delete_selected_title">Удалить выбранные?</string>
+    <string name="categories_delete_selected_message">Будет удалено %1$d категорий. Операции сохранятся без категории.</string>
 
     <!-- Edit category form -->
     <string name="edit_category_title">Категория</string>

@@ -26,27 +26,39 @@ class TransactionSaver @Inject constructor(
         }
     }
 
-    suspend fun replace(old: Transaction, new: Transaction, recurringRule: RecurringRule? = null) {
+    suspend fun replace(old: Transaction, new: Transaction, recurringUpdate: RecurringUpdate = RecurringUpdate.Keep) {
         txRunner.run {
             reverseBalanceEffect(old)
-            val ruleId = recurringRule?.let { recurringRuleRepo.save(it) }
-            transactionRepo.save(new.copy(recurringRuleId = ruleId ?: old.recurringRuleId))
+            val ruleId = when (recurringUpdate) {
+                is RecurringUpdate.Keep       -> old.recurringRuleId
+                is RecurringUpdate.Set        -> recurringRuleRepo.save(recurringUpdate.rule)
+                is RecurringUpdate.Clear      -> null
+                is RecurringUpdate.StopSeries -> { recurringRuleRepo.delete(recurringUpdate.ruleId); null }
+            }
+            transactionRepo.save(new.copy(recurringRuleId = ruleId))
             applyBalanceEffect(new)
+        }
+        if (recurringUpdate is RecurringUpdate.Clear) {
+            recurringRuleRepo.pruneOrphaned()
         }
     }
 
     suspend fun delete(transaction: Transaction) {
+        val hadRule = transaction.recurringRuleId != null
         txRunner.run {
             transactionRepo.delete(transaction.id)
             reverseBalanceEffect(transaction)
         }
+        if (hadRule) recurringRuleRepo.pruneOrphaned()
     }
 
     override suspend fun deleteMany(ids: Set<Long>) {
         if (ids.isEmpty()) return
+        var hadRecurringRule = false
         txRunner.run {
             val transactions = transactionRepo.getByIds(ids)
             if (transactions.isEmpty()) return@run
+            hadRecurringRule = transactions.any { it.recurringRuleId != null }
             val deltas = mutableMapOf<Long, BigDecimal>()
             for (tx in transactions) {
                 when (tx.type) {
@@ -66,6 +78,15 @@ class TransactionSaver @Inject constructor(
                 if (delta.signum() != 0) accountRepo.adjustBalance(accountId, delta)
             }
         }
+        if (hadRecurringRule) recurringRuleRepo.pruneOrphaned()
+    }
+
+    override suspend fun deleteManyStopSeries(ids: Set<Long>) {
+        if (ids.isEmpty()) return
+        val transactions = transactionRepo.getByIds(ids)
+        val ruleIds = transactions.mapNotNull { it.recurringRuleId }.toSet()
+        ruleIds.forEach { recurringRuleRepo.delete(it) }
+        deleteMany(ids)
     }
 
     private suspend fun applyBalanceEffect(tx: Transaction) {

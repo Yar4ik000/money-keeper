@@ -24,7 +24,11 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -45,6 +49,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -79,7 +84,7 @@ private val PRESET_COLORS = listOf(
 fun EditAccountScreen(
     accountId: Long? = null,
     viewModel: EditAccountViewModel = hiltViewModel(),
-    onSaved: () -> Unit,
+    onSaved: (Long?) -> Unit,
     onBack: () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -87,7 +92,7 @@ fun EditAccountScreen(
 
     val errorDepositMsg = stringResource(R.string.error_deposit_params_missing)
 
-    LaunchedEffect(state.saved) { if (state.saved) onSaved() }
+    LaunchedEffect(state.saved) { if (state.saved) onSaved(state.savedAccountId) }
 
     LaunchedEffect(state.error) {
         when (val err = state.error) {
@@ -116,6 +121,8 @@ fun EditAccountScreen(
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { padding ->
+        var showTypeTip by remember { mutableStateOf(accountId == null) }
+
         Column(
             Modifier
                 .fillMaxSize()
@@ -125,6 +132,40 @@ fun EditAccountScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
+            if (showTypeTip) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    ),
+                ) {
+                    Row(
+                        modifier = Modifier.padding(start = 12.dp, top = 8.dp, bottom = 8.dp, end = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            Icons.Outlined.Info,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                            modifier = Modifier.padding(end = 8.dp),
+                        )
+                        Text(
+                            text = stringResource(R.string.edit_account_tip_types),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            modifier = Modifier.weight(1f),
+                        )
+                        IconButton(onClick = { showTypeTip = false }) {
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                            )
+                        }
+                    }
+                }
+            }
+
             // Account name (обязательное)
             OutlinedTextField(
                 value = state.name,

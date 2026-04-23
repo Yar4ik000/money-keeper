@@ -67,7 +67,7 @@ private val PRESET_COLORS = listOf(
 @Composable
 fun EditCategoryScreen(
     viewModel: EditCategoryViewModel = hiltViewModel(),
-    onSaved: () -> Unit,
+    onSaved: (Long) -> Unit,
     onBack: () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -78,7 +78,7 @@ fun EditCategoryScreen(
         null -> null
     }
 
-    LaunchedEffect(state.saved) { if (state.saved) onSaved() }
+    LaunchedEffect(state.saved) { if (state.saved) onSaved(state.savedCategoryId ?: 0L) }
     LaunchedEffect(state.error) {
         if (state.error != null) errorMsg?.let { snackbarHostState.showSnackbar(it) }
     }

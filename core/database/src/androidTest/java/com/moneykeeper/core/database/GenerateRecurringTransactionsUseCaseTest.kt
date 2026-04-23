@@ -86,7 +86,7 @@ class GenerateRecurringTransactionsUseCaseTest {
         endDate: LocalDate? = null,
         lastGeneratedDate: LocalDate? = null,
     ): Long {
-        val ruleId = db.recurringRuleDao().upsert(
+        val ruleId = db.recurringRuleDao().insert(
             RecurringRuleEntity(
                 frequency = frequency, startDate = startDate,
                 endDate = endDate, lastGeneratedDate = lastGeneratedDate,
@@ -234,7 +234,7 @@ class GenerateRecurringTransactionsUseCaseTest {
     fun ruleWithoutSeedTransaction_isSkipped() = runTest {
         val accId = insertAccount("Card", BigDecimal("1000.00"))
         // Insert rule only, no template transaction linked to it
-        db.recurringRuleDao().upsert(
+        db.recurringRuleDao().insert(
             RecurringRuleEntity(
                 frequency = Frequency.DAILY,
                 startDate = LocalDate.of(2026, 4, 19),

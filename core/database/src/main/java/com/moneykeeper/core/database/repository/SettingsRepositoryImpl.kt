@@ -36,6 +36,12 @@ class SettingsRepositoryImpl @Inject constructor(
         val ALLOW_SCREENSHOTS        = booleanPreferencesKey("allow_screenshots")
         val BUDGET_WARNING_THRESHOLD  = intPreferencesKey("budget_warning_threshold")
         val BUDGET_CRITICAL_THRESHOLD = intPreferencesKey("budget_critical_threshold")
+        val SEEN_TIP_DASHBOARD        = booleanPreferencesKey("seen_tip_dashboard")
+        val SEEN_TIP_ACCOUNTS         = booleanPreferencesKey("seen_tip_accounts")
+        val SEEN_TIP_ANALYTICS        = booleanPreferencesKey("seen_tip_analytics")
+        val SEEN_TIP_FORECAST         = booleanPreferencesKey("seen_tip_forecast")
+        val SEEN_TIP_BUDGETS          = booleanPreferencesKey("seen_tip_budgets")
+        val SEEN_SETTINGS_TIP         = booleanPreferencesKey("seen_settings_tip")
     }
 
     override val settings: Flow<AppSettings> = context.dataStore.data.map { prefs ->
@@ -52,6 +58,12 @@ class SettingsRepositoryImpl @Inject constructor(
             allowScreenshots            = prefs[Keys.ALLOW_SCREENSHOTS] ?: true,
             budgetWarningThreshold      = prefs[Keys.BUDGET_WARNING_THRESHOLD] ?: 70,
             budgetCriticalThreshold     = prefs[Keys.BUDGET_CRITICAL_THRESHOLD] ?: 90,
+            seenTipDashboard            = prefs[Keys.SEEN_TIP_DASHBOARD] ?: false,
+            seenTipAccounts             = prefs[Keys.SEEN_TIP_ACCOUNTS] ?: false,
+            seenTipAnalytics            = prefs[Keys.SEEN_TIP_ANALYTICS] ?: false,
+            seenTipForecast             = prefs[Keys.SEEN_TIP_FORECAST] ?: false,
+            seenTipBudgets              = prefs[Keys.SEEN_TIP_BUDGETS] ?: false,
+            seenSettingsTip             = prefs[Keys.SEEN_SETTINGS_TIP] ?: false,
         )
     }
 
@@ -69,6 +81,22 @@ class SettingsRepositoryImpl @Inject constructor(
             prefs[Keys.ALLOW_SCREENSHOTS]         = settings.allowScreenshots
             prefs[Keys.BUDGET_WARNING_THRESHOLD]  = settings.budgetWarningThreshold
             prefs[Keys.BUDGET_CRITICAL_THRESHOLD] = settings.budgetCriticalThreshold
+            prefs[Keys.SEEN_TIP_DASHBOARD]        = settings.seenTipDashboard
+            prefs[Keys.SEEN_TIP_ACCOUNTS]         = settings.seenTipAccounts
+            prefs[Keys.SEEN_TIP_ANALYTICS]        = settings.seenTipAnalytics
+            prefs[Keys.SEEN_TIP_FORECAST]         = settings.seenTipForecast
+            prefs[Keys.SEEN_TIP_BUDGETS]          = settings.seenTipBudgets
+            prefs[Keys.SEEN_SETTINGS_TIP]         = settings.seenSettingsTip
+        }
+    }
+
+    override suspend fun resetTabTips() {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.SEEN_TIP_DASHBOARD] = false
+            prefs[Keys.SEEN_TIP_ACCOUNTS]  = false
+            prefs[Keys.SEEN_TIP_ANALYTICS] = false
+            prefs[Keys.SEEN_TIP_FORECAST]  = false
+            prefs[Keys.SEEN_TIP_BUDGETS]   = false
         }
     }
 }

@@ -18,6 +18,9 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalanceWallet
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
+import androidx.compose.material.icons.filled.Analytics
+import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material3.Button
@@ -43,7 +46,7 @@ fun OnboardingScreen(
     onFinished: () -> Unit,
     viewModel: OnboardingViewModel = hiltViewModel(),
 ) {
-    val pagerState = rememberPagerState(pageCount = { 3 })
+    val pagerState = rememberPagerState(pageCount = { 5 })
     val scope = rememberCoroutineScope()
 
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
@@ -65,7 +68,7 @@ fun OnboardingScreen(
                     Spacer(Modifier)
                 }
 
-                if (pagerState.currentPage < 2) {
+                if (pagerState.currentPage < 4) {
                     Button(onClick = { scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) } }) {
                         Text(stringResource(R.string.onboarding_next))
                     }
@@ -122,6 +125,16 @@ fun OnboardingScreen(
                         }
                     }
                 }
+                3 -> OnboardingPage(
+                    icon = { Icon(Icons.AutoMirrored.Filled.ReceiptLong, contentDescription = null, modifier = Modifier.height(80.dp)) },
+                    title = stringResource(R.string.onboarding_page4_title),
+                    description = stringResource(R.string.onboarding_page4_desc),
+                )
+                4 -> OnboardingPage(
+                    icon = { Icon(Icons.Default.Backup, contentDescription = null, modifier = Modifier.height(80.dp)) },
+                    title = stringResource(R.string.onboarding_page5_title),
+                    description = stringResource(R.string.onboarding_page5_desc),
+                )
             }
         }
     }

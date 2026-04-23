@@ -19,9 +19,17 @@ data class AppSettings(
     val budgetWarningThreshold: Int = 70,
     /** Global default: spent% at which budget bar turns red and nav badge is shown. */
     val budgetCriticalThreshold: Int = 90,
+    // Tab-tip "seen" flags — one per main bottom-bar tab
+    val seenTipDashboard: Boolean = false,
+    val seenTipAccounts: Boolean = false,
+    val seenTipAnalytics: Boolean = false,
+    val seenTipForecast: Boolean = false,
+    val seenTipBudgets: Boolean = false,
+    val seenSettingsTip: Boolean = false,
 )
 
 interface SettingsRepository {
     val settings: Flow<AppSettings>
     suspend fun updateSettings(settings: AppSettings)
+    suspend fun resetTabTips()
 }

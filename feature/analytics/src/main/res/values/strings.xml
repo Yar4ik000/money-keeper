@@ -30,7 +30,7 @@
     <string name="analytics_top_expenses">Расходы по категориям</string>
     <string name="analytics_top_incomes">Доходы по категориям</string>
     <string name="analytics_monthly_trend">Динамика доходов и расходов</string>
-    <string name="analytics_daily_avg">Среднедневной расход: %s</string>
+    <string name="analytics_daily_avg">Среднесуточный расход: %s</string>
     <string name="analytics_group_by_category">По категориям</string>
     <string name="analytics_group_by_account">По счетам</string>
     <string name="analytics_no_data">Нет данных за период</string>
@@ -51,4 +51,19 @@
     <string name="category_analytics_transactions">Операции</string>
     <string name="action_cancel">Отмена</string>
     <string name="action_ok">ОК</string>
+
+    <!-- Delete recurring transactions dialog (multi-select) -->
+    <string name="history_delete_recurring_title">Удалить повторяющиеся операции?</string>
+    <string name="history_delete_only_selected">Только выбранные операции</string>
+    <string name="history_delete_only_selected_desc">Серия продолжит создавать новые операции по расписанию</string>
+    <string name="history_stop_series">Остановить серию</string>
+    <string name="history_stop_series_desc">Новые операции по расписанию создаваться не будут</string>
+
+    <!-- Delete scope dialog (single recurring tx) -->
+    <string name="history_delete_scope_title">Удалить повторяющуюся операцию?</string>
+    <string name="history_delete_scope_only_this">Только эту</string>
+    <string name="history_delete_scope_only_this_desc">Удалить только эту запись, серия продолжит работу</string>
+    <string name="history_delete_scope_this_and_future">Эту и все будущие</string>
+    <string name="history_delete_scope_this_and_future_desc">Серия завершится — новые операции после этой не создадутся</string>
+    <string name="history_delete_scope_stop_series_desc">Удалить эту операцию и остановить всю серию</string>
 </resources>

@@ -17,6 +17,7 @@ class GenerateRecurringTransactionsUseCase @Inject constructor(
     private val txRunner: TransactionRunner,
 ) {
     suspend operator fun invoke(today: LocalDate = LocalDate.now()) {
+        recurringRuleRepo.pruneOrphaned()
         val rules = recurringRuleRepo.getAllWithTemplates(today)
         for (ruleWithTemplate in rules) {
             txRunner.run {
