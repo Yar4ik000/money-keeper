@@ -36,8 +36,41 @@
     <string name="settings_notifications_system">Разрешения в системе</string>
     <string name="settings_notifications_system_subtitle">Открыть настройки уведомлений Android</string>
 
+    <string name="settings_show_tips">Показать подсказки снова</string>
+    <string name="settings_show_tips_subtitle">Сбросить все обучающие подсказки по вкладкам</string>
+
     <string name="settings_categories">Категории</string>
     <string name="settings_categories_subtitle">Управление категориями операций</string>
+    <string name="settings_recurring_rules">Повторяющиеся операции</string>
+    <string name="settings_recurring_rules_subtitle">Управление активными сериями платежей</string>
+
+    <string name="recurring_rules_title">Повторяющиеся операции</string>
+    <string name="recurring_rules_empty">Нет активных повторяющихся операций</string>
+    <string name="recurring_rules_stop_title">Остановить серию?</string>
+    <string name="recurring_rules_stop_message">Новые операции по расписанию создаваться не будут. Уже созданные операции останутся.</string>
+    <string name="recurring_rules_stop_confirm">Остановить</string>
+    <string name="recurring_rules_next_date">Следующая: %1$s</string>
+    <string name="recurring_rules_ended">Серия завершена</string>
+    <string name="recurring_freq_daily">Каждый день</string>
+    <string name="recurring_freq_daily_n">Каждые %1$d дн.</string>
+    <string name="recurring_freq_weekly">Каждую неделю</string>
+    <string name="recurring_freq_weekly_n">Каждые %1$d нед.</string>
+    <string name="recurring_freq_monthly">Каждый месяц</string>
+    <string name="recurring_freq_monthly_n">Каждые %1$d мес.</string>
+    <string name="recurring_freq_yearly">Каждый год</string>
+    <string name="recurring_freq_yearly_n">Каждые %1$d лет</string>
+    <string name="recurring_freq_label_daily">Ежедневно</string>
+    <string name="recurring_freq_label_weekly">Еженедельно</string>
+    <string name="recurring_freq_label_monthly">Ежемесячно</string>
+    <string name="recurring_freq_label_yearly">Ежегодно</string>
+
+    <string name="recurring_detail_title">Расписание</string>
+    <string name="recurring_detail_frequency">Частота</string>
+    <string name="recurring_detail_interval">Интервал</string>
+    <string name="recurring_detail_end_date">Дата окончания</string>
+    <string name="recurring_detail_no_end">Без конца</string>
+    <string name="recurring_detail_save">Сохранить</string>
+    <string name="recurring_detail_edit_hint">Изменения применятся только к будущим операциям. Уже созданные останутся без изменений.</string>
     <string name="settings_budgets">Бюджеты</string>
     <string name="settings_budgets_subtitle">Лимиты расходов по категориям</string>
     <string name="settings_backup">Резервное копирование</string>
@@ -111,4 +144,9 @@
     <string name="onboarding_page2_desc">Карты, наличные, накопительные счета и срочные вклады — добавьте все ваши финансы и следите за балансом в реальном времени.</string>
     <string name="onboarding_page3_title">Уведомления</string>
     <string name="onboarding_page3_desc">Разрешите уведомления, чтобы получать напоминания об истечении вкладов и запланированных платежах.</string>
+    <string name="onboarding_page4_title">Операции и категории</string>
+    <string name="onboarding_page4_desc">Записывайте доходы, расходы и переводы. Создавайте категории и подкатегории для детального учёта трат.</string>
+    <string name="onboarding_page5_title">Безопасность и резервные копии</string>
+    <string name="onboarding_page5_desc">Защитите приложение PIN-кодом и отпечатком пальца. Создавайте зашифрованные резервные копии — данные останутся у вас.</string>
+    <string name="settings_tip_first_visit">Настройте резервное копирование, уведомления, категории и безопасность — всё здесь.</string>
 </resources>

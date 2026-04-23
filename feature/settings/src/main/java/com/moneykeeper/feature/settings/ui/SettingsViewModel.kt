@@ -47,6 +47,10 @@ class SettingsViewModel @Inject constructor(
         )
     }
 
+    fun resetTabTips() = viewModelScope.launch { settingsRepo.resetTabTips() }
+
+    fun markSettingsTipSeen() = update { copy(seenSettingsTip = true) }
+
     private fun update(block: AppSettings.() -> AppSettings) {
         viewModelScope.launch { settingsRepo.updateSettings(settings.value.block()) }
     }

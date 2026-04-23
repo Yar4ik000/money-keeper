@@ -1,7 +1,6 @@
 package com.moneykeeper.feature.settings.ui
 
 import android.content.Intent
-import android.provider.Settings
 import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -17,7 +16,7 @@ import java.io.File
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Label
-import androidx.compose.material.icons.outlined.AccessTime
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.AccountBalance
 import androidx.compose.material.icons.outlined.Backup
 import androidx.compose.material.icons.outlined.CurrencyExchange
@@ -25,9 +24,8 @@ import androidx.compose.material.icons.outlined.Fingerprint
 import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Lock
-import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Palette
-import androidx.compose.material.icons.outlined.NotificationsActive
+import androidx.compose.material.icons.outlined.TipsAndUpdates
 import androidx.compose.material.icons.outlined.Repeat
 import androidx.compose.material.icons.outlined.Savings
 import androidx.compose.material.icons.outlined.Screenshot
@@ -44,9 +42,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
@@ -74,6 +70,7 @@ private val SUPPORTED_CURRENCIES = listOf("RUB", "USD", "EUR", "GBP", "CNY", "BY
 fun SettingsScreen(
     onBack: () -> Unit,
     onCategories: () -> Unit,
+    onRecurringRules: () -> Unit,
     onBackup: () -> Unit,
     onChangePin: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel(),
@@ -101,7 +98,6 @@ fun SettingsScreen(
         }
     }
 
-    var showTimePicker by remember { mutableStateOf(false) }
     var showThemeDialog by remember { mutableStateOf(false) }
     var showCurrencyDialog by remember { mutableStateOf(false) }
     var showAutoLockDialog by remember { mutableStateOf(false) }
@@ -134,6 +130,42 @@ fun SettingsScreen(
                 .padding(padding)
                 .verticalScroll(rememberScrollState()),
         ) {
+            if (!settings.seenSettingsTip) {
+                androidx.compose.material3.Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    colors = androidx.compose.material3.CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    ),
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            Icons.Outlined.TipsAndUpdates,
+                            contentDescription = null,
+                            modifier = Modifier.padding(end = 12.dp),
+                            tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                        )
+                        Text(
+                            text = stringResource(R.string.settings_tip_first_visit),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            modifier = Modifier.weight(1f),
+                        )
+                        IconButton(onClick = { viewModel.markSettingsTipSeen() }) {
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                            )
+                        }
+                    }
+                }
+            }
+
             SectionHeader(stringResource(R.string.settings_section_general))
 
             ListItem(
@@ -149,54 +181,13 @@ fun SettingsScreen(
                 modifier = Modifier.clickable { showThemeDialog = true },
             )
 
-            HorizontalDivider()
-            SectionHeader(stringResource(R.string.settings_section_notifications))
+            // TODO(v1.6): Restore notifications section when AlarmManager scheduling is ready
 
             ListItem(
-                leadingContent = { Icon(Icons.Outlined.Notifications, contentDescription = null) },
-                headlineContent = { Text(stringResource(R.string.settings_deposit_notifications)) },
-                supportingContent = { Text(stringResource(R.string.settings_deposit_notifications_subtitle)) },
-                trailingContent = {
-                    Switch(
-                        checked = settings.depositNotificationsEnabled,
-                        onCheckedChange = { viewModel.toggleDepositNotifications(it) },
-                    )
-                },
-            )
-            ListItem(
-                leadingContent = { Icon(Icons.Outlined.Repeat, contentDescription = null) },
-                headlineContent = { Text(stringResource(R.string.settings_recurring_reminders)) },
-                supportingContent = { Text(stringResource(R.string.settings_recurring_reminders_subtitle)) },
-                trailingContent = {
-                    Switch(
-                        checked = settings.recurringRemindersEnabled,
-                        onCheckedChange = { viewModel.toggleRecurringReminders(it) },
-                    )
-                },
-            )
-            ListItem(
-                leadingContent = { Icon(Icons.Outlined.AccessTime, contentDescription = null) },
-                headlineContent = { Text(stringResource(R.string.settings_notification_time)) },
-                supportingContent = {
-                    Text(
-                        stringResource(
-                            R.string.settings_notification_time_value,
-                            settings.notificationHour,
-                            settings.notificationMinute,
-                        )
-                    )
-                },
-                modifier = Modifier.clickable { showTimePicker = true },
-            )
-            ListItem(
-                leadingContent = { Icon(Icons.Outlined.NotificationsActive, contentDescription = null) },
-                headlineContent = { Text(stringResource(R.string.settings_notifications_system)) },
-                supportingContent = { Text(stringResource(R.string.settings_notifications_system_subtitle)) },
-                modifier = Modifier.clickable {
-                    val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
-                        .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
-                    context.startActivity(intent)
-                },
+                leadingContent = { Icon(Icons.Outlined.TipsAndUpdates, contentDescription = null) },
+                headlineContent = { Text(stringResource(R.string.settings_show_tips)) },
+                supportingContent = { Text(stringResource(R.string.settings_show_tips_subtitle)) },
+                modifier = Modifier.clickable { viewModel.resetTabTips() },
             )
 
             HorizontalDivider()
@@ -207,6 +198,12 @@ fun SettingsScreen(
                 headlineContent = { Text(stringResource(R.string.settings_categories)) },
                 supportingContent = { Text(stringResource(R.string.settings_categories_subtitle)) },
                 modifier = Modifier.clickable(onClick = onCategories),
+            )
+            ListItem(
+                leadingContent = { Icon(Icons.Outlined.Repeat, contentDescription = null) },
+                headlineContent = { Text(stringResource(R.string.settings_recurring_rules)) },
+                supportingContent = { Text(stringResource(R.string.settings_recurring_rules_subtitle)) },
+                modifier = Modifier.clickable(onClick = onRecurringRules),
             )
 
             HorizontalDivider()
@@ -323,28 +320,6 @@ fun SettingsScreen(
                 trailingContent = { Text(appVersion, style = MaterialTheme.typography.bodyMedium) },
             )
         }
-    }
-
-    if (showTimePicker) {
-        val timePickerState = rememberTimePickerState(
-            initialHour = settings.notificationHour,
-            initialMinute = settings.notificationMinute,
-            is24Hour = true,
-        )
-        AlertDialog(
-            onDismissRequest = { showTimePicker = false },
-            title = { Text(stringResource(R.string.settings_notification_time)) },
-            text = { TimePicker(state = timePickerState) },
-            confirmButton = {
-                TextButton(onClick = {
-                    viewModel.updateNotificationTime(timePickerState.hour, timePickerState.minute)
-                    showTimePicker = false
-                }) { Text(stringResource(R.string.common_ok)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showTimePicker = false }) { Text(stringResource(R.string.common_cancel)) }
-            },
-        )
     }
 
     if (showThemeDialog) {
