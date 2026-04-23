@@ -22,4 +22,8 @@ class CategoriesViewModel @Inject constructor(
     fun deleteCategory(id: Long) = viewModelScope.launch {
         categoryRepo.delete(id)
     }
+
+    fun deleteCategories(ids: Set<Long>) = viewModelScope.launch {
+        ids.forEach { categoryRepo.delete(it) }
+    }
 }

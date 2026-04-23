@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
@@ -40,6 +41,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavBackStackEntry
 import com.moneykeeper.core.domain.model.Account
 import com.moneykeeper.core.domain.model.Category
 import com.moneykeeper.core.domain.model.RecurringRule
@@ -61,11 +63,34 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun AddTransactionRoute(
     viewModel: AddTransactionViewModel = hiltViewModel(),
+    navBackStackEntry: NavBackStackEntry,
     onSaved: () -> Unit,
     onBack: () -> Unit,
     onNavigateToCategories: () -> Unit,
+    onAddAccountFromPicker: () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+    val newCategoryId by navBackStackEntry.savedStateHandle
+        .getStateFlow("newCategoryId", -1L)
+        .collectAsStateWithLifecycle()
+    val newAccountId by navBackStackEntry.savedStateHandle
+        .getStateFlow("newAccountId", -1L)
+        .collectAsStateWithLifecycle()
+
+    LaunchedEffect(newCategoryId) {
+        if (newCategoryId != -1L) {
+            viewModel.onCategoryCreated(newCategoryId)
+            navBackStackEntry.savedStateHandle.remove<Long>("newCategoryId")
+        }
+    }
+    LaunchedEffect(newAccountId) {
+        if (newAccountId != -1L) {
+            viewModel.onAccountCreated(newAccountId)
+            navBackStackEntry.savedStateHandle.remove<Long>("newAccountId")
+        }
+    }
+
     AddTransactionScreen(
         uiState = state,
         onTypeChange = viewModel::onTypeChange,
@@ -81,6 +106,7 @@ fun AddTransactionRoute(
         onSaved = onSaved,
         onBack = onBack,
         onNavigateToCategories = onNavigateToCategories,
+        onAddAccountFromPicker = onAddAccountFromPicker,
     )
 }
 
@@ -101,6 +127,7 @@ fun AddTransactionScreen(
     onSaved: () -> Unit,
     onBack: () -> Unit,
     onNavigateToCategories: () -> Unit,
+    onAddAccountFromPicker: () -> Unit = {},
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -157,6 +184,7 @@ fun AddTransactionScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .imePadding()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -284,6 +312,7 @@ fun AddTransactionScreen(
             selectedId = uiState.selectedAccount?.id,
             onSelect = onAccountSelect,
             onDismiss = { showAccountPicker = false },
+            onAddAccount = { showAccountPicker = false; onAddAccountFromPicker() },
         )
     }
     if (showToAccountPicker) {

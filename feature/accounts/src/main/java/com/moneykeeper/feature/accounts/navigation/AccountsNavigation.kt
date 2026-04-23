@@ -14,7 +14,7 @@ import com.moneykeeper.feature.accounts.ui.transfer.TransferScreen
 
 private const val ROUTE_ACCOUNTS       = "accounts"
 private const val ROUTE_ACCOUNT_DETAIL = "accounts/{accountId}"
-private const val ROUTE_EDIT_ACCOUNT   = "accounts/{accountId}/edit"
+private const val ROUTE_EDIT_ACCOUNT   = "accounts/{accountId}/edit?returnTo={returnTo}"
 private const val ROUTE_TRANSFER       = "accounts/transfer"
 
 fun NavGraphBuilder.accountsGraph(navController: NavController) {
@@ -42,13 +42,28 @@ fun NavGraphBuilder.accountsGraph(navController: NavController) {
 
     composable(
         route = ROUTE_EDIT_ACCOUNT,
-        arguments = listOf(navArgument("accountId") { type = NavType.LongType }),
+        arguments = listOf(
+            navArgument("accountId") { type = NavType.LongType },
+            navArgument("returnTo") {
+                type = NavType.StringType
+                nullable = true
+                defaultValue = null
+            },
+        ),
     ) { back ->
         val id = back.arguments!!.getLong("accountId")
+        val returnTo = back.arguments?.getString("returnTo")
         EditAccountScreen(
             accountId = if (id == -1L) null else id,
-            onSaved   = { navController.popBackStack() },
-            onBack    = { navController.popBackStack() },
+            onSaved = { savedId ->
+                if (returnTo == "transaction" && savedId != null) {
+                    navController.previousBackStackEntry
+                        ?.savedStateHandle
+                        ?.set("newAccountId", savedId)
+                }
+                navController.popBackStack()
+            },
+            onBack = { navController.popBackStack() },
         )
     }
 

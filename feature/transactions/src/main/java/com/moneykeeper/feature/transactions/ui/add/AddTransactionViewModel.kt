@@ -91,6 +91,16 @@ class AddTransactionViewModel @Inject constructor(
     fun onRecurringRuleChange(rule: RecurringRule) =
         _uiState.update { it.copy(recurringRule = rule) }
 
+    fun onCategoryCreated(id: Long) {
+        val category = _uiState.value.availableCategories.find { it.id == id } ?: return
+        _uiState.update { it.copy(selectedCategory = category, error = null) }
+    }
+
+    fun onAccountCreated(id: Long) {
+        val account = _uiState.value.availableAccounts.find { it.id == id } ?: return
+        _uiState.update { it.copy(selectedAccount = account, error = null) }
+    }
+
     fun onSave() = viewModelScope.launch {
         val s = _uiState.value
         if (s.amount <= BigDecimal.ZERO) {

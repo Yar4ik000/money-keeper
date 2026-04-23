@@ -1,5 +1,7 @@
 package com.moneykeeper.app.navigation
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
@@ -16,12 +18,14 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.moneykeeper.core.ui.components.TipCard
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -42,26 +46,76 @@ import com.moneykeeper.feature.transactions.navigation.transactionsGraph
 @Composable
 fun MoneyKeeperNavHost(
     navController: NavHostController = rememberNavController(),
+    tipViewModel: TipViewModel = hiltViewModel(),
 ) {
+    val tipSettings by tipViewModel.settings.collectAsStateWithLifecycle()
+    val backStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = backStackEntry?.destination?.route
+
     Scaffold(
         bottomBar = { MoneyKeeperBottomBar(navController) },
     ) { padding ->
-        NavHost(
-            navController = navController,
-            startDestination = Screen.Dashboard.route,
-            modifier = Modifier.padding(padding),
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
         ) {
-            dashboardGraph(navController)
-            accountsGraph(navController)
-            transactionsGraph(navController)
-            analyticsGraph(navController)
-            settingsGraph(navController)
-            forecastGraph(navController)
-            budgetsGraph(navController)
-            composable(Screen.ChangePin.route) {
-                ChangePinScreen(
-                    onBack = { navController.popBackStack() },
-                    onChanged = { navController.popBackStack() },
+            NavHost(
+                navController = navController,
+                startDestination = Screen.Dashboard.route,
+            ) {
+                dashboardGraph(navController)
+                accountsGraph(navController)
+                transactionsGraph(navController)
+                analyticsGraph(navController)
+                settingsGraph(navController)
+                forecastGraph(navController)
+                budgetsGraph(navController)
+                composable(Screen.ChangePin.route) {
+                    ChangePinScreen(
+                        onBack = { navController.popBackStack() },
+                        onChanged = { navController.popBackStack() },
+                    )
+                }
+            }
+
+            val tipText: String? = when (currentRoute) {
+                Screen.Dashboard.route ->
+                    if (!tipSettings.seenTipDashboard)
+                        "Нажмите «+» чтобы добавить операцию. Карусель сверху — ваши счета."
+                    else null
+                Screen.Accounts.route ->
+                    if (!tipSettings.seenTipAccounts)
+                        "Нажмите «+» чтобы добавить счёт. Нажмите на счёт, чтобы посмотреть детали."
+                    else null
+                Screen.Analytics.route ->
+                    if (!tipSettings.seenTipAnalytics)
+                        "Здесь видна аналитика расходов по категориям и динамика по месяцам."
+                    else null
+                Screen.Forecast.route ->
+                    if (!tipSettings.seenTipForecast)
+                        "Прогноз будущих операций на основе регулярных транзакций и вкладов."
+                    else null
+                Screen.Budgets.route ->
+                    if (!tipSettings.seenTipBudgets)
+                        "Создайте бюджет, чтобы контролировать расходы по категориям."
+                    else null
+                else -> null
+            }
+            if (tipText != null) {
+                val onDismiss: () -> Unit = when (currentRoute) {
+                    Screen.Dashboard.route  -> tipViewModel::markDashboardTipSeen
+                    Screen.Accounts.route   -> tipViewModel::markAccountsTipSeen
+                    Screen.Analytics.route  -> tipViewModel::markAnalyticsTipSeen
+                    Screen.Forecast.route   -> tipViewModel::markForecastTipSeen
+                    Screen.Budgets.route    -> tipViewModel::markBudgetsTipSeen
+                    else                    -> ({ })
+                }
+                TipCard(
+                    text = tipText,
+                    onDismiss = onDismiss,
+                    onDismissAll = { tipViewModel.markAllTipsSeen() },
+                    modifier = Modifier.align(Alignment.BottomCenter),
                 )
             }
         }

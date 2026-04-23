@@ -14,6 +14,7 @@ private const val ROUTE_ADD_TX = "transactions/add?accountId={accountId}"
 private const val ROUTE_EDIT_TX = "transactions/{transactionId}/edit"
 private const val ROUTE_CATEGORIES = "transactions/categories"
 private const val ROUTE_ADD_CATEGORY = "transactions/categories/add"
+private const val ROUTE_ADD_CATEGORY_PICKER = "transactions/categories/add/picker"
 private const val ROUTE_EDIT_CATEGORY = "transactions/categories/{categoryId}/edit"
 
 fun NavGraphBuilder.transactionsGraph(navController: NavController) {
@@ -27,11 +28,13 @@ fun NavGraphBuilder.transactionsGraph(navController: NavController) {
                 defaultValue = null
             },
         ),
-    ) {
+    ) { backStackEntry ->
         AddTransactionRoute(
+            navBackStackEntry = backStackEntry,
             onSaved = { navController.popBackStack() },
             onBack = { navController.popBackStack() },
-            onNavigateToCategories = { navController.navigate(ROUTE_CATEGORIES) },
+            onNavigateToCategories = { navController.navigate(ROUTE_ADD_CATEGORY_PICKER) },
+            onAddAccountFromPicker = { navController.navigate("accounts/-1/edit?returnTo=transaction") },
         )
     }
 
@@ -40,11 +43,13 @@ fun NavGraphBuilder.transactionsGraph(navController: NavController) {
         arguments = listOf(
             navArgument("transactionId") { type = NavType.LongType },
         ),
-    ) {
+    ) { backStackEntry ->
         EditTransactionRoute(
+            navBackStackEntry = backStackEntry,
             onSaved = { navController.popBackStack() },
             onBack = { navController.popBackStack() },
-            onNavigateToCategories = { navController.navigate(ROUTE_CATEGORIES) },
+            onNavigateToCategories = { navController.navigate(ROUTE_ADD_CATEGORY_PICKER) },
+            onAddAccountFromPicker = { navController.navigate("accounts/-1/edit?returnTo=transaction") },
         )
     }
 
@@ -61,6 +66,19 @@ fun NavGraphBuilder.transactionsGraph(navController: NavController) {
     composable(ROUTE_ADD_CATEGORY) {
         EditCategoryScreen(
             onSaved = { navController.popBackStack() },
+            onBack = { navController.popBackStack() },
+        )
+    }
+
+    // Picker variant: returns newCategoryId to the previous (transaction) screen
+    composable(ROUTE_ADD_CATEGORY_PICKER) {
+        EditCategoryScreen(
+            onSaved = { id ->
+                navController.previousBackStackEntry
+                    ?.savedStateHandle
+                    ?.set("newCategoryId", id)
+                navController.popBackStack()
+            },
             onBack = { navController.popBackStack() },
         )
     }

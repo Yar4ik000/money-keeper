@@ -100,6 +100,7 @@ class EditAccountViewModel @Inject constructor(
                     _uiState.update { it.copy(error = EditAccountError.DepositParamsMissing) }
                     return@launch
                 }
+                // TODO(v1.7): allow initialAmount = 0 once deposit_events model lands (PRINCIPAL_ADD handles first deposit)
                 if (deposit.initialAmount <= BigDecimal.ZERO) {
                     _uiState.update { it.copy(error = EditAccountError.DepositAmountInvalid) }
                     return@launch
@@ -146,6 +147,6 @@ class EditAccountViewModel @Inject constructor(
             depositRepo.save(s.deposit.copy(accountId = id))
         }
 
-        _uiState.update { it.copy(saved = true) }
+        _uiState.update { it.copy(saved = true, savedAccountId = id) }
     }
 }

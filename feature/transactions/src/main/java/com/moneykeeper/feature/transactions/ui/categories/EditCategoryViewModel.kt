@@ -77,7 +77,7 @@ class EditCategoryViewModel @Inject constructor(
             _uiState.update { it.copy(error = EditCategoryError.NameEmpty) }
             return@launch
         }
-        categoryRepo.save(
+        val id = categoryRepo.save(
             Category(
                 id = categoryId ?: 0L,
                 name = s.name.trim(),
@@ -87,6 +87,6 @@ class EditCategoryViewModel @Inject constructor(
                 parentCategoryId = s.parentCategoryId,
             )
         )
-        _uiState.update { it.copy(saved = true) }
+        _uiState.update { it.copy(saved = true, savedCategoryId = id) }
     }
 }

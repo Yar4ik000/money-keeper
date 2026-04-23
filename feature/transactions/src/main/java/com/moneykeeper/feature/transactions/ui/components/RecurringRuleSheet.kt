@@ -9,9 +9,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
@@ -64,15 +69,40 @@ fun RecurringRuleSheet(
                 text = stringResource(R.string.recurring_title),
                 style = MaterialTheme.typography.titleMedium,
             )
-            if (rule != null && rule.id != 0L) {
+            HorizontalDivider(Modifier.padding(vertical = 8.dp))
+
+            val isNewRule = rule == null || rule.id == 0L
+            if (isNewRule) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    ),
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.Top,
+                    ) {
+                        Icon(
+                            Icons.Outlined.Info,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(end = 8.dp, top = 2.dp),
+                        )
+                        Text(
+                            text = stringResource(R.string.recurring_new_rule_hint),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            } else {
                 Text(
                     text = stringResource(R.string.recurring_edit_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 4.dp),
                 )
             }
-            HorizontalDivider(Modifier.padding(vertical = 8.dp))
 
             Text(
                 text = stringResource(R.string.recurring_frequency),
@@ -100,6 +130,16 @@ fun RecurringRuleSheet(
                 label = { Text(stringResource(R.string.recurring_interval)) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                supportingText = {
+                    val n = intervalInput.toIntOrNull()?.coerceAtLeast(1) ?: 1
+                    val resId = when (frequency) {
+                        Frequency.DAILY   -> R.string.recurring_interval_preview_daily
+                        Frequency.WEEKLY  -> R.string.recurring_interval_preview_weekly
+                        Frequency.MONTHLY -> R.string.recurring_interval_preview_monthly
+                        Frequency.YEARLY  -> R.string.recurring_interval_preview_yearly
+                    }
+                    Text(stringResource(resId, n))
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 8.dp),
