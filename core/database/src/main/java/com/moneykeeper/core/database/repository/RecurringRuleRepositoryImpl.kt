@@ -32,7 +32,12 @@ class RecurringRuleRepositoryImpl(
 
     override suspend fun getById(id: Long): RecurringRule? = ruleDao.getById(id)?.toDomain()
 
-    override suspend fun save(rule: RecurringRule): Long = ruleDao.upsert(rule.toEntity())
+    override suspend fun getByIdWithTemplate(id: Long): RecurringRuleWithTemplate? =
+        ruleDao.getById(id)?.let { buildAggregate(it) }
+
+    override suspend fun save(rule: RecurringRule): Long =
+        if (rule.id == 0L) ruleDao.insert(rule.toEntity())
+        else { ruleDao.update(rule.toEntity()); rule.id }
 
     override suspend fun updateLastGeneratedDate(id: Long, date: LocalDate) =
         ruleDao.updateLastGeneratedDate(id, date.toString())
@@ -40,6 +45,8 @@ class RecurringRuleRepositoryImpl(
     override suspend fun delete(id: Long) {
         ruleDao.getById(id)?.let { ruleDao.delete(it) }
     }
+
+    override suspend fun pruneOrphaned(): Int = ruleDao.deleteOrphaned()
 
     /**
      * Строит агрегат правило + шаблон.

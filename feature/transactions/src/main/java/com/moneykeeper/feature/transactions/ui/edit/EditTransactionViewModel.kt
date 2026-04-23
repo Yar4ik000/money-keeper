@@ -12,6 +12,7 @@ import com.moneykeeper.core.domain.repository.AccountRepository
 import com.moneykeeper.core.domain.repository.CategoryRepository
 import com.moneykeeper.core.domain.repository.RecurringRuleRepository
 import com.moneykeeper.core.domain.repository.TransactionRepository
+import com.moneykeeper.feature.transactions.domain.RecurringUpdate
 import com.moneykeeper.feature.transactions.domain.TransactionSaver
 import com.moneykeeper.feature.transactions.ui.add.AddTxError
 import com.moneykeeper.feature.transactions.ui.add.AddTransactionUiState
@@ -39,9 +40,13 @@ class EditTransactionViewModel @Inject constructor(
 
     private val transactionId: Long = checkNotNull(savedStateHandle["transactionId"])
     private var originalTransaction: Transaction? = null
+    private var originalRule: RecurringRule? = null
 
     private val _uiState = MutableStateFlow(AddTransactionUiState())
     val uiState: StateFlow<AddTransactionUiState> = _uiState.asStateFlow()
+
+    private val _showStopSeriesDialog = MutableStateFlow(false)
+    val showStopSeriesDialog: StateFlow<Boolean> = _showStopSeriesDialog.asStateFlow()
 
     init {
         viewModelScope.launch {
@@ -56,6 +61,7 @@ class EditTransactionViewModel @Inject constructor(
                     ?: return@collect
 
                 val rule = tx.recurringRuleId?.let { recurringRuleRepo.getById(it) }
+                if (originalRule == null) originalRule = rule
                 _uiState.update { s ->
                     s.copy(
                         amountInput = tx.amount.toPlainString(),
@@ -99,13 +105,38 @@ class EditTransactionViewModel @Inject constructor(
 
     fun onNoteChange(note: String) = _uiState.update { it.copy(note = note) }
 
-    fun onRecurringToggle(on: Boolean) =
-        _uiState.update {
-            it.copy(isRecurring = on, recurringRule = if (!on) null else it.recurringRule)
+    fun onRecurringToggle(on: Boolean) {
+        if (!on && originalTransaction?.recurringRuleId != null) {
+            _showStopSeriesDialog.update { true }
+        } else {
+            _uiState.update { s ->
+                s.copy(
+                    isRecurring = on,
+                    // When re-enabling, restore the original rule so the UI shows it correctly
+                    // and executeReplace emits Set(...) instead of falling through to Keep
+                    recurringRule = if (!on) null else (s.recurringRule ?: originalRule),
+                )
+            }
         }
+    }
+
+    fun onRecurringUncheckConfirm(confirmed: Boolean) {
+        _showStopSeriesDialog.update { false }
+        if (confirmed) _uiState.update { it.copy(isRecurring = false, recurringRule = null) }
+    }
 
     fun onRecurringRuleChange(rule: RecurringRule) =
         _uiState.update { it.copy(recurringRule = rule) }
+
+    fun onCategoryCreated(id: Long) {
+        val category = _uiState.value.availableCategories.find { it.id == id } ?: return
+        _uiState.update { it.copy(selectedCategory = category, error = null) }
+    }
+
+    fun onAccountCreated(id: Long) {
+        val account = _uiState.value.availableAccounts.find { it.id == id } ?: return
+        _uiState.update { it.copy(selectedAccount = account, error = null) }
+    }
 
     fun onSave() = viewModelScope.launch {
         val s = _uiState.value
@@ -114,7 +145,7 @@ class EditTransactionViewModel @Inject constructor(
             _uiState.update { it.copy(error = AddTxError.AmountRequired) }
             return@launch
         }
-        val account = s.selectedAccount ?: run {
+        if (s.selectedAccount == null) {
             _uiState.update { it.copy(error = AddTxError.AccountRequired) }
             return@launch
         }
@@ -122,7 +153,20 @@ class EditTransactionViewModel @Inject constructor(
             _uiState.update { it.copy(error = AddTxError.ToAccountRequired) }
             return@launch
         }
-        val rule = if (s.isRecurring) s.recurringRule?.copy(startDate = s.date) else null
+        executeReplace()
+    }
+
+    private suspend fun executeReplace() {
+        val s = _uiState.value
+        val old = originalTransaction ?: return
+        val account = s.selectedAccount ?: return
+        val recurringUpdate = when {
+            s.isRecurring && s.recurringRule != null ->
+                RecurringUpdate.Set(s.recurringRule.copy(startDate = s.date))
+            !s.isRecurring && old.recurringRuleId != null ->
+                RecurringUpdate.StopSeries(old.recurringRuleId!!)
+            else -> RecurringUpdate.Keep
+        }
         val newTx = Transaction(
             id = transactionId,
             accountId = account.id,
@@ -134,7 +178,7 @@ class EditTransactionViewModel @Inject constructor(
             note = s.note,
             createdAt = old.createdAt,
         )
-        transactionSaver.replace(old, newTx, rule)
+        transactionSaver.replace(old, newTx, recurringUpdate)
         _uiState.update { it.copy(saved = true) }
     }
 }

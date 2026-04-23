@@ -128,7 +128,7 @@ class ForeignKeyIntegrationTest {
     @Test
     fun deleteRecurringRule_setsTransactionRuleIdToNull() = runTest {
         val accId = insertAccount("Card")
-        val ruleId = db.recurringRuleDao().upsert(
+        val ruleId = db.recurringRuleDao().insert(
             RecurringRuleEntity(frequency = Frequency.MONTHLY,
                 startDate = LocalDate.of(2026, 1, 1), endDate = null)
         )

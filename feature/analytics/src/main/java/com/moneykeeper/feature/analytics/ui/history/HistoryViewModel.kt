@@ -4,11 +4,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.moneykeeper.core.domain.analytics.PeriodSummaryByCurrency
 import com.moneykeeper.core.domain.model.TransactionType
+import com.moneykeeper.core.domain.model.TransactionWithMeta
 import com.moneykeeper.core.domain.money.CurrencyAmount
 import com.moneykeeper.core.domain.repository.AccountRepository
 import com.moneykeeper.core.domain.repository.CategoryRepository
+import com.moneykeeper.core.domain.repository.RecurringRuleRepository
 import com.moneykeeper.core.domain.repository.TransactionDeleter
 import com.moneykeeper.core.domain.repository.TransactionRepository
+import com.moneykeeper.core.domain.repository.TransactionRunner
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -30,6 +33,8 @@ class HistoryViewModel @Inject constructor(
     private val accountRepo: AccountRepository,
     private val categoryRepo: CategoryRepository,
     private val transactionDeleter: TransactionDeleter,
+    private val recurringRuleRepo: RecurringRuleRepository,
+    private val txRunner: TransactionRunner,
 ) : ViewModel() {
 
     private val _filter = MutableStateFlow(HistoryFilter())
@@ -136,5 +141,37 @@ class HistoryViewModel @Inject constructor(
         if (ids.isEmpty()) return@launch
         clearSelection()
         transactionDeleter.deleteMany(ids)
+    }
+
+    fun deleteSelectedStopSeries() = viewModelScope.launch {
+        val ids = _selectedIds.value
+        if (ids.isEmpty()) return@launch
+        clearSelection()
+        transactionDeleter.deleteManyStopSeries(ids)
+    }
+
+    fun deleteSingleOnly(meta: TransactionWithMeta) = viewModelScope.launch {
+        clearSelection()
+        transactionDeleter.deleteMany(setOf(meta.transaction.id))
+    }
+
+    fun deleteSingleThisAndFuture(meta: TransactionWithMeta) = viewModelScope.launch {
+        clearSelection()
+        val ruleId = meta.transaction.recurringRuleId ?: return@launch
+        val rule = recurringRuleRepo.getById(ruleId) ?: return@launch
+        val newEndDate = meta.transaction.date.minusDays(1)
+        txRunner.run {
+            if (newEndDate < rule.startDate) {
+                recurringRuleRepo.delete(ruleId)
+            } else {
+                recurringRuleRepo.save(rule.copy(endDate = newEndDate))
+            }
+            transactionDeleter.deleteMany(setOf(meta.transaction.id))
+        }
+    }
+
+    fun deleteSingleStopSeries(meta: TransactionWithMeta) = viewModelScope.launch {
+        clearSelection()
+        transactionDeleter.deleteManyStopSeries(setOf(meta.transaction.id))
     }
 }

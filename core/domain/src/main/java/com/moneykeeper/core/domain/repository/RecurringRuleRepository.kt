@@ -10,7 +10,9 @@ interface RecurringRuleRepository {
     fun observeAllWithTemplates(): Flow<List<RecurringRuleWithTemplate>>
     suspend fun getAllWithTemplates(today: LocalDate = LocalDate.now()): List<RecurringRuleWithTemplate>
     suspend fun getById(id: Long): RecurringRule?
+    suspend fun getByIdWithTemplate(id: Long): RecurringRuleWithTemplate?
     suspend fun save(rule: RecurringRule): Long
     suspend fun updateLastGeneratedDate(id: Long, date: LocalDate)
     suspend fun delete(id: Long)
+    suspend fun pruneOrphaned(): Int
 }

@@ -10,6 +10,9 @@ import com.moneykeeper.core.domain.repository.TransactionRepository
 import com.moneykeeper.core.domain.repository.TransactionRunner
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.math.BigDecimal
@@ -77,18 +80,31 @@ class TransactionSaverTest {
         override suspend fun getAll() = throw UnsupportedOperationException()
     }
 
+    private var prunedCount = 0
+
     private val fakeRuleRepo = object : RecurringRuleRepository {
+        private val rules = mutableMapOf<Long, RecurringRule>()
+
         override fun observeAll() = throw UnsupportedOperationException()
         override fun observeAllWithTemplates() = throw UnsupportedOperationException()
         override suspend fun getAllWithTemplates(today: LocalDate) =
             throw UnsupportedOperationException()
-        override suspend fun getById(id: Long): RecurringRule? = null
+        override suspend fun getById(id: Long): RecurringRule? = rules[id]
         override suspend fun save(rule: RecurringRule): Long {
             savedRuleId++
+            rules[savedRuleId] = rule.copy(id = savedRuleId)
             return savedRuleId
         }
         override suspend fun updateLastGeneratedDate(id: Long, date: LocalDate) = Unit
-        override suspend fun delete(id: Long) = Unit
+        override suspend fun delete(id: Long) { rules.remove(id) }
+        override suspend fun pruneOrphaned(): Int {
+            val referencedIds = savedTransactions.mapNotNull { it.recurringRuleId }.toSet()
+            val orphans = rules.keys.filter { it !in referencedIds }
+            orphans.forEach { rules.remove(it) }
+            prunedCount += orphans.size
+            return orphans.size
+        }
+        fun ruleExists(id: Long) = rules.containsKey(id)
     }
 
     private val fakeTxRunner = object : TransactionRunner {
@@ -126,6 +142,7 @@ class TransactionSaverTest {
         savedTransactions.clear()
         deletedIds.clear()
         savedRuleId = 0L
+        prunedCount = 0
         saver = TransactionSaver(fakeTxRepo, fakeAccountRepo, fakeRuleRepo, fakeTxRunner)
     }
 
@@ -226,5 +243,63 @@ class TransactionSaverTest {
 
         val saved = savedTransactions.first()
         assertEquals(1L, saved.recurringRuleId)
+    }
+
+    @Test
+    fun `replace with Clear detaches rule and prunes orphan`() = runTest {
+        val rule = RecurringRule(id = 0L, frequency = Frequency.MONTHLY, interval = 1, startDate = today, endDate = null)
+        val expense = tx()
+        saver.save(expense, recurringRule = rule)
+
+        val savedWithRule = savedTransactions.first()
+        val ruleId = savedWithRule.recurringRuleId!!
+        assertTrue("Rule should exist after save", fakeRuleRepo.ruleExists(ruleId))
+
+        saver.replace(savedWithRule, savedWithRule.copy(note = "edited"), RecurringUpdate.Clear)
+
+        val afterReplace = savedTransactions.find { it.id == savedWithRule.id }!!
+        assertNull("recurringRuleId must be null after Clear", afterReplace.recurringRuleId)
+        assertFalse("Orphaned rule must be pruned", fakeRuleRepo.ruleExists(ruleId))
+    }
+
+    @Test
+    fun `replace with StopSeries deletes rule immediately`() = runTest {
+        val rule = RecurringRule(id = 0L, frequency = Frequency.MONTHLY, interval = 1, startDate = today, endDate = null)
+        val expense = tx()
+        saver.save(expense, recurringRule = rule)
+
+        val savedWithRule = savedTransactions.first()
+        val ruleId = savedWithRule.recurringRuleId!!
+
+        saver.replace(savedWithRule, savedWithRule.copy(note = "stop"), RecurringUpdate.StopSeries(ruleId))
+
+        assertFalse("Rule must be deleted by StopSeries", fakeRuleRepo.ruleExists(ruleId))
+    }
+
+    @Test
+    fun `replace with Clear does NOT prune rule still referenced by another transaction`() = runTest {
+        val rule = RecurringRule(id = 0L, frequency = Frequency.MONTHLY, interval = 1, startDate = today, endDate = null)
+        saver.save(tx(id = 1L), recurringRule = rule)
+        val ruleId = savedTransactions.first().recurringRuleId!!
+
+        val sister = tx(id = 2L).copy(recurringRuleId = ruleId)
+        fakeTxRepo.save(sister)
+
+        val first = savedTransactions.find { it.id == 1L }!!
+        saver.replace(first, first.copy(note = "edited"), RecurringUpdate.Clear)
+
+        assertTrue("Rule must survive if still referenced by sister", fakeRuleRepo.ruleExists(ruleId))
+    }
+
+    @Test
+    fun `delete prunes orphaned rule`() = runTest {
+        val rule = RecurringRule(id = 0L, frequency = Frequency.MONTHLY, interval = 1, startDate = today, endDate = null)
+        val expense = tx()
+        saver.save(expense, recurringRule = rule)
+
+        val savedWithRule = savedTransactions.first()
+        saver.delete(savedWithRule)
+
+        assertFalse("Rule should be pruned after deleting last referencing transaction", fakeRuleRepo.ruleExists(savedWithRule.recurringRuleId!!))
     }
 }

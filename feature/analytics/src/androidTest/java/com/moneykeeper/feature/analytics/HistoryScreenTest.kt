@@ -2,7 +2,6 @@ package com.moneykeeper.feature.analytics
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -22,7 +21,6 @@ import org.junit.runner.RunWith
 import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.LocalDateTime
-import java.time.YearMonth
 
 @RunWith(AndroidJUnit4::class)
 class HistoryScreenTest {
@@ -43,6 +41,7 @@ class HistoryScreenTest {
                 onEnterSelectionMode = {},
                 onToggleSelection = {},
                 onDeleteSelected = {},
+                onDeleteSelectedStopSeries = {},
                 onClearSelection = {},
             )
         }
@@ -64,6 +63,7 @@ class HistoryScreenTest {
                 onEnterSelectionMode = {},
                 onToggleSelection = {},
                 onDeleteSelected = {},
+                onDeleteSelectedStopSeries = {},
                 onClearSelection = {},
             )
         }
@@ -72,10 +72,9 @@ class HistoryScreenTest {
 
     @Test
     fun historyScreen_showsTransactionCategoryName() {
-        val meta = makeTransactionWithMeta(categoryName = "Продукты", amount = BigDecimal("500"))
         val group = TransactionGroup(
             date = LocalDate.now(),
-            items = listOf(meta),
+            items = listOf(makeMeta(categoryName = "Продукты", amount = BigDecimal("500"))),
             dayTotals = listOf(CurrencyAmount("RUB", BigDecimal("-500"))),
         )
         composeTestRule.setContent {
@@ -91,6 +90,7 @@ class HistoryScreenTest {
                 onEnterSelectionMode = {},
                 onToggleSelection = {},
                 onDeleteSelected = {},
+                onDeleteSelectedStopSeries = {},
                 onClearSelection = {},
             )
         }
@@ -114,20 +114,19 @@ class HistoryScreenTest {
                 onEnterSelectionMode = {},
                 onToggleSelection = {},
                 onDeleteSelected = {},
+                onDeleteSelectedStopSeries = {},
                 onClearSelection = {},
             )
         }
-        // Totals row should be visible
         composeTestRule.onNodeWithText("История").assertIsDisplayed()
     }
 
     @Test
-    fun historyScreen_deleteButton_showsConfirmDialogBeforeDelete() {
+    fun historyScreen_deleteButton_showsSimpleConfirmDialog_forNonRecurringTransactions() {
         var deleteCalled = false
-        val meta = makeTransactionWithMeta(categoryName = "Продукты", amount = BigDecimal("500"))
         val group = TransactionGroup(
             date = LocalDate.now(),
-            items = listOf(meta),
+            items = listOf(makeMeta(categoryName = "Продукты", amount = BigDecimal("500"))),
             dayTotals = listOf(CurrencyAmount("RUB", BigDecimal("-500"))),
         )
         composeTestRule.setContent {
@@ -145,24 +144,22 @@ class HistoryScreenTest {
                 onEnterSelectionMode = {},
                 onToggleSelection = {},
                 onDeleteSelected = { deleteCalled = true },
+                onDeleteSelectedStopSeries = {},
                 onClearSelection = {},
             )
         }
 
-        // Bottom-bar "Удалить" button shows an AlertDialog instead of deleting immediately
         composeTestRule.onAllNodesWithText("Удалить")[0].performClick()
         composeTestRule.onNodeWithText("Удалить выбранные операции?").assertIsDisplayed()
-        // Callback must NOT fire before the user confirms
-        assert(!deleteCalled)
+        assert(!deleteCalled) { "Delete must not fire before user confirms" }
     }
 
     @Test
-    fun historyScreen_deleteConfirmDialog_cancelDoesNotInvokeCallback() {
+    fun historyScreen_simpleDeleteConfirm_cancelDoesNotInvokeCallback() {
         var deleteCalled = false
-        val meta = makeTransactionWithMeta(categoryName = "Продукты", amount = BigDecimal("500"))
         val group = TransactionGroup(
             date = LocalDate.now(),
-            items = listOf(meta),
+            items = listOf(makeMeta(categoryName = "Продукты", amount = BigDecimal("500"))),
             dayTotals = listOf(CurrencyAmount("RUB", BigDecimal("-500"))),
         )
         composeTestRule.setContent {
@@ -180,6 +177,7 @@ class HistoryScreenTest {
                 onEnterSelectionMode = {},
                 onToggleSelection = {},
                 onDeleteSelected = { deleteCalled = true },
+                onDeleteSelectedStopSeries = {},
                 onClearSelection = {},
             )
         }
@@ -187,16 +185,168 @@ class HistoryScreenTest {
         composeTestRule.onAllNodesWithText("Удалить")[0].performClick()
         composeTestRule.onNodeWithText("Отмена").performClick()
         composeTestRule.onNodeWithText("Удалить выбранные операции?").assertDoesNotExist()
-        assert(!deleteCalled)
+        assert(!deleteCalled) { "Delete must not fire after cancelling the dialog" }
     }
 
-    private fun makeTransactionWithMeta(
+    // Single recurring tx → scope dialog (3 options)
+    @Test
+    fun historyScreen_deleteButton_showsScopeDialog_whenSingleRecurringSelected() {
+        val recurringMeta = makeMeta(
+            categoryName = "Аренда", amount = BigDecimal("1000"), recurringRuleId = 5L,
+        )
+        val group = TransactionGroup(
+            date = LocalDate.now(),
+            items = listOf(recurringMeta),
+            dayTotals = listOf(CurrencyAmount("RUB", BigDecimal("-1000"))),
+        )
+        composeTestRule.setContent {
+            HistoryScreen(
+                uiState = HistoryUiState.Success(
+                    groups = listOf(group),
+                    totalsByCurrency = emptyList(),
+                    filter = HistoryFilter(),
+                    isSelectionMode = true,
+                    selectedIds = setOf(1L),
+                ),
+                onTransactionClick = {},
+                onBack = {},
+                onFilterUpdate = noop,
+                onEnterSelectionMode = {},
+                onToggleSelection = {},
+                onDeleteSelected = {},
+                onDeleteSelectedStopSeries = {},
+                onClearSelection = {},
+            )
+        }
+
+        composeTestRule.onAllNodesWithText("Удалить")[0].performClick()
+        composeTestRule.onNodeWithText("Удалить повторяющуюся операцию?").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Только эту").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Эту и все будущие").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Остановить серию").assertIsDisplayed()
+    }
+
+    @Test
+    fun historyScreen_scopeDialog_stopSeries_invokesStopSeriesCallback() {
+        var stopSeriesCalled = false
+        val recurringMeta = makeMeta(
+            categoryName = "Аренда", amount = BigDecimal("1000"), recurringRuleId = 5L,
+        )
+        val group = TransactionGroup(
+            date = LocalDate.now(),
+            items = listOf(recurringMeta),
+            dayTotals = listOf(CurrencyAmount("RUB", BigDecimal("-1000"))),
+        )
+        composeTestRule.setContent {
+            HistoryScreen(
+                uiState = HistoryUiState.Success(
+                    groups = listOf(group),
+                    totalsByCurrency = emptyList(),
+                    filter = HistoryFilter(),
+                    isSelectionMode = true,
+                    selectedIds = setOf(1L),
+                ),
+                onTransactionClick = {},
+                onBack = {},
+                onFilterUpdate = noop,
+                onEnterSelectionMode = {},
+                onToggleSelection = {},
+                onDeleteSelected = {},
+                onDeleteSelectedStopSeries = {},
+                onDeleteSingleStopSeries = { stopSeriesCalled = true },
+                onClearSelection = {},
+            )
+        }
+
+        composeTestRule.onAllNodesWithText("Удалить")[0].performClick()
+        composeTestRule.onNodeWithText("Остановить серию").performClick()
+        assert(stopSeriesCalled) { "Stop-series callback must fire when user taps Остановить серию" }
+    }
+
+    @Test
+    fun historyScreen_scopeDialog_onlyThis_invokesDeleteSingleCallback() {
+        var deleteCalled = false
+        val recurringMeta = makeMeta(
+            categoryName = "Аренда", amount = BigDecimal("1000"), recurringRuleId = 5L,
+        )
+        val group = TransactionGroup(
+            date = LocalDate.now(),
+            items = listOf(recurringMeta),
+            dayTotals = listOf(CurrencyAmount("RUB", BigDecimal("-1000"))),
+        )
+        composeTestRule.setContent {
+            HistoryScreen(
+                uiState = HistoryUiState.Success(
+                    groups = listOf(group),
+                    totalsByCurrency = emptyList(),
+                    filter = HistoryFilter(),
+                    isSelectionMode = true,
+                    selectedIds = setOf(1L),
+                ),
+                onTransactionClick = {},
+                onBack = {},
+                onFilterUpdate = noop,
+                onEnterSelectionMode = {},
+                onToggleSelection = {},
+                onDeleteSelected = {},
+                onDeleteSelectedStopSeries = {},
+                onDeleteSingleOnly = { deleteCalled = true },
+                onClearSelection = {},
+            )
+        }
+
+        composeTestRule.onAllNodesWithText("Удалить")[0].performClick()
+        composeTestRule.onNodeWithText("Только эту").performClick()
+        assert(deleteCalled) { "Delete callback must fire when user taps Только эту" }
+    }
+
+    // Multiple recurring txs selected → 2-option dialog
+    @Test
+    fun historyScreen_deleteButton_showsRecurringDialog_whenMultipleRecurringSelected() {
+        val recurring1 = makeMeta(id = 1L, categoryName = "Аренда", amount = BigDecimal("1000"), recurringRuleId = 5L)
+        val recurring2 = makeMeta(id = 2L, categoryName = "Аренда", amount = BigDecimal("1000"), recurringRuleId = 5L)
+        val group = TransactionGroup(
+            date = LocalDate.now(),
+            items = listOf(recurring1, recurring2),
+            dayTotals = listOf(CurrencyAmount("RUB", BigDecimal("-2000"))),
+        )
+        composeTestRule.setContent {
+            HistoryScreen(
+                uiState = HistoryUiState.Success(
+                    groups = listOf(group),
+                    totalsByCurrency = emptyList(),
+                    filter = HistoryFilter(),
+                    isSelectionMode = true,
+                    selectedIds = setOf(1L, 2L),
+                ),
+                onTransactionClick = {},
+                onBack = {},
+                onFilterUpdate = noop,
+                onEnterSelectionMode = {},
+                onToggleSelection = {},
+                onDeleteSelected = {},
+                onDeleteSelectedStopSeries = {},
+                onClearSelection = {},
+            )
+        }
+
+        composeTestRule.onAllNodesWithText("Удалить")[0].performClick()
+        composeTestRule.onNodeWithText("Удалить повторяющиеся операции?").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Только выбранные операции").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Остановить серию").assertIsDisplayed()
+    }
+
+    // ── helpers ───────────────────────────────────────────────────────────────
+
+    private fun makeMeta(
         categoryName: String,
         amount: BigDecimal,
+        id: Long = 1L,
         type: TransactionType = TransactionType.EXPENSE,
+        recurringRuleId: Long? = null,
     ) = TransactionWithMeta(
         transaction = Transaction(
-            id = 1L,
+            id = id,
             accountId = 1L,
             toAccountId = null,
             amount = amount,
@@ -204,6 +354,7 @@ class HistoryScreenTest {
             categoryId = 1L,
             date = LocalDate.now(),
             note = "",
+            recurringRuleId = recurringRuleId,
             createdAt = LocalDateTime.now(),
         ),
         accountName = "Карта",

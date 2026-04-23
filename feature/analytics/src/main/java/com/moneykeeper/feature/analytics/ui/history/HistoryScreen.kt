@@ -2,20 +2,26 @@ package com.moneykeeper.feature.analytics.ui.history
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -39,6 +45,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.moneykeeper.core.domain.model.TransactionWithMeta
 import com.moneykeeper.core.ui.util.formatAsCurrency
 import com.moneykeeper.feature.analytics.R
 import com.moneykeeper.feature.analytics.ui.components.PeriodSelector
@@ -61,6 +68,10 @@ fun HistoryRoute(
         onEnterSelectionMode = viewModel::enterSelectionMode,
         onToggleSelection = viewModel::toggleSelection,
         onDeleteSelected = viewModel::deleteSelected,
+        onDeleteSelectedStopSeries = viewModel::deleteSelectedStopSeries,
+        onDeleteSingleOnly = viewModel::deleteSingleOnly,
+        onDeleteSingleThisAndFuture = viewModel::deleteSingleThisAndFuture,
+        onDeleteSingleStopSeries = viewModel::deleteSingleStopSeries,
         onClearSelection = viewModel::clearSelection,
     )
 }
@@ -75,12 +86,29 @@ fun HistoryScreen(
     onEnterSelectionMode: (Long) -> Unit,
     onToggleSelection: (Long) -> Unit,
     onDeleteSelected: () -> Unit,
+    onDeleteSelectedStopSeries: () -> Unit,
+    onDeleteSingleOnly: (TransactionWithMeta) -> Unit = {},
+    onDeleteSingleThisAndFuture: (TransactionWithMeta) -> Unit = {},
+    onDeleteSingleStopSeries: (TransactionWithMeta) -> Unit = {},
     onClearSelection: () -> Unit,
 ) {
     var showFilterSheet by remember { mutableStateOf(false) }
     var showSearchBar by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
+    var showRecurringDeleteDialog by remember { mutableStateOf(false) }
+    var showScopeDialog by remember { mutableStateOf(false) }
     val success = uiState as? HistoryUiState.Success
+
+    val allItems = success?.groups?.flatMap { it.items } ?: emptyList()
+
+    val singleRecurringSelected: TransactionWithMeta? = if (success?.selectedIds?.size == 1) {
+        allItems.find {
+            it.transaction.id == success.selectedIds.first() && it.transaction.recurringRuleId != null
+        }
+    } else null
+
+    val hasRecurringSelected = success != null && allItems
+        .any { it.transaction.id in success.selectedIds && it.transaction.recurringRuleId != null }
 
     Scaffold(
         topBar = {
@@ -125,7 +153,13 @@ fun HistoryScreen(
                         horizontalArrangement = Arrangement.End,
                     ) {
                         Button(
-                            onClick = { showDeleteConfirm = true },
+                            onClick = {
+                                when {
+                                    singleRecurringSelected != null -> showScopeDialog = true
+                                    hasRecurringSelected -> showRecurringDeleteDialog = true
+                                    else -> showDeleteConfirm = true
+                                }
+                            },
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.error,
                             ),
@@ -275,5 +309,173 @@ fun HistoryScreen(
                 }
             },
         )
+    }
+
+    if (showRecurringDeleteDialog) {
+        RecurringDeleteDialog(
+            onDeleteSelected = {
+                showRecurringDeleteDialog = false
+                onDeleteSelected()
+            },
+            onStopSeries = {
+                showRecurringDeleteDialog = false
+                onDeleteSelectedStopSeries()
+            },
+            onDismiss = { showRecurringDeleteDialog = false },
+        )
+    }
+
+    if (showScopeDialog && singleRecurringSelected != null) {
+        DeleteScopeDialog(
+            onlyThis = {
+                showScopeDialog = false
+                onDeleteSingleOnly(singleRecurringSelected)
+            },
+            thisAndFuture = {
+                showScopeDialog = false
+                onDeleteSingleThisAndFuture(singleRecurringSelected)
+            },
+            stopSeries = {
+                showScopeDialog = false
+                onDeleteSingleStopSeries(singleRecurringSelected)
+            },
+            onDismiss = { showScopeDialog = false },
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DeleteScopeDialog(
+    onlyThis: () -> Unit,
+    thisAndFuture: () -> Unit,
+    stopSeries: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    BasicAlertDialog(onDismissRequest = onDismiss) {
+        Card(shape = RoundedCornerShape(28.dp)) {
+            Column(Modifier.padding(24.dp)) {
+                Text(
+                    text = stringResource(R.string.history_delete_scope_title),
+                    style = MaterialTheme.typography.titleLarge,
+                )
+                Spacer(Modifier.height(16.dp))
+                Surface(
+                    onClick = onlyThis,
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Column(Modifier.padding(12.dp)) {
+                        Text(
+                            text = stringResource(R.string.history_delete_scope_only_this),
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                        Text(
+                            text = stringResource(R.string.history_delete_scope_only_this_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                Surface(
+                    onClick = thisAndFuture,
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Column(Modifier.padding(12.dp)) {
+                        Text(
+                            text = stringResource(R.string.history_delete_scope_this_and_future),
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                        Text(
+                            text = stringResource(R.string.history_delete_scope_this_and_future_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                Surface(
+                    onClick = stopSeries,
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.errorContainer,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Column(Modifier.padding(12.dp)) {
+                        Text(
+                            text = stringResource(R.string.history_stop_series),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                        )
+                        Text(
+                            text = stringResource(R.string.history_delete_scope_stop_series_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun RecurringDeleteDialog(
+    onDeleteSelected: () -> Unit,
+    onStopSeries: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    BasicAlertDialog(onDismissRequest = onDismiss) {
+        Card(shape = RoundedCornerShape(28.dp)) {
+            Column(Modifier.padding(24.dp)) {
+                Text(
+                    text = stringResource(R.string.history_delete_recurring_title),
+                    style = MaterialTheme.typography.titleLarge,
+                )
+                Spacer(Modifier.height(16.dp))
+                Surface(
+                    onClick = onDeleteSelected,
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Column(Modifier.padding(12.dp)) {
+                        Text(
+                            text = stringResource(R.string.history_delete_only_selected),
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                        Text(
+                            text = stringResource(R.string.history_delete_only_selected_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                Surface(
+                    onClick = onStopSeries,
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.errorContainer,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Column(Modifier.padding(12.dp)) {
+                        Text(
+                            text = stringResource(R.string.history_stop_series),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                        )
+                        Text(
+                            text = stringResource(R.string.history_stop_series_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                        )
+                    }
+                }
+            }
+        }
     }
 }
