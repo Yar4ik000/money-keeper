@@ -54,6 +54,7 @@ class TransactionRepositoryImpl(
                 categoryName = cat?.name.orEmpty(),
                 categoryColor = cat?.colorHex ?: "#9E9E9E",
                 categoryIcon = cat?.iconName ?: "HelpOutline",
+                toAccountName = tx.toAccountId?.let { accById[it]?.name },
             )
         }
     }
@@ -75,6 +76,7 @@ class TransactionRepositoryImpl(
                 categoryName = cat?.name.orEmpty(),
                 categoryColor = cat?.colorHex ?: "#9E9E9E",
                 categoryIcon = cat?.iconName ?: "HelpOutline",
+                toAccountName = tx.toAccountId?.let { accById[it]?.name },
             )
         }
     }
@@ -125,6 +127,7 @@ class TransactionRepositoryImpl(
                 categoryName = cat?.name.orEmpty(),
                 categoryColor = cat?.colorHex ?: "#9E9E9E",
                 categoryIcon = cat?.iconName ?: "HelpOutline",
+                toAccountName = tx.toAccountId?.let { accById[it]?.name },
             )
         }
     }

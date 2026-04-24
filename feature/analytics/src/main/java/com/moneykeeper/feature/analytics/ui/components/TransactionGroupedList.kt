@@ -3,6 +3,7 @@ package com.moneykeeper.feature.analytics.ui.components
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -11,7 +12,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -84,7 +88,7 @@ fun TransactionHistoryItem(
         TransactionType.INCOME   -> MaterialTheme.colorScheme.primary to "+"
         TransactionType.EXPENSE,
         TransactionType.SAVINGS  -> MaterialTheme.colorScheme.error to "-"
-        TransactionType.TRANSFER -> MaterialTheme.colorScheme.onSurface to "→"
+        TransactionType.TRANSFER -> MaterialTheme.colorScheme.onSurface to ""
     }
 
     ListItem(
@@ -111,11 +115,28 @@ fun TransactionHistoryItem(
             Text(meta.categoryName.ifEmpty { "Прочее" })
         },
         supportingContent = {
-            val parts = listOfNotNull(
-                meta.accountName.takeIf { it.isNotEmpty() },
-                meta.transaction.note.takeIf { it.isNotEmpty() },
-            )
-            if (parts.isNotEmpty()) Text(parts.joinToString(" · "))
+            if (meta.transaction.type == TransactionType.TRANSFER && meta.toAccountName != null) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Text(meta.accountName, style = MaterialTheme.typography.bodySmall)
+                    Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(12.dp))
+                    Text(
+                        buildString {
+                            append(meta.toAccountName)
+                            if (meta.transaction.note.isNotEmpty()) append(" · ${meta.transaction.note}")
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            } else {
+                val parts = listOfNotNull(
+                    meta.accountName.takeIf { it.isNotEmpty() },
+                    meta.transaction.note.takeIf { it.isNotEmpty() },
+                )
+                if (parts.isNotEmpty()) Text(parts.joinToString(" · "))
+            }
         },
         trailingContent = {
             Text(

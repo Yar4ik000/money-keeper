@@ -44,17 +44,27 @@ class HistoryViewModel @Inject constructor(
     private val derivedTransactions: Flow<HistoryUiState> = _filter.flatMapLatest { f ->
         combine(
             transactionRepo.observe(
-                accountId = f.accountId,
-                categoryId = f.categoryId,
-                type = f.type,
+                accountId = null,
+                categoryId = null,
+                type = null,
                 from = f.from,
                 to = f.to,
             ),
             accountRepo.observeActiveAccounts(),
             categoryRepo.observeAll(),
         ) { transactions, accounts, categories ->
-            val filtered = if (f.query.isBlank()) transactions
-            else transactions.filter { it.transaction.note.contains(f.query, ignoreCase = true) }
+            val filtered = transactions.filter { meta ->
+                (f.accountIds.isEmpty() || meta.transaction.accountId in f.accountIds) &&
+                (f.categoryIds.isEmpty() || meta.transaction.categoryId in f.categoryIds) &&
+                (f.types.isEmpty() || meta.transaction.type in f.types) &&
+                (f.query.isBlank() || run {
+                    val q = f.query
+                    meta.transaction.note.contains(q, ignoreCase = true) ||
+                    meta.categoryName.contains(q, ignoreCase = true) ||
+                    meta.accountName.contains(q, ignoreCase = true) ||
+                    meta.toAccountName?.contains(q, ignoreCase = true) == true
+                })
+            }
 
             val groups = filtered
                 .groupBy { it.transaction.date }
