@@ -90,6 +90,7 @@ class TransactionSaverTest {
         override suspend fun getAllWithTemplates(today: LocalDate) =
             throw UnsupportedOperationException()
         override suspend fun getById(id: Long): RecurringRule? = rules[id]
+        override suspend fun getByIdWithTemplate(id: Long) = throw UnsupportedOperationException()
         override suspend fun save(rule: RecurringRule): Long {
             savedRuleId++
             rules[savedRuleId] = rule.copy(id = savedRuleId)
@@ -301,5 +302,80 @@ class TransactionSaverTest {
         saver.delete(savedWithRule)
 
         assertFalse("Rule should be pruned after deleting last referencing transaction", fakeRuleRepo.ruleExists(savedWithRule.recurringRuleId!!))
+    }
+
+    // ── non-obvious: regression + edge cases ─────────────────────────────────
+
+    @Test
+    fun `save with recurringRule seeds rule lastGeneratedDate to transaction date`() = runTest {
+        // Regression: without seeding lastGeneratedDate, GenerateRecurringTransactionsUseCase
+        // re-generates a transaction for startDate on the next run, duplicating what
+        // the user just saved. RecurringDates.expandDates starts at startDate and the
+        // use case treats null lastGeneratedDate as startDate.minusDays(1).
+        val rule = RecurringRule(
+            id = 0L, frequency = Frequency.MONTHLY, interval = 1,
+            startDate = today, endDate = null,
+        )
+        val expense = tx(type = TransactionType.EXPENSE, amount = BigDecimal("100"))
+
+        saver.save(expense, recurringRule = rule)
+
+        val savedTx = savedTransactions.first()
+        val savedRule = fakeRuleRepo.getById(savedTx.recurringRuleId!!)!!
+        assertEquals(
+            "Rule's lastGeneratedDate must be seeded to the transaction's date so the generator does not re-create it",
+            expense.date,
+            savedRule.lastGeneratedDate,
+        )
+    }
+
+    @Test
+    fun `replace INCOME to EXPENSE correctly flips sign of balance impact`() = runTest {
+        // Type change is a classic sign-flip bug: if reverse/apply is not strictly
+        // "reverse old THEN apply new", the balance drifts by ±amount or ±2×amount.
+        val old = tx(id = 1L, type = TransactionType.INCOME, amount = BigDecimal("100"), accountId = 10L)
+        fakeTxRepo.save(old)
+        balances[10L] = BigDecimal("100") // income was previously applied
+
+        val new = old.copy(type = TransactionType.EXPENSE)
+        saver.replace(old, new)
+
+        // reverse INCOME (100 → 0), apply EXPENSE (0 → -100). Net: -200 from original.
+        assertEquals(BigDecimal("-100"), balances[10L])
+    }
+
+    @Test
+    fun `deleteMany with TRANSFER reverses both source and destination`() = runTest {
+        val transfer = tx(
+            id = 1L, type = TransactionType.TRANSFER,
+            accountId = 10L, toAccountId = 20L, amount = BigDecimal("300"),
+        )
+        fakeTxRepo.save(transfer)
+        balances[10L] = BigDecimal("-300") // source was debited
+        balances[20L] = BigDecimal("300")  // destination was credited
+
+        saver.deleteMany(setOf(1L))
+
+        assertEquals("Source must be credited back", BigDecimal("0"), balances[10L])
+        assertEquals("Destination must be debited back", BigDecimal("0"), balances[20L])
+    }
+
+    @Test
+    fun `replace TRANSFER changing destination moves money to new dest and restores old`() = runTest {
+        val old = tx(
+            id = 1L, type = TransactionType.TRANSFER,
+            accountId = 10L, toAccountId = 20L, amount = BigDecimal("500"),
+        )
+        fakeTxRepo.save(old)
+        balances[10L] = BigDecimal("-500")
+        balances[20L] = BigDecimal("500")
+
+        val new = old.copy(toAccountId = 30L)
+        saver.replace(old, new)
+
+        // Reverse old: +500 to 10, -500 to 20. Apply new: -500 to 10, +500 to 30.
+        assertEquals("Source net unchanged (still -500 from new transfer)", BigDecimal("-500"), balances[10L])
+        assertEquals("Old destination must be restored to zero", BigDecimal("0"), balances[20L])
+        assertEquals("New destination must receive the transfer", BigDecimal("500"), balances[30L])
     }
 }

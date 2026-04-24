@@ -15,6 +15,7 @@ import com.moneykeeper.core.domain.model.RecurringRule
 import com.moneykeeper.core.domain.model.Transaction
 import com.moneykeeper.core.domain.model.TransactionType
 import com.moneykeeper.core.domain.repository.TransactionRunner
+import com.moneykeeper.core.domain.usecase.GenerateRecurringTransactionsUseCase
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -227,6 +228,46 @@ class TransactionSaverRuntimeTest {
     }
 
     // ── balance correctness ───────────────────────────────────────────────────
+
+    // ── regression: no duplicate on next-day generation after saving with rule ──
+
+    @Test
+    fun saveWithRecurringRule_thenGenerateNextDay_doesNotDuplicateTransactionOnStartDate() = runTest {
+        // Regression: TransactionSaver.save persists the user-entered transaction AND
+        // a rule whose startDate equals that transaction's date. On the next run of
+        // GenerateRecurringTransactionsUseCase (worker or post-unlock catch-up), the
+        // generator must not produce a second transaction for startDate.
+        val startDate = LocalDate.of(2026, 4, 20)
+        val expense = Transaction(
+            accountId = testAccountId, toAccountId = null,
+            amount = BigDecimal("100"), type = TransactionType.EXPENSE,
+            categoryId = null, date = startDate, createdAt = LocalDateTime.now(),
+        )
+        val rule = RecurringRule(
+            id = 0L, frequency = Frequency.MONTHLY, interval = 1,
+            startDate = startDate, endDate = null,
+        )
+        saver.save(expense, recurringRule = rule)
+        val balanceAfterSave = db.accountDao().getById(testAccountId)!!.balance
+
+        val accountRepo = AccountRepositoryImpl(db.accountDao())
+        val directRunner = object : TransactionRunner {
+            override suspend fun <T> run(block: suspend () -> T): T = block()
+        }
+        val generator = GenerateRecurringTransactionsUseCase(ruleRepo, txRepo, accountRepo, directRunner)
+        generator(today = startDate.plusDays(1))
+
+        val txCount = txRepo.getAll().size
+        assertEquals(
+            "Generator must not re-create the user-entered transaction for startDate",
+            1, txCount,
+        )
+        val balanceAfter = db.accountDao().getById(testAccountId)!!.balance
+        assertEquals(
+            "Balance must not double-count the initial transaction",
+            balanceAfterSave, balanceAfter,
+        )
+    }
 
     @Test
     fun save_expense_decreasesBalance_andDelete_restoresIt() = runTest {

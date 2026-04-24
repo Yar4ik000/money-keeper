@@ -20,7 +20,7 @@ class TransactionSaver @Inject constructor(
 
     suspend fun save(transaction: Transaction, recurringRule: RecurringRule? = null) {
         txRunner.run {
-            val ruleId = recurringRule?.let { recurringRuleRepo.save(it) }
+            val ruleId = recurringRule?.copy(lastGeneratedDate = transaction.date)?.let { recurringRuleRepo.save(it) }
             transactionRepo.save(transaction.copy(recurringRuleId = ruleId))
             applyBalanceEffect(transaction)
         }
@@ -31,7 +31,7 @@ class TransactionSaver @Inject constructor(
             reverseBalanceEffect(old)
             val ruleId = when (recurringUpdate) {
                 is RecurringUpdate.Keep       -> old.recurringRuleId
-                is RecurringUpdate.Set        -> recurringRuleRepo.save(recurringUpdate.rule)
+                is RecurringUpdate.Set        -> recurringRuleRepo.save(recurringUpdate.rule.copy(lastGeneratedDate = new.date))
                 is RecurringUpdate.Clear      -> null
                 is RecurringUpdate.StopSeries -> { recurringRuleRepo.delete(recurringUpdate.ruleId); null }
             }
