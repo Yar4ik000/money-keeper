@@ -94,16 +94,15 @@ fun FilterBottomSheet(
 
             Text(stringResource(R.string.filter_type), style = MaterialTheme.typography.labelLarge)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TypeFilterChip(
-                    label = stringResource(R.string.filter_type_all),
-                    selected = draft.type == null,
-                    onClick = { draft = draft.copy(type = null) },
-                )
                 TransactionType.entries.forEach { type ->
                     TypeFilterChip(
                         label = stringResource(type.labelRes),
-                        selected = draft.type == type,
-                        onClick = { draft = draft.copy(type = type) },
+                        selected = type in draft.types,
+                        onClick = {
+                            draft = draft.copy(
+                                types = if (type in draft.types) draft.types - type else draft.types + type,
+                            )
+                        },
                     )
                 }
             }
@@ -111,16 +110,15 @@ fun FilterBottomSheet(
             if (accounts.isNotEmpty()) {
                 Text(stringResource(R.string.filter_account), style = MaterialTheme.typography.labelLarge)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TypeFilterChip(
-                        label = stringResource(R.string.filter_any),
-                        selected = draft.accountId == null,
-                        onClick = { draft = draft.copy(accountId = null) },
-                    )
                     accounts.forEach { account ->
                         TypeFilterChip(
                             label = account.name,
-                            selected = draft.accountId == account.id,
-                            onClick = { draft = draft.copy(accountId = account.id) },
+                            selected = account.id in draft.accountIds,
+                            onClick = {
+                                draft = draft.copy(
+                                    accountIds = if (account.id in draft.accountIds) draft.accountIds - account.id else draft.accountIds + account.id,
+                                )
+                            },
                         )
                     }
                 }
@@ -129,16 +127,15 @@ fun FilterBottomSheet(
             if (categories.isNotEmpty()) {
                 Text(stringResource(R.string.filter_category), style = MaterialTheme.typography.labelLarge)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TypeFilterChip(
-                        label = stringResource(R.string.filter_any),
-                        selected = draft.categoryId == null,
-                        onClick = { draft = draft.copy(categoryId = null) },
-                    )
                     categories.forEach { category ->
                         TypeFilterChip(
                             label = category.name,
-                            selected = draft.categoryId == category.id,
-                            onClick = { draft = draft.copy(categoryId = category.id) },
+                            selected = category.id in draft.categoryIds,
+                            onClick = {
+                                draft = draft.copy(
+                                    categoryIds = if (category.id in draft.categoryIds) draft.categoryIds - category.id else draft.categoryIds + category.id,
+                                )
+                            },
                         )
                     }
                 }
