@@ -184,6 +184,8 @@ internal fun applyHistoryFilter(
         (meta.transaction.type == TransactionType.TRANSFER && meta.transaction.toAccountId in filter.accountIds)) &&
     (filter.categoryIds.isEmpty() || meta.transaction.categoryId in filter.categoryIds) &&
     (filter.types.isEmpty() || meta.transaction.type in filter.types) &&
+    (filter.minAmount == null || meta.transaction.amount >= filter.minAmount) &&
+    (filter.maxAmount == null || meta.transaction.amount <= filter.maxAmount) &&
     (filter.query.isBlank() || run {
         val q = filter.query
         meta.transaction.note.contains(q, ignoreCase = true) ||

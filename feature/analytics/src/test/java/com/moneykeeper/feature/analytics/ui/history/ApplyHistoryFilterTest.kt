@@ -208,4 +208,40 @@ class ApplyHistoryFilterTest {
         val result = applyHistoryFilter(items, baseFilter.copy(query = "накоп"))
         assertEquals(listOf(1L), result.map { it.transaction.id })
     }
+
+    // ── amount range ─────────────────────────────────────────────────────────
+
+    @Test
+    fun `minAmount filters out transactions below threshold`() {
+        val items = listOf(
+            meta(tx(id = 1L).copy(amount = BigDecimal("50"))),
+            meta(tx(id = 2L).copy(amount = BigDecimal("150"))),
+            meta(tx(id = 3L).copy(amount = BigDecimal("200"))),
+        )
+        val result = applyHistoryFilter(items, baseFilter.copy(minAmount = BigDecimal("100")))
+        assertEquals(listOf(2L, 3L), result.map { it.transaction.id })
+    }
+
+    @Test
+    fun `maxAmount filters out transactions above threshold`() {
+        val items = listOf(
+            meta(tx(id = 1L).copy(amount = BigDecimal("50"))),
+            meta(tx(id = 2L).copy(amount = BigDecimal("150"))),
+            meta(tx(id = 3L).copy(amount = BigDecimal("300"))),
+        )
+        val result = applyHistoryFilter(items, baseFilter.copy(maxAmount = BigDecimal("200")))
+        assertEquals(listOf(1L, 2L), result.map { it.transaction.id })
+    }
+
+    @Test
+    fun `min and max together form a closed range`() {
+        val items = listOf(
+            meta(tx(id = 1L).copy(amount = BigDecimal("99"))),
+            meta(tx(id = 2L).copy(amount = BigDecimal("100"))),
+            meta(tx(id = 3L).copy(amount = BigDecimal("500"))),
+            meta(tx(id = 4L).copy(amount = BigDecimal("501"))),
+        )
+        val result = applyHistoryFilter(items, baseFilter.copy(minAmount = BigDecimal("100"), maxAmount = BigDecimal("500")))
+        assertEquals(listOf(2L, 3L), result.map { it.transaction.id })
+    }
 }

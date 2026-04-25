@@ -6,6 +6,7 @@ import com.moneykeeper.core.domain.model.Category
 import com.moneykeeper.core.domain.model.TransactionType
 import com.moneykeeper.core.domain.model.TransactionWithMeta
 import com.moneykeeper.core.domain.money.CurrencyAmount
+import java.math.BigDecimal
 import java.time.LocalDate
 
 data class HistoryFilter(
@@ -15,6 +16,8 @@ data class HistoryFilter(
     val categoryIds: Set<Long> = emptySet(),
     val types: Set<TransactionType> = emptySet(),
     val query: String = "",
+    val minAmount: BigDecimal? = null,
+    val maxAmount: BigDecimal? = null,
 )
 
 sealed interface HistoryUiState {

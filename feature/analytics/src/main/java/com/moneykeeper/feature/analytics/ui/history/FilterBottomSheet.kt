@@ -45,6 +45,7 @@ import com.moneykeeper.core.domain.model.AccountType
 import com.moneykeeper.core.domain.model.Category
 import com.moneykeeper.core.domain.model.TransactionType
 import com.moneykeeper.core.ui.locale.AppLocale
+import com.moneykeeper.core.ui.util.AmountTextField
 import com.moneykeeper.feature.analytics.R
 import java.time.Instant
 import java.time.LocalDate
@@ -63,6 +64,8 @@ fun FilterBottomSheet(
     onDismiss: () -> Unit,
 ) {
     var draft by remember(filter) { mutableStateOf(filter) }
+    var amountMinInput by remember(filter) { mutableStateOf(filter.minAmount?.stripTrailingZeros()?.toPlainString() ?: "") }
+    var amountMaxInput by remember(filter) { mutableStateOf(filter.maxAmount?.stripTrailingZeros()?.toPlainString() ?: "") }
     var showFromPicker by remember { mutableStateOf(false) }
     var showToPicker by remember { mutableStateOf(false) }
     var accountsExpanded by remember { mutableStateOf(false) }
@@ -104,6 +107,22 @@ fun FilterBottomSheet(
                     )
                     Box(Modifier.matchParentSize().clickable { showToPicker = true })
                 }
+            }
+
+            Text(stringResource(R.string.filter_amount), style = MaterialTheme.typography.labelLarge)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                AmountTextField(
+                    value = amountMinInput,
+                    onValueChange = { amountMinInput = it },
+                    label = { Text(stringResource(R.string.filter_amount_min)) },
+                    modifier = Modifier.weight(1f),
+                )
+                AmountTextField(
+                    value = amountMaxInput,
+                    onValueChange = { amountMaxInput = it },
+                    label = { Text(stringResource(R.string.filter_amount_max)) },
+                    modifier = Modifier.weight(1f),
+                )
             }
 
             Text(stringResource(R.string.filter_type), style = MaterialTheme.typography.labelLarge)
@@ -248,10 +267,19 @@ fun FilterBottomSheet(
 
             Spacer(Modifier.height(8.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                TextButton(onClick = { onApply(HistoryFilter()) }) {
+                TextButton(onClick = {
+                    amountMinInput = ""
+                    amountMaxInput = ""
+                    onApply(HistoryFilter())
+                }) {
                     Text(stringResource(R.string.filter_reset))
                 }
-                Button(onClick = { onApply(draft) }) {
+                Button(onClick = {
+                    onApply(draft.copy(
+                        minAmount = amountMinInput.toBigDecimalOrNull(),
+                        maxAmount = amountMaxInput.toBigDecimalOrNull(),
+                    ))
+                }) {
                     Text(stringResource(R.string.filter_apply))
                 }
             }

@@ -14,6 +14,9 @@
     <string name="filter_period">Период</string>
     <string name="filter_from">С</string>
     <string name="filter_to">По</string>
+    <string name="filter_amount">Сумма</string>
+    <string name="filter_amount_min">От</string>
+    <string name="filter_amount_max">До</string>
     <string name="filter_type">Тип</string>
     <string name="filter_type_all">Все</string>
     <string name="filter_account">Счёт</string>
