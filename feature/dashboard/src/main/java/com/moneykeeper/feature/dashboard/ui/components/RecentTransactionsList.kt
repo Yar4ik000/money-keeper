@@ -20,7 +20,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.moneykeeper.core.domain.model.TransactionType
 import com.moneykeeper.core.domain.model.TransactionWithMeta
@@ -77,27 +80,41 @@ fun TransactionListItem(meta: TransactionWithMeta, onClick: () -> Unit) {
             Text(meta.categoryName.ifEmpty { stringResource(R.string.dashboard_category_none) })
         },
         supportingContent = {
-            if (meta.transaction.type == TransactionType.TRANSFER && meta.toAccountName != null) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    Text(meta.accountName, style = MaterialTheme.typography.bodySmall)
-                    Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(12.dp))
-                    Text(
-                        buildString {
-                            append(meta.toAccountName)
-                            if (meta.transaction.note.isNotEmpty()) append(" · ${meta.transaction.note}")
-                        },
-                        style = MaterialTheme.typography.bodySmall,
-                    )
+            val onSurface = MaterialTheme.colorScheme.onSurface
+            val onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant
+            val toAccountName = meta.toAccountName
+            if (meta.transaction.type == TransactionType.TRANSFER && toAccountName != null) {
+                androidx.compose.foundation.layout.Column {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Text(meta.accountName, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium, color = onSurface)
+                        Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(12.dp), tint = onSurface)
+                        Text(toAccountName, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium, color = onSurface)
+                    }
+                    if (meta.transaction.note.isNotEmpty()) {
+                        Text(meta.transaction.note, style = MaterialTheme.typography.bodySmall, color = onSurfaceVariant)
+                    }
                 }
-            } else {
-                val parts = listOfNotNull(
-                    meta.accountName.takeIf { it.isNotEmpty() },
-                    meta.transaction.note.takeIf { it.isNotEmpty() },
+            } else if (meta.accountName.isNotEmpty() || meta.transaction.note.isNotEmpty()) {
+                Text(
+                    text = buildAnnotatedString {
+                        if (meta.accountName.isNotEmpty()) {
+                            withStyle(SpanStyle(fontWeight = FontWeight.Medium, color = onSurface)) {
+                                append(meta.accountName)
+                            }
+                        }
+                        if (meta.accountName.isNotEmpty() && meta.transaction.note.isNotEmpty()) {
+                            withStyle(SpanStyle(color = onSurfaceVariant)) { append(" · ") }
+                        }
+                        if (meta.transaction.note.isNotEmpty()) {
+                            withStyle(SpanStyle(color = onSurfaceVariant)) {
+                                append(meta.transaction.note)
+                            }
+                        }
+                    },
                 )
-                if (parts.isNotEmpty()) Text(parts.joinToString(" · "))
             }
         },
         trailingContent = {
