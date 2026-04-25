@@ -160,12 +160,10 @@ private fun MoneyKeeperBottomBar(
                     if (selected || now - lastNavMs < 300L) return@NavigationBarItem
                     lastNavMs = now
                     navController.navigate(item.screen.route) {
-                        popUpTo(navController.graph.findStartDestination().id) {
-                            saveState = true
+                        popUpTo(Screen.Dashboard.route) {
                             inclusive = false
                         }
                         launchSingleTop = true
-                        restoreState = true
                     }
                 },
                 icon = {
