@@ -171,10 +171,12 @@ fun EditAccountScreen(
                 value = state.name,
                 onValueChange = viewModel::onNameChange,
                 label = { RequiredLabel(stringResource(R.string.edit_account_name)) },
-                isError = state.error is EditAccountError.NameEmpty,
-                supportingText = if (state.error is EditAccountError.NameEmpty) {
-                    { Text(stringResource(R.string.error_name_empty)) }
-                } else null,
+                isError = state.error is EditAccountError.NameEmpty || state.error is EditAccountError.NameTaken,
+                supportingText = when (state.error) {
+                    is EditAccountError.NameEmpty -> { { Text(stringResource(R.string.error_name_empty)) } }
+                    is EditAccountError.NameTaken -> { { Text(stringResource(R.string.error_name_taken)) } }
+                    else -> null
+                },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
