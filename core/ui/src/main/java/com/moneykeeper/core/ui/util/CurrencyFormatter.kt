@@ -11,6 +11,8 @@ fun BigDecimal.formatAsCurrency(currency: String = "RUB"): String {
             "RUB" -> Locale.forLanguageTag("ru-RU")
             "USD" -> Locale.forLanguageTag("en-US")
             "EUR" -> Locale.forLanguageTag("de-DE")
+            "GBP" -> Locale.forLanguageTag("en-GB")
+            "CNY" -> Locale.forLanguageTag("zh-CN")
             else  -> AppLocale.current()
         }
     )
