@@ -34,6 +34,7 @@ data class TransferUiState(
 sealed interface TransferError {
     data object SameAccount : TransferError
     data object InvalidAmount : TransferError
+    data object CurrencyMismatch : TransferError
 }
 
 @HiltViewModel
@@ -66,6 +67,13 @@ class TransferViewModel @Inject constructor(
         }
         if (s.amount <= BigDecimal.ZERO) {
             _uiState.update { it.copy(error = TransferError.InvalidAmount) }
+            return@launch
+        }
+
+        val fromAccount = accountRepo.getById(fromId) ?: return@launch
+        val toAccount = accountRepo.getById(toId) ?: return@launch
+        if (fromAccount.currency != toAccount.currency) {
+            _uiState.update { it.copy(error = TransferError.CurrencyMismatch) }
             return@launch
         }
 

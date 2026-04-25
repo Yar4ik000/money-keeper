@@ -115,6 +115,13 @@ class AddTransactionViewModel @Inject constructor(
             _uiState.update { it.copy(error = AddTxError.ToAccountRequired) }
             return@launch
         }
+        if (s.type == TransactionType.TRANSFER &&
+            s.selectedToAccount != null &&
+            account.currency != s.selectedToAccount.currency
+        ) {
+            _uiState.update { it.copy(error = AddTxError.CurrencyMismatch) }
+            return@launch
+        }
         val rule = if (s.isRecurring) s.recurringRule?.copy(startDate = s.date) else null
         transactionSaver.save(
             Transaction(

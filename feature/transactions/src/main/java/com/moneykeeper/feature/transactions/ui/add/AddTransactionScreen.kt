@@ -132,9 +132,10 @@ fun AddTransactionScreen(
     val snackbarHostState = remember { SnackbarHostState() }
 
     val errorMsg = when (uiState.error) {
-        is AddTxError.AmountRequired -> stringResource(R.string.error_tx_amount_required)
-        is AddTxError.AccountRequired -> stringResource(R.string.error_tx_account_required)
+        is AddTxError.AmountRequired    -> stringResource(R.string.error_tx_amount_required)
+        is AddTxError.AccountRequired   -> stringResource(R.string.error_tx_account_required)
         is AddTxError.ToAccountRequired -> stringResource(R.string.error_tx_to_account_required)
+        is AddTxError.CurrencyMismatch  -> stringResource(R.string.error_tx_currency_mismatch)
         null -> null
     }
 
@@ -205,7 +206,7 @@ fun AddTransactionScreen(
             // Account field
             Box {
                 OutlinedTextField(
-                    value = uiState.selectedAccount?.name ?: "",
+                    value = uiState.selectedAccount?.let { "${it.name} · ${it.currency}" } ?: "",
                     onValueChange = {},
                     readOnly = true,
                     label = { Text(stringResource(R.string.tx_account)) },
@@ -218,7 +219,7 @@ fun AddTransactionScreen(
             if (uiState.type == TransactionType.TRANSFER) {
                 Box {
                     OutlinedTextField(
-                        value = uiState.selectedToAccount?.name ?: "",
+                        value = uiState.selectedToAccount?.let { "${it.name} · ${it.currency}" } ?: "",
                         onValueChange = {},
                         readOnly = true,
                         label = { Text(stringResource(R.string.tx_to_account)) },

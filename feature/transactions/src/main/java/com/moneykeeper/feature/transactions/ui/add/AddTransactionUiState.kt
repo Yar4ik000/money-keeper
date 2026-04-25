@@ -29,4 +29,5 @@ sealed interface AddTxError {
     data object AmountRequired : AddTxError
     data object AccountRequired : AddTxError
     data object ToAccountRequired : AddTxError
+    data object CurrencyMismatch : AddTxError
 }

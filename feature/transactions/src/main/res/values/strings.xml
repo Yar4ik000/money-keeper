@@ -85,5 +85,6 @@
     <string name="error_tx_account_required">Выберите счёт</string>
     <string name="error_tx_category_required">Выберите категорию</string>
     <string name="error_tx_to_account_required">Выберите счёт назначения</string>
+    <string name="error_tx_currency_mismatch">Перевод между счетами с разными валютами недоступен</string>
     <string name="error_category_name_empty">Введите название категории</string>
 </resources>

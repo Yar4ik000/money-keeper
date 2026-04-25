@@ -95,7 +95,7 @@ fun AccountPicker(
                     Column(Modifier.weight(1f)) {
                         Text(account.name, style = MaterialTheme.typography.bodyLarge)
                         Text(
-                            stringResource(accountTypeRes(account.type)),
+                            "${stringResource(accountTypeRes(account.type))} · ${account.currency}",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
