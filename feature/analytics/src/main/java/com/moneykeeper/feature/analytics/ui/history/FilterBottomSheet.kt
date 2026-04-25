@@ -213,7 +213,7 @@ fun FilterBottomSheet(
                     }
                 } else {
                     val displayText = when {
-                        draft.categoryIds.isEmpty() -> stringResource(R.string.filter_any)
+                        draft.categoryIds.isEmpty() -> stringResource(R.string.filter_any_f)
                         draft.categoryIds.size == 1 -> categories.find { it.id in draft.categoryIds }?.name ?: ""
                         else -> stringResource(R.string.filter_selected_count, draft.categoryIds.size)
                     }

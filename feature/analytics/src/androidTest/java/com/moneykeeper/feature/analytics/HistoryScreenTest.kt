@@ -1,10 +1,13 @@
 package com.moneykeeper.feature.analytics
 
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.moneykeeper.core.domain.analytics.PeriodSummaryByCurrency
 import com.moneykeeper.core.domain.model.Transaction
@@ -334,6 +337,62 @@ class HistoryScreenTest {
         composeTestRule.onNodeWithText("Удалить повторяющиеся операции?").assertIsDisplayed()
         composeTestRule.onNodeWithText("Только выбранные операции").assertIsDisplayed()
         composeTestRule.onNodeWithText("Остановить серию").assertIsDisplayed()
+    }
+
+    // ── search bar ───────────────────────────────────────────────────────────
+
+    @Test
+    fun tappingSearchIcon_showsSearchFieldInToolbar() {
+        composeTestRule.setContent {
+            HistoryScreen(
+                uiState = HistoryUiState.Success(groups = emptyList(), totalsByCurrency = emptyList(), filter = HistoryFilter()),
+                onTransactionClick = {}, onBack = {}, onFilterUpdate = noop,
+                onEnterSelectionMode = {}, onToggleSelection = {},
+                onDeleteSelected = {}, onDeleteSelectedStopSeries = {}, onClearSelection = {},
+            )
+        }
+        composeTestRule.onNodeWithContentDescription("Открыть поиск").performClick()
+        composeTestRule.onNodeWithText("Поиск по заметкам…").assertIsDisplayed()
+    }
+
+    @Test
+    fun typingInSearchField_passesQueryToFilterUpdate() {
+        var capturedQuery = ""
+        val capturingUpdate: ((HistoryFilter) -> HistoryFilter) -> Unit = { update ->
+            capturedQuery = update(HistoryFilter()).query
+        }
+        composeTestRule.setContent {
+            HistoryScreen(
+                uiState = HistoryUiState.Success(groups = emptyList(), totalsByCurrency = emptyList(), filter = HistoryFilter()),
+                onTransactionClick = {}, onBack = {}, onFilterUpdate = capturingUpdate,
+                onEnterSelectionMode = {}, onToggleSelection = {},
+                onDeleteSelected = {}, onDeleteSelectedStopSeries = {}, onClearSelection = {},
+            )
+        }
+        composeTestRule.onNodeWithContentDescription("Открыть поиск").performClick()
+        composeTestRule.onNode(hasSetTextAction()).performTextInput("Ресторан")
+        assert(capturedQuery == "Ресторан") { "Expected query 'Ресторан', got '$capturedQuery'" }
+    }
+
+    @Test
+    fun closingSearchBar_hidesFieldAndClearsQuery() {
+        var capturedQuery: String? = null
+        val capturingUpdate: ((HistoryFilter) -> HistoryFilter) -> Unit = { update ->
+            capturedQuery = update(HistoryFilter()).query
+        }
+        composeTestRule.setContent {
+            HistoryScreen(
+                uiState = HistoryUiState.Success(groups = emptyList(), totalsByCurrency = emptyList(), filter = HistoryFilter()),
+                onTransactionClick = {}, onBack = {}, onFilterUpdate = capturingUpdate,
+                onEnterSelectionMode = {}, onToggleSelection = {},
+                onDeleteSelected = {}, onDeleteSelectedStopSeries = {}, onClearSelection = {},
+            )
+        }
+        composeTestRule.onNodeWithContentDescription("Открыть поиск").performClick()
+        composeTestRule.onNodeWithText("Поиск по заметкам…").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Закрыть поиск").performClick()
+        composeTestRule.onNodeWithText("Поиск по заметкам…").assertDoesNotExist()
+        assert(capturedQuery == "") { "Expected empty query after closing, got '$capturedQuery'" }
     }
 
     // ── helpers ───────────────────────────────────────────────────────────────

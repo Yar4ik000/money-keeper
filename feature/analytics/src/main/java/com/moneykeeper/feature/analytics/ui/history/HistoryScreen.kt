@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
@@ -97,10 +98,16 @@ fun HistoryScreen(
 ) {
     var showFilterSheet by remember { mutableStateOf(false) }
     var showSearchBar by remember { mutableStateOf(false) }
+    var searchFieldValue by remember { mutableStateOf(TextFieldValue("")) }
+    val searchFocusRequester = remember { FocusRequester() }
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var showRecurringDeleteDialog by remember { mutableStateOf(false) }
     var showScopeDialog by remember { mutableStateOf(false) }
     val success = uiState as? HistoryUiState.Success
+
+    LaunchedEffect(showSearchBar) {
+        if (showSearchBar) searchFocusRequester.requestFocus()
+    }
 
     val allItems = success?.groups?.flatMap { it.items } ?: emptyList()
 
@@ -119,22 +126,22 @@ fun HistoryScreen(
                 title = {
                     when {
                         showSearchBar -> {
-                            val focusRequester = remember { FocusRequester() }
-                            LaunchedEffect(Unit) { focusRequester.requestFocus() }
-                            val query = success?.filter?.query ?: ""
                             BasicTextField(
-                                value = query,
-                                onValueChange = { q -> onFilterUpdate { it.copy(query = q) } },
+                                value = searchFieldValue,
+                                onValueChange = { newValue ->
+                                    searchFieldValue = newValue
+                                    onFilterUpdate { it.copy(query = newValue.text) }
+                                },
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .focusRequester(focusRequester),
+                                    .focusRequester(searchFocusRequester),
                                 textStyle = MaterialTheme.typography.bodyLarge.copy(
                                     color = MaterialTheme.colorScheme.onSurface,
                                 ),
                                 singleLine = true,
                                 decorationBox = { inner ->
                                     Box {
-                                        if (query.isEmpty()) {
+                                        if (searchFieldValue.text.isEmpty()) {
                                             Text(
                                                 text = stringResource(R.string.history_search_hint),
                                                 style = MaterialTheme.typography.bodyLarge,
@@ -156,9 +163,10 @@ fun HistoryScreen(
                     when {
                         showSearchBar -> IconButton(onClick = {
                             showSearchBar = false
+                            searchFieldValue = TextFieldValue("")
                             onFilterUpdate { it.copy(query = "") }
                         }) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_close_search))
                         }
                         success?.isSelectionMode == true -> IconButton(onClick = onClearSelection) {
                             Icon(Icons.Filled.Close, contentDescription = null)
@@ -171,16 +179,18 @@ fun HistoryScreen(
                 actions = {
                     when {
                         showSearchBar -> {
-                            val query = success?.filter?.query ?: ""
-                            if (query.isNotEmpty()) {
-                                IconButton(onClick = { onFilterUpdate { it.copy(query = "") } }) {
+                            if (searchFieldValue.text.isNotEmpty()) {
+                                IconButton(onClick = {
+                                    searchFieldValue = TextFieldValue("")
+                                    onFilterUpdate { it.copy(query = "") }
+                                }) {
                                     Icon(Icons.Filled.Close, contentDescription = null)
                                 }
                             }
                         }
                         success?.isSelectionMode != true -> {
                             IconButton(onClick = { showSearchBar = true }) {
-                                Icon(Icons.Filled.Search, contentDescription = null)
+                                Icon(Icons.Filled.Search, contentDescription = stringResource(R.string.cd_open_search))
                             }
                             IconButton(onClick = { showFilterSheet = true }) {
                                 Icon(Icons.Filled.FilterList, contentDescription = null)

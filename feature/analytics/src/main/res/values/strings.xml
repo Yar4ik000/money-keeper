@@ -2,6 +2,8 @@
     <!-- History screen -->
     <string name="history_title">История</string>
     <string name="history_search_hint">Поиск по заметкам…</string>
+    <string name="cd_open_search">Открыть поиск</string>
+    <string name="cd_close_search">Закрыть поиск</string>
     <string name="history_empty">Операций нет</string>
     <string name="history_delete_selected">Удалить</string>
     <string name="history_delete_confirm_title">Удалить выбранные операции?</string>
@@ -17,6 +19,7 @@
     <string name="filter_account">Счёт</string>
     <string name="filter_category">Категория</string>
     <string name="filter_any">Любой</string>
+    <string name="filter_any_f">Любая</string>
     <string name="filter_apply">Применить</string>
     <string name="filter_reset">Сбросить</string>
     <string name="filter_selected_count">Выбрано: %d</string>
