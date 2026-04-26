@@ -21,6 +21,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -153,5 +154,27 @@ class EditAccountViewModelTest {
         viewModel.onNameChange("Карта")
         viewModel.save().join()
         assertEquals(EditAccountError.NameTaken, viewModel.uiState.value.error)
+    }
+
+    // ── zero initialAmount allowed for DEPOSIT / SAVINGS ─────────────────────
+
+    @Test
+    fun `deposit with zero initialAmount saves successfully`() = runTest {
+        val viewModel = vm()
+        viewModel.onNameChange("Вклад")
+        viewModel.onTypeChange(com.moneykeeper.core.domain.model.AccountType.DEPOSIT)
+        viewModel.save().join()
+        assertTrue(viewModel.uiState.value.saved)
+        assertNull(viewModel.uiState.value.error)
+    }
+
+    @Test
+    fun `savings with zero initialAmount saves successfully`() = runTest {
+        val viewModel = vm()
+        viewModel.onNameChange("Накопления")
+        viewModel.onTypeChange(com.moneykeeper.core.domain.model.AccountType.SAVINGS)
+        viewModel.save().join()
+        assertTrue(viewModel.uiState.value.saved)
+        assertNull(viewModel.uiState.value.error)
     }
 }

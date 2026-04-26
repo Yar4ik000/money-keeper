@@ -4,8 +4,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -42,7 +40,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -64,9 +61,7 @@ import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
-private val NOTIFY_OPTIONS = listOf(1, 3, 7, 14, 30)
-
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DepositSection(
     deposit: Deposit,
@@ -270,28 +265,7 @@ fun DepositSection(
             }
         }
 
-        if (!isSavings) {
-            Text(
-                text = stringResource(R.string.deposit_notify_days_label),
-                style = MaterialTheme.typography.labelLarge,
-            )
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                NOTIFY_OPTIONS.forEach { days ->
-                    val selected = days in deposit.notifyDaysBefore
-                    FilterChip(
-                        selected = selected,
-                        onClick = {
-                            val updated = if (selected)
-                                deposit.notifyDaysBefore - days
-                            else
-                                (deposit.notifyDaysBefore + days).sorted()
-                            onChange(deposit.copy(notifyDaysBefore = updated))
-                        },
-                        label = { Text(pluralStringResource(R.plurals.notify_days, days, days)) },
-                    )
-                }
-            }
-        }
+        // TODO(v1.7): restore notifyDaysBefore UI here (NEW-37) when AlarmManager-based notifications land
 
         if (!isSavings) {
             HorizontalDivider()

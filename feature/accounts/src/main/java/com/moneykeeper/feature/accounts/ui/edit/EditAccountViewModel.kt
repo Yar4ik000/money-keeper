@@ -100,9 +100,11 @@ class EditAccountViewModel @Inject constructor(
         val eventType = if (deposit.isCapitalized) DepositEventType.CAPITALIZATION else DepositEventType.INTEREST_ACCRUAL
 
         txRunner.run {
-            depositEventRepo.insert(
-                DepositEvent(depositId = depositId, date = deposit.startDate, type = DepositEventType.PRINCIPAL_ADD, amount = deposit.initialAmount)
-            )
+            if (deposit.initialAmount > BigDecimal.ZERO) {
+                depositEventRepo.insert(
+                    DepositEvent(depositId = depositId, date = deposit.startDate, type = DepositEventType.PRINCIPAL_ADD, amount = deposit.initialAmount)
+                )
+            }
 
             var from = deposit.startDate
             var principal = deposit.initialAmount
@@ -148,11 +150,6 @@ class EditAccountViewModel @Inject constructor(
             isDepositType || isSavingsType -> {
                 val deposit = s.deposit ?: run {
                     _uiState.update { it.copy(error = EditAccountError.DepositParamsMissing) }
-                    return@launch
-                }
-                // TODO(v1.7): allow initialAmount = 0 once deposit_events model lands (PRINCIPAL_ADD handles first deposit)
-                if (deposit.initialAmount <= BigDecimal.ZERO) {
-                    _uiState.update { it.copy(error = EditAccountError.DepositAmountInvalid) }
                     return@launch
                 }
                 if (deposit.interestRate <= BigDecimal.ZERO) {
