@@ -1,10 +1,12 @@
 package com.moneykeeper.core.database.converter
 
 import androidx.room.TypeConverter
+import com.moneykeeper.core.domain.model.AccrualBasis
 import com.moneykeeper.core.domain.model.AccountType
 import com.moneykeeper.core.domain.model.BudgetPeriod
 import com.moneykeeper.core.domain.model.CapPeriod
 import com.moneykeeper.core.domain.model.CategoryType
+import com.moneykeeper.core.domain.model.DepositEventType
 import com.moneykeeper.core.domain.model.Frequency
 import com.moneykeeper.core.domain.model.TransactionType
 import java.math.BigDecimal
@@ -42,6 +44,12 @@ class Converters {
 
     @TypeConverter fun fromBudgetPeriod(v: BudgetPeriod): String = v.name
     @TypeConverter fun toBudgetPeriod(s: String): BudgetPeriod = BudgetPeriod.valueOf(s)
+
+    @TypeConverter fun fromDepositEventType(v: DepositEventType): String = v.name
+    @TypeConverter fun toDepositEventType(s: String): DepositEventType = DepositEventType.valueOf(s)
+
+    @TypeConverter fun fromAccrualBasis(v: AccrualBasis): String = v.name
+    @TypeConverter fun toAccrualBasis(s: String): AccrualBasis = AccrualBasis.valueOf(s)
 
     // List<Int> <-> "1,3,7" (used for notifyDaysBefore in deposits)
     @TypeConverter fun fromIntList(list: List<Int>): String = list.joinToString(",")

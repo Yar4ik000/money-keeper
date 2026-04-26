@@ -4,6 +4,7 @@ import com.moneykeeper.core.database.dao.AccountDao
 import com.moneykeeper.core.database.dao.BudgetDao
 import com.moneykeeper.core.database.dao.CategoryDao
 import com.moneykeeper.core.database.dao.DepositDao
+import com.moneykeeper.core.database.dao.DepositEventDao
 import com.moneykeeper.core.database.dao.RecurringRuleDao
 import com.moneykeeper.core.database.dao.TransactionDao
 import android.content.Context
@@ -11,6 +12,7 @@ import com.moneykeeper.core.database.repository.AccountRepositoryImpl
 import com.moneykeeper.core.database.repository.BackupRepositoryImpl
 import com.moneykeeper.core.database.repository.BudgetRepositoryImpl
 import com.moneykeeper.core.database.repository.CategoryRepositoryImpl
+import com.moneykeeper.core.database.repository.DepositEventRepositoryImpl
 import com.moneykeeper.core.database.repository.DepositRepositoryImpl
 import com.moneykeeper.core.database.repository.RecurringRuleRepositoryImpl
 import com.moneykeeper.core.database.repository.SettingsRepositoryImpl
@@ -19,6 +21,7 @@ import com.moneykeeper.core.domain.repository.AccountRepository
 import com.moneykeeper.core.domain.repository.BackupRepository
 import com.moneykeeper.core.domain.repository.BudgetRepository
 import com.moneykeeper.core.domain.repository.CategoryRepository
+import com.moneykeeper.core.domain.repository.DepositEventRepository
 import com.moneykeeper.core.domain.repository.DepositRepository
 import com.moneykeeper.core.domain.repository.RecurringRuleRepository
 import com.moneykeeper.core.domain.repository.SettingsRepository
@@ -41,6 +44,10 @@ object RepositoryModule {
     @Provides @Singleton
     fun provideDepositRepository(dao: DepositDao): DepositRepository =
         DepositRepositoryImpl(dao)
+
+    @Provides @Singleton
+    fun provideDepositEventRepository(dao: DepositEventDao): DepositEventRepository =
+        DepositEventRepositoryImpl(dao)
 
     @Provides @Singleton
     fun provideCategoryRepository(dao: CategoryDao): CategoryRepository =

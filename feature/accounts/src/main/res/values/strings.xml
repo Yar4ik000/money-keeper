@@ -79,6 +79,35 @@
     <!-- %1$s — дата, %2$d — дней до конца -->
     <string name="deposit_days_left">до %1$s · %2$d дн.</string>
 
+    <!-- Manual deposit adjustments (historical corrections) -->
+    <string name="deposit_manual_topup">+ Пополнить</string>
+    <string name="deposit_manual_withdraw">− Снять</string>
+    <string name="deposit_manual_topup_title">Ручная корректировка: пополнение</string>
+    <string name="deposit_manual_withdraw_title">Ручная корректировка: снятие</string>
+    <string name="deposit_manual_topup_confirm">Добавить</string>
+    <string name="deposit_manual_withdraw_confirm">Списать</string>
+    <string name="deposit_manual_adjust_hint">Используйте только для записи прошлых операций. Для текущих пополнений и снятий делайте перевод между счетами — это корректно отразится в истории.</string>
+    <string name="deposit_manual_amount_label">Сумма</string>
+    <string name="deposit_manual_date_label">Дата операции</string>
+    <string name="deposit_manual_note_label">Заметка (необязательно)</string>
+
+    <!-- Deposit events (history of accruals / top-ups / withdrawals) -->
+    <string name="deposit_events_title">История начислений</string>
+    <string name="deposit_event_principal_add">Пополнение</string>
+    <string name="deposit_event_principal_withdraw">Снятие</string>
+    <string name="deposit_event_interest_accrual">Начисление процентов</string>
+    <string name="deposit_event_capitalization">Капитализация</string>
+    <string name="deposit_topup">Пополнить</string>
+    <string name="deposit_withdraw">Снять</string>
+    <string name="deposit_topup_title">Пополнение вклада</string>
+    <string name="deposit_withdraw_title">Снятие со вклада</string>
+    <string name="deposit_event_amount_hint">Сумма</string>
+    <string name="deposit_event_note_hint">Заметка (необязательно)</string>
+    <string name="deposit_event_confirm">Подтвердить</string>
+    <string name="deposit_withdraw_max">Макс.: %1$s</string>
+    <string name="error_deposit_event_amount_invalid">Введите сумму больше нуля</string>
+    <string name="error_deposit_withdraw_exceeds_balance">Сумма превышает баланс</string>
+
     <!-- Transfer screen -->
     <string name="transfer_title">Перевод</string>
     <string name="transfer_from">Откуда</string>
@@ -96,7 +125,23 @@
     <string name="error_deposit_rate_invalid">Введите ставку больше нуля</string>
     <string name="error_deposit_date_invalid">Дата окончания должна быть позже даты начала</string>
     <string name="error_deposit_end_date_past">Дата окончания нового вклада не может быть в прошлом</string>
+    <!-- Accrual basis -->
+    <string name="deposit_accrual_basis_label">База для расчёта процентов</string>
+    <string name="deposit_accrual_basis_daily">На ежедневный остаток</string>
+    <string name="deposit_accrual_basis_daily_desc">Проценты начисляются на фактический остаток каждого дня</string>
+    <string name="deposit_accrual_basis_period_start">На остаток в начале периода</string>
+    <string name="deposit_accrual_basis_period_start_desc">Пополнения внутри периода учитываются только со следующего периода</string>
+
     <string name="deposit_notify_days_label">Уведомить за (дней)</string>
+    <!-- Deposit event section headers -->
+    <string name="deposit_movements_title">Движение средств</string>
+    <string name="deposit_accruals_title">Начисления</string>
+
+    <!-- Deposit event multi-select delete -->
+    <string name="deposit_event_delete_title">Удалить записи?</string>
+    <string name="deposit_event_delete_text">Выбранные пополнения и снятия будут удалены, начисления пересчитаются.</string>
+    <string name="deposit_event_delete_action">Удалить (%1$d)</string>
+
     <string name="error_transfer_same_account">Нельзя переводить на тот же счёт</string>
     <string name="error_transfer_invalid_amount">Введите сумму больше нуля</string>
     <string name="error_transfer_currency_mismatch">Перевод между счетами с разными валютами недоступен</string>

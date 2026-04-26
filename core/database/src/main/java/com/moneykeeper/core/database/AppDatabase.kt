@@ -10,22 +10,27 @@ import com.moneykeeper.core.database.dao.AccountDao
 import com.moneykeeper.core.database.dao.BudgetDao
 import com.moneykeeper.core.database.dao.CategoryDao
 import com.moneykeeper.core.database.dao.DepositDao
+import com.moneykeeper.core.database.dao.DepositEventDao
 import com.moneykeeper.core.database.dao.RecurringRuleDao
 import com.moneykeeper.core.database.dao.TransactionDao
 import com.moneykeeper.core.database.entity.AccountEntity
 import com.moneykeeper.core.database.entity.BudgetEntity
 import com.moneykeeper.core.database.entity.CategoryEntity
 import com.moneykeeper.core.database.entity.DepositEntity
+import com.moneykeeper.core.database.entity.DepositEventEntity
 import com.moneykeeper.core.database.entity.RecurringRuleEntity
 import com.moneykeeper.core.database.entity.TransactionEntity
 import com.moneykeeper.core.database.migration.MIGRATION_2_3
 import com.moneykeeper.core.database.migration.MIGRATION_4_5
 import com.moneykeeper.core.database.migration.MIGRATION_5_6
+import com.moneykeeper.core.database.migration.MIGRATION_6_7
+import com.moneykeeper.core.database.migration.MIGRATION_7_8
 
 @Database(
     entities = [
         AccountEntity::class,
         DepositEntity::class,
+        DepositEventEntity::class,
         CategoryEntity::class,
         TransactionEntity::class,
         RecurringRuleEntity::class,
@@ -34,13 +39,14 @@ import com.moneykeeper.core.database.migration.MIGRATION_5_6
     version = AppDatabase.VERSION,
     exportSchema = true,
     autoMigrations = [AutoMigration(from = 3, to = 4)],
-    // Note: 4→5 is manual (budgets table restructured)
+    // Note: 4→5 manual (budgets table restructured); 6→7 manual (deposit_events + balance materialization); 7→8 manual (accrualBasis column)
 )
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun accountDao(): AccountDao
     abstract fun depositDao(): DepositDao
+    abstract fun depositEventDao(): DepositEventDao
     abstract fun categoryDao(): CategoryDao
     abstract fun transactionDao(): TransactionDao
     abstract fun recurringRuleDao(): RecurringRuleDao
@@ -48,8 +54,8 @@ abstract class AppDatabase : RoomDatabase() {
 
     companion object {
         const val DB_NAME = "money_keeper.db"
-        const val VERSION = 6
+        const val VERSION = 8
 
-        val MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_2_3, MIGRATION_4_5, MIGRATION_5_6)
+        val MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_2_3, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
     }
 }

@@ -49,6 +49,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.moneykeeper.core.domain.calculator.DepositCalculator
+import com.moneykeeper.core.domain.model.AccrualBasis
 import com.moneykeeper.core.domain.model.CapPeriod
 import com.moneykeeper.core.domain.model.Deposit
 import com.moneykeeper.core.domain.model.RateTier
@@ -240,6 +241,30 @@ fun DepositSection(
                     ) {
                         RadioButton(selected = deposit.capitalizationPeriod == period, onClick = null)
                         Text(stringResource(capPeriodRes(period)), Modifier.padding(start = 8.dp))
+                    }
+                }
+            }
+        }
+
+        // Accrual basis
+        Text(stringResource(R.string.deposit_accrual_basis_label), style = MaterialTheme.typography.labelLarge)
+        Column(Modifier.selectableGroup()) {
+            AccrualBasis.entries.forEach { basis ->
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .selectable(
+                            selected = deposit.accrualBasis == basis,
+                            onClick = { onChange(deposit.copy(accrualBasis = basis)) },
+                            role = Role.RadioButton,
+                        )
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    RadioButton(selected = deposit.accrualBasis == basis, onClick = null)
+                    Column(Modifier.padding(start = 8.dp)) {
+                        Text(stringResource(accrualBasisLabelRes(basis)), style = MaterialTheme.typography.bodyMedium)
+                        Text(stringResource(accrualBasisDescRes(basis)), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
@@ -493,4 +518,14 @@ private fun capPeriodRes(period: CapPeriod): Int = when (period) {
     CapPeriod.MONTHLY   -> R.string.deposit_cap_monthly
     CapPeriod.QUARTERLY -> R.string.deposit_cap_quarterly
     CapPeriod.YEARLY    -> R.string.deposit_cap_yearly
+}
+
+private fun accrualBasisLabelRes(basis: AccrualBasis): Int = when (basis) {
+    AccrualBasis.DAILY        -> R.string.deposit_accrual_basis_daily
+    AccrualBasis.PERIOD_START -> R.string.deposit_accrual_basis_period_start
+}
+
+private fun accrualBasisDescRes(basis: AccrualBasis): Int = when (basis) {
+    AccrualBasis.DAILY        -> R.string.deposit_accrual_basis_daily_desc
+    AccrualBasis.PERIOD_START -> R.string.deposit_accrual_basis_period_start_desc
 }

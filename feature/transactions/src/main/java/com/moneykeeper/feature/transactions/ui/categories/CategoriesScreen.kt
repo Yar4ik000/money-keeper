@@ -23,7 +23,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material3.AlertDialog
+import com.moneykeeper.core.ui.components.DeleteConfirmDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -148,26 +148,13 @@ fun CategoriesScreen(
     }
 
     if (showDeleteConfirm) {
-        AlertDialog(
-            onDismissRequest = { showDeleteConfirm = false },
-            title = { Text(stringResource(R.string.categories_delete_selected_title)) },
-            text = { Text(stringResource(R.string.categories_delete_selected_message, selectedIds.size)) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.deleteCategories(selectedIds)
-                        selectedIds = emptySet()
-                        showDeleteConfirm = false
-                    },
-                ) {
-                    Text(stringResource(R.string.categories_delete_confirm))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteConfirm = false }) {
-                    Text(stringResource(R.string.dialog_cancel))
-                }
-            },
+        DeleteConfirmDialog(
+            title = stringResource(R.string.categories_delete_selected_title),
+            body = stringResource(R.string.categories_delete_selected_message, selectedIds.size),
+            confirmLabel = stringResource(R.string.categories_delete_confirm),
+            cancelLabel = stringResource(R.string.dialog_cancel),
+            onConfirm = { viewModel.deleteCategories(selectedIds); selectedIds = emptySet(); showDeleteConfirm = false },
+            onDismiss = { showDeleteConfirm = false },
         )
     }
 }

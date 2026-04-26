@@ -91,6 +91,101 @@ class DepositCalculatorTest {
         assertEquals(0, atEnd.compareTo(afterEnd))
     }
 
+    // ── EOM roll (nextPeriodEnd) ──────────────────────────────────────────────
+
+    @Test
+    fun nextPeriodEnd_oct31_monthly_rolls_to_nov30() {
+        assertEquals(
+            LocalDate.of(2025, 11, 30),
+            DepositCalculator.nextPeriodEnd(LocalDate.of(2025, 10, 31), CapPeriod.MONTHLY),
+        )
+    }
+
+    @Test
+    fun nextPeriodEnd_nov30_monthly_rolls_to_dec31() {
+        assertEquals(
+            LocalDate.of(2025, 12, 31),
+            DepositCalculator.nextPeriodEnd(LocalDate.of(2025, 11, 30), CapPeriod.MONTHLY),
+        )
+    }
+
+    @Test
+    fun nextPeriodEnd_feb28_nonLeap_monthly_rolls_to_mar31() {
+        // 2026 is not a leap year; Feb 28 is the last day → Mar 31
+        assertEquals(
+            LocalDate.of(2026, 3, 31),
+            DepositCalculator.nextPeriodEnd(LocalDate.of(2026, 2, 28), CapPeriod.MONTHLY),
+        )
+    }
+
+    @Test
+    fun nextPeriodEnd_midMonth_noEomRoll() {
+        // Oct 15 is not the last day of the month → no EOM roll
+        assertEquals(
+            LocalDate.of(2026, 2, 15),
+            DepositCalculator.nextPeriodEnd(LocalDate.of(2026, 1, 15), CapPeriod.MONTHLY),
+        )
+    }
+
+    @Test
+    fun nextPeriodEnd_oct31_quarterly_rolls_to_jan31() {
+        assertEquals(
+            LocalDate.of(2026, 1, 31),
+            DepositCalculator.nextPeriodEnd(LocalDate.of(2025, 10, 31), CapPeriod.QUARTERLY),
+        )
+    }
+
+    // ── accrueByPeriodDaily ───────────────────────────────────────────────────
+
+    private fun depositFor(rate: BigDecimal) = Deposit(
+        id = 1L, accountId = 1L,
+        initialAmount = BigDecimal("50000"),
+        interestRate = rate,
+        startDate = LocalDate.of(2025, 10, 31),
+        endDate = LocalDate.of(2026, 10, 31),
+        isCapitalized = true,
+        capitalizationPeriod = CapPeriod.MONTHLY,
+        notifyDaysBefore = listOf(7), autoRenew = false, payoutAccountId = null, isActive = true,
+    )
+
+    @Test
+    fun accrueByPeriodDaily_fromEqualsTo_returnsEmpty() {
+        val date = LocalDate.of(2025, 11, 15)
+        val result = DepositCalculator.accrueByPeriodDaily(
+            BigDecimal("100000"), depositFor(BigDecimal("16")), date, date, emptyList(),
+        )
+        assertTrue(result.isEmpty())
+    }
+
+    @Test
+    fun accrueByPeriodDaily_noChanges_matchesSimpleInterest() {
+        val from = LocalDate.of(2025, 10, 31)
+        val to   = LocalDate.of(2025, 11, 30)
+        val deposit = depositFor(BigDecimal("16"))
+        val result = DepositCalculator.accrueByPeriodDaily(BigDecimal("100000"), deposit, from, to, emptyList())
+        val expected = DepositCalculator.simpleInterest(BigDecimal("100000"), BigDecimal("16"), from, to)
+        assertEquals(1, result.size)
+        assertEquals(to, result[0].first)
+        assertEquals(0, expected.compareTo(result[0].second))
+    }
+
+    @Test
+    fun accrueByPeriodDaily_tinkoff_midPeriodTopup_produces_11901_37() {
+        // Oct31: open 50k @ 16%. Nov3: +950k → total 1000k. Period end Nov30.
+        // Seg1 Oct31→Nov3 (3 d) @ 50k:   50000*0.16*3/365  =    65.75
+        // Seg2 Nov3→Nov30 (27 d) @ 1000k: 1000000*0.16*27/365 = 11835.62
+        // Total: 11901.37
+        val from = LocalDate.of(2025, 10, 31)
+        val to   = LocalDate.of(2025, 11, 30)
+        val changes = listOf(LocalDate.of(2025, 11, 3) to BigDecimal("950000"))
+        val result = DepositCalculator.accrueByPeriodDaily(
+            BigDecimal("50000"), depositFor(BigDecimal("16")), from, to, changes,
+        )
+        assertEquals(1, result.size)
+        assertEquals(to, result[0].first)
+        assertEquals(0, BigDecimal("11901.37").compareTo(result[0].second))
+    }
+
     @Test
     fun quarterly_compound_interest() {
         // Ежеквартальная капитализация: 4 периода по 90-92 дня.

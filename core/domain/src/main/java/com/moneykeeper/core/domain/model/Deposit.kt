@@ -19,6 +19,7 @@ data class Deposit(
     val isActive: Boolean = true,
     /** Stepped rates, sorted by fromDate ascending. Empty = use interestRate for full term. */
     val rateTiers: List<RateTier> = emptyList(),
+    val accrualBasis: AccrualBasis = AccrualBasis.DAILY,
 )
 
 /** A rate period: [ratePercent] applies from [fromDate] until the next tier starts (or deposit ends). */
