@@ -7,4 +7,5 @@ data class TransactionWithMeta(
     val categoryName: String,
     val categoryColor: String,
     val categoryIcon: String,
+    val toAccountName: String? = null,
 )

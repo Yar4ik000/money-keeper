@@ -44,17 +44,16 @@ class HistoryViewModel @Inject constructor(
     private val derivedTransactions: Flow<HistoryUiState> = _filter.flatMapLatest { f ->
         combine(
             transactionRepo.observe(
-                accountId = f.accountId,
-                categoryId = f.categoryId,
-                type = f.type,
+                accountId = null,
+                categoryId = null,
+                type = null,
                 from = f.from,
                 to = f.to,
             ),
             accountRepo.observeActiveAccounts(),
             categoryRepo.observeAll(),
         ) { transactions, accounts, categories ->
-            val filtered = if (f.query.isBlank()) transactions
-            else transactions.filter { it.transaction.note.contains(f.query, ignoreCase = true) }
+            val filtered = applyHistoryFilter(transactions, f)
 
             val groups = filtered
                 .groupBy { it.transaction.date }
@@ -174,4 +173,24 @@ class HistoryViewModel @Inject constructor(
         clearSelection()
         transactionDeleter.deleteManyStopSeries(setOf(meta.transaction.id))
     }
+}
+
+internal fun applyHistoryFilter(
+    transactions: List<TransactionWithMeta>,
+    filter: HistoryFilter,
+): List<TransactionWithMeta> = transactions.filter { meta ->
+    (filter.accountIds.isEmpty() ||
+        meta.transaction.accountId in filter.accountIds ||
+        (meta.transaction.type == TransactionType.TRANSFER && meta.transaction.toAccountId in filter.accountIds)) &&
+    (filter.categoryIds.isEmpty() || meta.transaction.categoryId in filter.categoryIds) &&
+    (filter.types.isEmpty() || meta.transaction.type in filter.types) &&
+    (filter.minAmount == null || meta.transaction.amount >= filter.minAmount) &&
+    (filter.maxAmount == null || meta.transaction.amount <= filter.maxAmount) &&
+    (filter.query.isBlank() || run {
+        val q = filter.query
+        meta.transaction.note.contains(q, ignoreCase = true) ||
+            meta.categoryName.contains(q, ignoreCase = true) ||
+            meta.accountName.contains(q, ignoreCase = true) ||
+            meta.toAccountName?.contains(q, ignoreCase = true) == true
+    })
 }

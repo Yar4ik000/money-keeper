@@ -137,6 +137,7 @@ class EditTransactionViewModelTest {
                 rules.remove(id)
             }
             override suspend fun pruneOrphaned() = 0
+            override suspend fun getByIdWithTemplate(id: Long) = throw UnsupportedOperationException()
         }
     }
 

@@ -18,6 +18,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -144,6 +147,7 @@ private fun MoneyKeeperBottomBar(
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination
     val budgetsBadge by badgeViewModel.badge.collectAsStateWithLifecycle()
+    var lastNavMs by remember { mutableLongStateOf(0L) }
     NavigationBar {
         bottomNavItems.forEach { item ->
             val selected = currentDestination
@@ -152,8 +156,11 @@ private fun MoneyKeeperBottomBar(
             NavigationBarItem(
                 selected = selected,
                 onClick = {
+                    val now = android.os.SystemClock.uptimeMillis()
+                    if (selected || now - lastNavMs < 300L) return@NavigationBarItem
+                    lastNavMs = now
                     navController.navigate(item.screen.route) {
-                        popUpTo(navController.graph.findStartDestination().id) {
+                        popUpTo(Screen.Dashboard.route) {
                             inclusive = false
                         }
                         launchSingleTop = true

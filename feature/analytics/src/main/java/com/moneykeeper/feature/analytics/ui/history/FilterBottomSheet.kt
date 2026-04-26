@@ -12,12 +12,19 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -29,18 +36,23 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.moneykeeper.core.domain.model.Account
+import com.moneykeeper.core.domain.model.AccountType
 import com.moneykeeper.core.domain.model.Category
 import com.moneykeeper.core.domain.model.TransactionType
 import com.moneykeeper.core.ui.locale.AppLocale
+import com.moneykeeper.core.ui.util.AmountTextField
 import com.moneykeeper.feature.analytics.R
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+
+private const val CHIP_THRESHOLD = 5
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -52,8 +64,12 @@ fun FilterBottomSheet(
     onDismiss: () -> Unit,
 ) {
     var draft by remember(filter) { mutableStateOf(filter) }
+    var amountMinInput by remember(filter) { mutableStateOf(filter.minAmount?.stripTrailingZeros()?.toPlainString() ?: "") }
+    var amountMaxInput by remember(filter) { mutableStateOf(filter.maxAmount?.stripTrailingZeros()?.toPlainString() ?: "") }
     var showFromPicker by remember { mutableStateOf(false) }
     var showToPicker by remember { mutableStateOf(false) }
+    var accountsExpanded by remember { mutableStateOf(false) }
+    var categoriesExpanded by remember { mutableStateOf(false) }
     val dateFormatter = remember { DateTimeFormatter.ofPattern("dd.MM.yyyy").withLocale(AppLocale.current()) }
 
     ModalBottomSheet(
@@ -63,7 +79,8 @@ fun FilterBottomSheet(
         Column(
             modifier = Modifier
                 .padding(horizontal = 16.dp)
-                .navigationBarsPadding(),
+                .navigationBarsPadding()
+                .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(stringResource(R.string.filter_title), style = MaterialTheme.typography.titleLarge)
@@ -92,64 +109,177 @@ fun FilterBottomSheet(
                 }
             }
 
+            Text(stringResource(R.string.filter_amount), style = MaterialTheme.typography.labelLarge)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                AmountTextField(
+                    value = amountMinInput,
+                    onValueChange = { amountMinInput = it },
+                    label = { Text(stringResource(R.string.filter_amount_min)) },
+                    modifier = Modifier.weight(1f),
+                )
+                AmountTextField(
+                    value = amountMaxInput,
+                    onValueChange = { amountMaxInput = it },
+                    label = { Text(stringResource(R.string.filter_amount_max)) },
+                    modifier = Modifier.weight(1f),
+                )
+            }
+
             Text(stringResource(R.string.filter_type), style = MaterialTheme.typography.labelLarge)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TypeFilterChip(
-                    label = stringResource(R.string.filter_type_all),
-                    selected = draft.type == null,
-                    onClick = { draft = draft.copy(type = null) },
-                )
                 TransactionType.entries.forEach { type ->
                     TypeFilterChip(
                         label = stringResource(type.labelRes),
-                        selected = draft.type == type,
-                        onClick = { draft = draft.copy(type = type) },
+                        selected = type in draft.types,
+                        onClick = {
+                            draft = draft.copy(
+                                types = if (type in draft.types) draft.types - type else draft.types + type,
+                            )
+                        },
                     )
                 }
             }
 
             if (accounts.isNotEmpty()) {
                 Text(stringResource(R.string.filter_account), style = MaterialTheme.typography.labelLarge)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TypeFilterChip(
-                        label = stringResource(R.string.filter_any),
-                        selected = draft.accountId == null,
-                        onClick = { draft = draft.copy(accountId = null) },
-                    )
-                    accounts.forEach { account ->
-                        TypeFilterChip(
-                            label = account.name,
-                            selected = draft.accountId == account.id,
-                            onClick = { draft = draft.copy(accountId = account.id) },
+                val accountsByType = accounts.groupBy { it.type }
+                if (accounts.size <= CHIP_THRESHOLD) {
+                    accountsByType.forEach { (type, group) ->
+                        if (accountsByType.size > 1) {
+                            Text(
+                                text = stringResource(type.labelRes),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            group.forEach { account ->
+                                TypeFilterChip(
+                                    label = "${account.name} · ${account.currency}",
+                                    selected = account.id in draft.accountIds,
+                                    onClick = {
+                                        draft = draft.copy(
+                                            accountIds = if (account.id in draft.accountIds) draft.accountIds - account.id else draft.accountIds + account.id,
+                                        )
+                                    },
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    val displayText = when {
+                        draft.accountIds.isEmpty() -> stringResource(R.string.filter_any)
+                        draft.accountIds.size == 1 -> accounts.find { it.id in draft.accountIds }?.let { "${it.name} · ${it.currency}" } ?: ""
+                        else -> stringResource(R.string.filter_selected_count, draft.accountIds.size)
+                    }
+                    ExposedDropdownMenuBox(expanded = accountsExpanded, onExpandedChange = { accountsExpanded = it }) {
+                        OutlinedTextField(
+                            value = displayText,
+                            onValueChange = {},
+                            readOnly = true,
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(accountsExpanded) },
+                            modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth(),
                         )
+                        ExposedDropdownMenu(expanded = accountsExpanded, onDismissRequest = { accountsExpanded = false }) {
+                            accountsByType.forEach { (type, group) ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            text = stringResource(type.labelRes),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    },
+                                    onClick = {},
+                                    enabled = false,
+                                )
+                                group.forEach { account ->
+                                    DropdownMenuItem(
+                                        text = {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Checkbox(checked = account.id in draft.accountIds, onCheckedChange = null)
+                                                Text("${account.name} · ${account.currency}")
+                                            }
+                                        },
+                                        onClick = {
+                                            draft = draft.copy(
+                                                accountIds = if (account.id in draft.accountIds) draft.accountIds - account.id else draft.accountIds + account.id,
+                                            )
+                                        },
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
 
             if (categories.isNotEmpty()) {
                 Text(stringResource(R.string.filter_category), style = MaterialTheme.typography.labelLarge)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TypeFilterChip(
-                        label = stringResource(R.string.filter_any),
-                        selected = draft.categoryId == null,
-                        onClick = { draft = draft.copy(categoryId = null) },
-                    )
-                    categories.forEach { category ->
-                        TypeFilterChip(
-                            label = category.name,
-                            selected = draft.categoryId == category.id,
-                            onClick = { draft = draft.copy(categoryId = category.id) },
+                if (categories.size <= CHIP_THRESHOLD) {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        categories.forEach { category ->
+                            TypeFilterChip(
+                                label = category.name,
+                                selected = category.id in draft.categoryIds,
+                                onClick = {
+                                    draft = draft.copy(
+                                        categoryIds = if (category.id in draft.categoryIds) draft.categoryIds - category.id else draft.categoryIds + category.id,
+                                    )
+                                },
+                            )
+                        }
+                    }
+                } else {
+                    val displayText = when {
+                        draft.categoryIds.isEmpty() -> stringResource(R.string.filter_any_f)
+                        draft.categoryIds.size == 1 -> categories.find { it.id in draft.categoryIds }?.name ?: ""
+                        else -> stringResource(R.string.filter_selected_count, draft.categoryIds.size)
+                    }
+                    ExposedDropdownMenuBox(expanded = categoriesExpanded, onExpandedChange = { categoriesExpanded = it }) {
+                        OutlinedTextField(
+                            value = displayText,
+                            onValueChange = {},
+                            readOnly = true,
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(categoriesExpanded) },
+                            modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth(),
                         )
+                        ExposedDropdownMenu(expanded = categoriesExpanded, onDismissRequest = { categoriesExpanded = false }) {
+                            categories.forEach { category ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Checkbox(checked = category.id in draft.categoryIds, onCheckedChange = null)
+                                            Text(category.name)
+                                        }
+                                    },
+                                    onClick = {
+                                        draft = draft.copy(
+                                            categoryIds = if (category.id in draft.categoryIds) draft.categoryIds - category.id else draft.categoryIds + category.id,
+                                        )
+                                    },
+                                )
+                            }
+                        }
                     }
                 }
             }
 
             Spacer(Modifier.height(8.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                TextButton(onClick = { onApply(HistoryFilter()) }) {
+                TextButton(onClick = {
+                    amountMinInput = ""
+                    amountMaxInput = ""
+                    onApply(HistoryFilter())
+                }) {
                     Text(stringResource(R.string.filter_reset))
                 }
-                Button(onClick = { onApply(draft) }) {
+                Button(onClick = {
+                    onApply(draft.copy(
+                        minAmount = amountMinInput.toBigDecimalOrNull(),
+                        maxAmount = amountMaxInput.toBigDecimalOrNull(),
+                    ))
+                }) {
                     Text(stringResource(R.string.filter_apply))
                 }
             }
@@ -190,6 +320,16 @@ private val TransactionType.labelRes: Int
         TransactionType.EXPENSE  -> R.string.analytics_tx_expense
         TransactionType.TRANSFER -> R.string.analytics_tx_transfer
         TransactionType.SAVINGS  -> R.string.analytics_tx_savings
+    }
+
+private val AccountType.labelRes: Int
+    get() = when (this) {
+        AccountType.CARD       -> R.string.account_type_card
+        AccountType.CASH       -> R.string.account_type_cash
+        AccountType.DEPOSIT    -> R.string.account_type_deposit
+        AccountType.SAVINGS    -> R.string.account_type_savings
+        AccountType.INVESTMENT -> R.string.account_type_investment
+        AccountType.OTHER      -> R.string.account_type_other
     }
 
 @OptIn(ExperimentalMaterial3Api::class)

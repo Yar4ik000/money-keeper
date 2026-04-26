@@ -51,6 +51,6 @@ fun NavGraphBuilder.settingsGraph(navController: NavController) {
 
 fun NavGraphBuilder.budgetsGraph(navController: NavController) {
     composable(ROUTE_BUDGETS) {
-        BudgetsScreen(onBack = { navController.popBackStack() })
+        BudgetsScreen()
     }
 }

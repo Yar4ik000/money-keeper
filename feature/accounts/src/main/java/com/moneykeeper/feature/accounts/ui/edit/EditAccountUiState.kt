@@ -27,6 +27,7 @@ data class EditAccountUiState(
 
 sealed interface EditAccountError {
     data object NameEmpty : EditAccountError
+    data object NameTaken : EditAccountError
     data object DepositParamsMissing : EditAccountError
     data object DepositAmountInvalid : EditAccountError
     data object DepositRateInvalid : EditAccountError

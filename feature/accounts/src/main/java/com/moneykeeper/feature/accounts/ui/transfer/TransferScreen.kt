@@ -63,12 +63,14 @@ fun TransferScreen(
 
     val errSameAccount = stringResource(R.string.error_transfer_same_account)
     val errInvalidAmount = stringResource(R.string.error_transfer_invalid_amount)
+    val errCurrencyMismatch = stringResource(R.string.error_transfer_currency_mismatch)
 
     LaunchedEffect(state.saved) { if (state.saved) onSaved() }
     LaunchedEffect(state.error) {
         when (state.error) {
-            is TransferError.SameAccount   -> snackbarHostState.showSnackbar(errSameAccount)
-            is TransferError.InvalidAmount -> snackbarHostState.showSnackbar(errInvalidAmount)
+            is TransferError.SameAccount      -> snackbarHostState.showSnackbar(errSameAccount)
+            is TransferError.InvalidAmount    -> snackbarHostState.showSnackbar(errInvalidAmount)
+            is TransferError.CurrencyMismatch -> snackbarHostState.showSnackbar(errCurrencyMismatch)
             null -> Unit
         }
     }

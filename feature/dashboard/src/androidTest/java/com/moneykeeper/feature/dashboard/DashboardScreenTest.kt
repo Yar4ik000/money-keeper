@@ -191,6 +191,35 @@ class DashboardScreenTest {
     }
 
     @Test
+    fun totalBalanceCard_rendersEachCurrencyRow_whenMultipleCurrencies() {
+        // Feature-presence: per docs §6, strategy C is "no conversion — each currency
+        // on its own row". Breaking this (e.g., accidentally displaying only the first
+        // row, or converting at display time) should fail this test loudly.
+        val state = emptyState.copy(
+            totalsByCurrency = MultiCurrencyTotal(
+                listOf(
+                    CurrencyAmount("RUB", BigDecimal("100000")),
+                    CurrencyAmount("USD", BigDecimal("500")),
+                ),
+            ),
+        )
+        composeTestRule.setContent {
+            DashboardScreen(
+                state = state,
+                onAccountClick = {},
+                onAddAccount = {},
+                onAddTransaction = {},
+                onSeeAllTransactions = {},
+                onDepositClick = {},
+                onSettings = {},
+                onTransactionClick = {},
+            )
+        }
+        composeTestRule.onNodeWithText(BigDecimal("100000").formatAsCurrency("RUB")).assertIsDisplayed()
+        composeTestRule.onNodeWithText(BigDecimal("500").formatAsCurrency("USD")).assertIsDisplayed()
+    }
+
+    @Test
     fun recentTransactions_showsCategoryName() {
         val tx = Transaction(
             id = 1L, accountId = 1L, toAccountId = null,

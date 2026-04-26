@@ -3,6 +3,7 @@ package com.moneykeeper.feature.analytics.ui.components
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -11,7 +12,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -20,7 +24,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.moneykeeper.core.domain.model.TransactionType
 import com.moneykeeper.core.domain.model.TransactionWithMeta
@@ -84,7 +91,7 @@ fun TransactionHistoryItem(
         TransactionType.INCOME   -> MaterialTheme.colorScheme.primary to "+"
         TransactionType.EXPENSE,
         TransactionType.SAVINGS  -> MaterialTheme.colorScheme.error to "-"
-        TransactionType.TRANSFER -> MaterialTheme.colorScheme.onSurface to "→"
+        TransactionType.TRANSFER -> MaterialTheme.colorScheme.onSurface to ""
     }
 
     ListItem(
@@ -111,11 +118,42 @@ fun TransactionHistoryItem(
             Text(meta.categoryName.ifEmpty { "Прочее" })
         },
         supportingContent = {
-            val parts = listOfNotNull(
-                meta.accountName.takeIf { it.isNotEmpty() },
-                meta.transaction.note.takeIf { it.isNotEmpty() },
-            )
-            if (parts.isNotEmpty()) Text(parts.joinToString(" · "))
+            val onSurface = MaterialTheme.colorScheme.onSurface
+            val onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant
+            val toAccountName = meta.toAccountName
+            if (meta.transaction.type == TransactionType.TRANSFER && toAccountName != null) {
+                androidx.compose.foundation.layout.Column {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Text(meta.accountName, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium, color = onSurface)
+                        Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(12.dp), tint = onSurface)
+                        Text(toAccountName, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium, color = onSurface)
+                    }
+                    if (meta.transaction.note.isNotEmpty()) {
+                        Text(meta.transaction.note, style = MaterialTheme.typography.bodySmall, color = onSurfaceVariant)
+                    }
+                }
+            } else if (meta.accountName.isNotEmpty() || meta.transaction.note.isNotEmpty()) {
+                Text(
+                    text = buildAnnotatedString {
+                        if (meta.accountName.isNotEmpty()) {
+                            withStyle(SpanStyle(fontWeight = FontWeight.Medium, color = onSurface)) {
+                                append(meta.accountName)
+                            }
+                        }
+                        if (meta.accountName.isNotEmpty() && meta.transaction.note.isNotEmpty()) {
+                            withStyle(SpanStyle(color = onSurfaceVariant)) { append(" · ") }
+                        }
+                        if (meta.transaction.note.isNotEmpty()) {
+                            withStyle(SpanStyle(color = onSurfaceVariant)) {
+                                append(meta.transaction.note)
+                            }
+                        }
+                    },
+                )
+            }
         },
         trailingContent = {
             Text(

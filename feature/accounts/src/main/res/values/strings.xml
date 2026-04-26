@@ -90,6 +90,7 @@
 
     <!-- Errors -->
     <string name="error_name_empty">Введите название счёта</string>
+    <string name="error_name_taken">Счёт с таким названием уже существует</string>
     <string name="error_deposit_params_missing">Заполните параметры вклада</string>
     <string name="error_deposit_amount_invalid">Введите сумму вклада больше нуля</string>
     <string name="error_deposit_rate_invalid">Введите ставку больше нуля</string>
@@ -98,4 +99,5 @@
     <string name="deposit_notify_days_label">Уведомить за (дней)</string>
     <string name="error_transfer_same_account">Нельзя переводить на тот же счёт</string>
     <string name="error_transfer_invalid_amount">Введите сумму больше нуля</string>
+    <string name="error_transfer_currency_mismatch">Перевод между счетами с разными валютами недоступен</string>
 </resources>

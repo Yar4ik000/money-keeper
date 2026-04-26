@@ -505,8 +505,9 @@ feature/dashboard/
 
 **Утилиты форматирования и иконок в `core:ui`.**  
 `CurrencyFormatter.kt` — `BigDecimal.formatAsCurrency(currency)` с маппингом валюта→локаль. `ColorUtils.kt` — `parseHexColor(hex)` для перевода `#RRGGBB` строки в Compose `Color`.  
-`AccountIconMapper.kt` — `ACCOUNT_ICON_OPTIONS: List<Pair<String, ImageVector>>` (12 иконок, ключи: `"bank"`, `"wallet"`, `"card"` и т.д.) и `accountIconVector(iconName)` с fallback на `AccountBalance`.  
-`CategoryIconMapper.kt` — `CATEGORY_ICON_OPTIONS` (18 иконок, ключи: `"other"`, `"food"`, `"transport"` и т.д.) и `categoryIconVector(iconName)` с fallback на `Category`.  
+`AccountIconMapper.kt` — `ACCOUNT_ICON_OPTIONS: List<Pair<String, ImageVector>>` (18 иконок, ключи: `"bank"`, `"wallet"`, `"card"`, `"chart"`, `"business"`, `"store"`, `"safe"`, `"family"`, `"trophy"` и т.д.) и `accountIconVector(iconName)` с fallback на `AccountBalance`.  
+`CategoryIconMapper.kt` — `CATEGORY_ICON_OPTIONS` (32 иконки, ключи: `"other"`, `"food"`, `"transport"`, `"bar"`, `"clothes"`, `"fuel"`, `"kids"`, `"music"`, `"cinema"`, `"beauty"`, `"pharmacy"`, `"internet"`, `"nature"`, `"charity"`, `"repair"`, `"subscriptions"`, `"moto"` и т.д.) и `categoryIconVector(iconName)` с fallback на `Category`.  
+`CurrencyFormatter.kt` — `formatAsCurrency(currency)` и `currencySymbol(currency)`. Поддерживаемые коды: RUB, USD, EUR, GBP, CNY, KZT; каждому сопоставлена локаль через `localeFor()`, что даёт корректный символ (₽, $, €, £, ¥, ₸).  
 Все feature-модули используют эти утилиты напрямую, не дублируя маппинг.
 
 **DashboardViewModel — combine(5 flows).**  
@@ -576,6 +577,8 @@ feature/analytics/src/main/java/com/moneykeeper/feature/analytics/
 **HistoryViewModel — selection поверх derived state.**
 `uiState` производится из `_filter.flatMapLatest { ... }`. Состояние выбора (`selectedIds`, `isSelectionMode`) хранится в отдельных `MutableStateFlow` и объединяется в финальный `StateFlow` через `combine(derivedTransactions, _selectedIds, _isSelectionMode)`. При изменении фильтра выбор сбрасывается автоматически.
 
+`HistoryFilter` содержит: `from`/`to` (LocalDate), `accountIds`, `categoryIds`, `types` (Set), `query` (String), `minAmount`/`maxAmount` (BigDecimal?). DB-запрос фильтрует только по дате; остальное — `applyHistoryFilter()` в памяти (один месяц ≈ 50–300 строк для личных финансов, пагинация не нужна).
+
 **MonthlyBarEntry — два уровня.**
 В `core:domain/analytics` существует `MonthlyBarEntry(yearMonth: String, ...)` — DAO-ориентированная форма (ISO "2026-04"). В `analytics/ui/analytics` создан UI-уровневый `MonthlyBarEntry(month: YearMonth, ...)`. Маппинг `YearMonth.parse(entry.yearMonth)` происходит в `AnalyticsViewModel`.
 
@@ -599,7 +602,7 @@ feature/analytics/src/main/java/com/moneykeeper/feature/analytics/
 | `analytics/history` | HistoryScreen (группировка по дням, фильтр) |
 | `analytics/category/{categoryId}` | CategoryAnalyticsScreen (детализация) |
 
-### Instrumented тесты (4 сценария, `HistoryScreenTest.kt`)
+### Instrumented тесты (7 сценариев, `HistoryScreenTest.kt`)
 
 | Тест | Что проверяет |
 |------|---------------|
@@ -607,6 +610,9 @@ feature/analytics/src/main/java/com/moneykeeper/feature/analytics/
 | `historyScreen_showsEmptyMessage_whenNoTransactions` | «Операций нет» при пустом Success |
 | `historyScreen_showsTransactionCategoryName` | Имя категории в списке |
 | `historyScreen_showsPeriodTotals_whenPresent` | Итоги периода рендерятся |
+| `tappingSearchIcon_showsSearchFieldInToolbar` | Лупа открывает инлайн-поиск в шапке |
+| `typingInSearchField_passesQueryToFilterUpdate` | Набор текста передаёт запрос в фильтр |
+| `closingSearchBar_hidesFieldAndClearsQuery` | Стрелка ← сбрасывает поиск |
 
 ---
 
@@ -751,6 +757,14 @@ UnlockController.notifyUnlocked() после databaseProvider.initialize()
 - Совместимость: `manifest.databaseVersion > AppDatabase.VERSION` → `IncompatibleVersion` (отказ без изменения файлов)
 
 **UI:** `BackupScreen` с тремя SAF-лаунчерами (CSV, backup, restore), диалог ввода пароля для restore, финальный диалог «Перезапустить».
+
+### Управление повторяющимися правилами (v1.3.3)
+
+**Настройки → Повторяющиеся операции** — `RecurringRulesScreen` + `RecurringRuleDetailScreen` в `feature:settings/ui/recurring/`.
+
+`RecurringRulesViewModel` подписывается на `recurringRuleRepo.observeAllWithTemplates()` — это JOIN правила с его транзакцией-шаблоном. Список показывает иконку/имя категории, сумму, частоту, следующую дату генерации (`rule.expandDates(today, today+90).firstOrNull()`).
+
+`RecurringRuleDetailViewModel.stop()` вызывает `recurringRuleRepo.delete(id)`. FK `SET NULL` сохраняет все уже сгенерированные транзакции — `recurringRuleId` в них становится `null`.
 
 ### Настройки безопасности (Смена пароля и биометрия)
 

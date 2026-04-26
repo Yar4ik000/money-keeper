@@ -12,6 +12,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
@@ -88,6 +89,14 @@ class EditAccountViewModel @Inject constructor(
         val s = _uiState.value
         if (s.name.isBlank()) {
             _uiState.update { it.copy(error = EditAccountError.NameEmpty) }
+            return@launch
+        }
+
+        val nameTrimmed = s.name.trim()
+        val allAccounts = accountRepo.observeAllAccounts().first()
+        val collision = allAccounts.any { it.id != (accountId ?: -1L) && it.name.trim().equals(nameTrimmed, ignoreCase = true) }
+        if (collision) {
+            _uiState.update { it.copy(error = EditAccountError.NameTaken) }
             return@launch
         }
 

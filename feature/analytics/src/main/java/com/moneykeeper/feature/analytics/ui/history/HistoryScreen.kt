@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
@@ -27,19 +29,21 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -94,10 +98,16 @@ fun HistoryScreen(
 ) {
     var showFilterSheet by remember { mutableStateOf(false) }
     var showSearchBar by remember { mutableStateOf(false) }
+    var searchFieldValue by remember { mutableStateOf(TextFieldValue("")) }
+    val searchFocusRequester = remember { FocusRequester() }
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var showRecurringDeleteDialog by remember { mutableStateOf(false) }
     var showScopeDialog by remember { mutableStateOf(false) }
     val success = uiState as? HistoryUiState.Success
+
+    LaunchedEffect(showSearchBar) {
+        if (showSearchBar) searchFocusRequester.requestFocus()
+    }
 
     val allItems = success?.groups?.flatMap { it.items } ?: emptyList()
 
@@ -114,30 +124,77 @@ fun HistoryScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    if (success?.isSelectionMode == true) {
-                        Text(pluralStringResource(R.plurals.history_selected_count, success.selectedIds.size, success.selectedIds.size))
-                    } else {
-                        Text(stringResource(R.string.history_title))
+                    when {
+                        showSearchBar -> {
+                            BasicTextField(
+                                value = searchFieldValue,
+                                onValueChange = { newValue ->
+                                    searchFieldValue = newValue
+                                    onFilterUpdate { it.copy(query = newValue.text) }
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .focusRequester(searchFocusRequester),
+                                textStyle = MaterialTheme.typography.bodyLarge.copy(
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                ),
+                                singleLine = true,
+                                decorationBox = { inner ->
+                                    Box {
+                                        if (searchFieldValue.text.isEmpty()) {
+                                            Text(
+                                                text = stringResource(R.string.history_search_hint),
+                                                style = MaterialTheme.typography.bodyLarge,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                        }
+                                        inner()
+                                    }
+                                },
+                            )
+                        }
+                        success?.isSelectionMode == true ->
+                            Text(pluralStringResource(R.plurals.history_selected_count, success.selectedIds.size, success.selectedIds.size))
+                        else ->
+                            Text(stringResource(R.string.history_title))
                     }
                 },
                 navigationIcon = {
-                    if (success?.isSelectionMode == true) {
-                        IconButton(onClick = onClearSelection) {
+                    when {
+                        showSearchBar -> IconButton(onClick = {
+                            showSearchBar = false
+                            searchFieldValue = TextFieldValue("")
+                            onFilterUpdate { it.copy(query = "") }
+                        }) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_close_search))
+                        }
+                        success?.isSelectionMode == true -> IconButton(onClick = onClearSelection) {
                             Icon(Icons.Filled.Close, contentDescription = null)
                         }
-                    } else {
-                        IconButton(onClick = onBack) {
+                        else -> IconButton(onClick = onBack) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
                         }
                     }
                 },
                 actions = {
-                    if (success?.isSelectionMode != true) {
-                        IconButton(onClick = { showSearchBar = !showSearchBar }) {
-                            Icon(Icons.Filled.Search, contentDescription = null)
+                    when {
+                        showSearchBar -> {
+                            if (searchFieldValue.text.isNotEmpty()) {
+                                IconButton(onClick = {
+                                    searchFieldValue = TextFieldValue("")
+                                    onFilterUpdate { it.copy(query = "") }
+                                }) {
+                                    Icon(Icons.Filled.Close, contentDescription = null)
+                                }
+                            }
                         }
-                        IconButton(onClick = { showFilterSheet = true }) {
-                            Icon(Icons.Filled.FilterList, contentDescription = null)
+                        success?.isSelectionMode != true -> {
+                            IconButton(onClick = { showSearchBar = true }) {
+                                Icon(Icons.Filled.Search, contentDescription = stringResource(R.string.cd_open_search))
+                            }
+                            IconButton(onClick = { showFilterSheet = true }) {
+                                Icon(Icons.Filled.FilterList, contentDescription = null)
+                            }
                         }
                     }
                 },
@@ -179,21 +236,6 @@ fun HistoryScreen(
             }
             is HistoryUiState.Success -> {
                 LazyColumn(modifier = Modifier.padding(padding)) {
-                    if (showSearchBar) {
-                        item(key = "search") {
-                            OutlinedTextField(
-                                value = uiState.filter.query,
-                                onValueChange = { q -> onFilterUpdate { it.copy(query = q) } },
-                                placeholder = { Text(stringResource(R.string.history_search_hint)) },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                                singleLine = true,
-                                leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-                            )
-                        }
-                    }
-
                     item(key = "period_selector") {
                         val ym = YearMonth.of(uiState.filter.from.year, uiState.filter.from.month)
                         PeriodSelector(
