@@ -36,6 +36,8 @@
 - [ ] **`versionCode` поднят на +1?**
   Текущий: `app/build.gradle.kts` → `defaultConfig.versionCode`.
   Android отказывает в установке поверх, если `versionCode` не вырос.
+  **Важно:** делать это в feature-ветке до PR-мержа — тогда merge-коммит на main будет
+  подписан GitHub'ом и тег получит статус «Verified» на странице тегов.
 
 - [ ] **`versionName` обновлён?**
   Семантика: `MAJOR.MINOR.PATCH` — например `1.1.0` для новой фичи, `1.0.1` для патча.
