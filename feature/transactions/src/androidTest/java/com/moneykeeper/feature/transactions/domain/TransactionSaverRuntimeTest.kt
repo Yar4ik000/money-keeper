@@ -10,11 +10,17 @@ import com.moneykeeper.core.database.repository.RecurringRuleRepositoryImpl
 import com.moneykeeper.core.database.repository.TransactionRepositoryImpl
 import com.moneykeeper.core.domain.model.Account
 import com.moneykeeper.core.domain.model.AccountType
+import com.moneykeeper.core.domain.model.Deposit
+import com.moneykeeper.core.domain.model.DepositEvent
 import com.moneykeeper.core.domain.model.Frequency
 import com.moneykeeper.core.domain.model.RecurringRule
 import com.moneykeeper.core.domain.model.Transaction
 import com.moneykeeper.core.domain.model.TransactionType
+import com.moneykeeper.core.domain.repository.DepositEventRepository
+import com.moneykeeper.core.domain.repository.DepositRepository
 import com.moneykeeper.core.domain.repository.TransactionRunner
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import com.moneykeeper.core.domain.usecase.GenerateRecurringTransactionsUseCase
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
@@ -53,10 +59,25 @@ class TransactionSaverRuntimeTest {
         ruleRepo = RecurringRuleRepositoryImpl(
             db.recurringRuleDao(), db.transactionDao(), db.accountDao(), db.categoryDao(),
         )
+        val fakeDepositRepo = object : DepositRepository {
+            override fun observeAll(): Flow<List<Deposit>> = MutableStateFlow(emptyList())
+            override fun observeExpiringSoon(daysThreshold: Int): Flow<List<Deposit>> = MutableStateFlow(emptyList())
+            override suspend fun getAllActive(): List<Deposit> = emptyList()
+            override suspend fun getByAccountId(accountId: Long): Deposit? = null
+            override suspend fun save(deposit: Deposit): Long = 0L
+            override suspend fun markClosed(id: Long) = Unit
+        }
+        val fakeDepositEventRepo = object : DepositEventRepository {
+            override fun observe(depositId: Long): Flow<List<DepositEvent>> = MutableStateFlow(emptyList())
+            override suspend fun getAll(depositId: Long): List<DepositEvent> = emptyList()
+            override suspend fun insert(event: DepositEvent): Long = 0L
+            override suspend fun delete(id: Long) = Unit
+            override suspend fun deleteAll(depositId: Long) = Unit
+        }
         val directRunner = object : TransactionRunner {
             override suspend fun <T> run(block: suspend () -> T): T = block()
         }
-        saver = TransactionSaver(txRepo, accountRepo, ruleRepo, directRunner)
+        saver = TransactionSaver(txRepo, accountRepo, fakeDepositRepo, fakeDepositEventRepo, ruleRepo, directRunner)
         runBlocking {
             testAccountId = accountRepo.save(
                 Account(

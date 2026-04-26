@@ -12,6 +12,7 @@ data class Transaction(
     val type: TransactionType,
     val categoryId: Long?,
     val date: LocalDate,
+    val time: String? = null,
     val note: String = "",
     val recurringRuleId: Long? = null,
     val createdAt: LocalDateTime,

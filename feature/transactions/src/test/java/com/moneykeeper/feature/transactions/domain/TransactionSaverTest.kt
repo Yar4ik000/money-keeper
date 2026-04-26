@@ -1,13 +1,19 @@
 package com.moneykeeper.feature.transactions.domain
 
+import com.moneykeeper.core.domain.model.Deposit
+import com.moneykeeper.core.domain.model.DepositEvent
 import com.moneykeeper.core.domain.model.Frequency
 import com.moneykeeper.core.domain.model.RecurringRule
 import com.moneykeeper.core.domain.model.Transaction
 import com.moneykeeper.core.domain.model.TransactionType
 import com.moneykeeper.core.domain.repository.AccountRepository
+import com.moneykeeper.core.domain.repository.DepositEventRepository
+import com.moneykeeper.core.domain.repository.DepositRepository
 import com.moneykeeper.core.domain.repository.RecurringRuleRepository
 import com.moneykeeper.core.domain.repository.TransactionRepository
 import com.moneykeeper.core.domain.repository.TransactionRunner
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -108,6 +114,23 @@ class TransactionSaverTest {
         fun ruleExists(id: Long) = rules.containsKey(id)
     }
 
+    private val fakeDepositRepo = object : DepositRepository {
+        override fun observeAll(): Flow<List<Deposit>> = MutableStateFlow(emptyList())
+        override fun observeExpiringSoon(daysThreshold: Int): Flow<List<Deposit>> = MutableStateFlow(emptyList())
+        override suspend fun getAllActive(): List<Deposit> = emptyList()
+        override suspend fun getByAccountId(accountId: Long): Deposit? = null
+        override suspend fun save(deposit: Deposit): Long = 0L
+        override suspend fun markClosed(id: Long) = Unit
+    }
+
+    private val fakeDepositEventRepo = object : DepositEventRepository {
+        override fun observe(depositId: Long): Flow<List<DepositEvent>> = MutableStateFlow(emptyList())
+        override suspend fun getAll(depositId: Long): List<DepositEvent> = emptyList()
+        override suspend fun insert(event: DepositEvent): Long = 0L
+        override suspend fun delete(id: Long) = Unit
+        override suspend fun deleteAll(depositId: Long) = Unit
+    }
+
     private val fakeTxRunner = object : TransactionRunner {
         override suspend fun <T> run(block: suspend () -> T): T = block()
     }
@@ -144,7 +167,7 @@ class TransactionSaverTest {
         deletedIds.clear()
         savedRuleId = 0L
         prunedCount = 0
-        saver = TransactionSaver(fakeTxRepo, fakeAccountRepo, fakeRuleRepo, fakeTxRunner)
+        saver = TransactionSaver(fakeTxRepo, fakeAccountRepo, fakeDepositRepo, fakeDepositEventRepo, fakeRuleRepo, fakeTxRunner)
     }
 
     // ── tests ────────────────────────────────────────────────────────────────

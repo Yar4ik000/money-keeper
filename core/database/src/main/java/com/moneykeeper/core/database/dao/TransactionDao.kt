@@ -18,7 +18,7 @@ interface TransactionDao {
           AND (:categoryId IS NULL OR categoryId = :categoryId)
           AND (:type IS NULL OR type = :type)
           AND date BETWEEN :from AND :to
-        ORDER BY date DESC, createdAt DESC
+        ORDER BY date DESC, time DESC, id DESC
     """)
     fun observe(
         accountId: Long?,
@@ -30,12 +30,12 @@ interface TransactionDao {
 
     @Query("""
         SELECT * FROM transactions
-        ORDER BY date DESC, createdAt DESC
+        ORDER BY date DESC, time DESC, id DESC
         LIMIT :limit
     """)
     fun observeRecent(limit: Int): Flow<List<TransactionEntity>>
 
-    @Query("SELECT * FROM transactions ORDER BY date DESC, createdAt DESC")
+    @Query("SELECT * FROM transactions ORDER BY date DESC, time DESC, id DESC")
     suspend fun getAll(): List<TransactionEntity>
 
     @Query("SELECT * FROM transactions WHERE id = :id")

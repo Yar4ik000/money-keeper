@@ -9,13 +9,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -26,7 +30,9 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimeInput
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -39,6 +45,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
+import java.time.LocalTime
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavBackStackEntry
@@ -99,6 +106,7 @@ fun AddTransactionRoute(
         onToAccountSelect = viewModel::onToAccountSelect,
         onCategorySelect = viewModel::onCategorySelect,
         onDateChange = viewModel::onDateChange,
+        onTimeChange = viewModel::onTimeChange,
         onNoteChange = viewModel::onNoteChange,
         onRecurringToggle = viewModel::onRecurringToggle,
         onRecurringRuleChange = viewModel::onRecurringRuleChange,
@@ -120,6 +128,7 @@ fun AddTransactionScreen(
     onToAccountSelect: (Account) -> Unit,
     onCategorySelect: (Category) -> Unit,
     onDateChange: (LocalDate) -> Unit,
+    onTimeChange: (String?) -> Unit,
     onNoteChange: (String) -> Unit,
     onRecurringToggle: (Boolean) -> Unit,
     onRecurringRuleChange: (RecurringRule) -> Unit,
@@ -148,6 +157,7 @@ fun AddTransactionScreen(
     var showAccountPicker by remember { mutableStateOf(false) }
     var showToAccountPicker by remember { mutableStateOf(false) }
     var showDatePicker by remember { mutableStateOf(false) }
+    var showTimePicker by remember { mutableStateOf(false) }
     var showRecurringSheet by remember { mutableStateOf(false) }
 
     val dateFormatter = remember {
@@ -243,16 +253,45 @@ fun AddTransactionScreen(
                 }
             }
 
-            // Date
-            Box {
-                OutlinedTextField(
-                    value = uiState.date.format(dateFormatter),
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text(stringResource(R.string.tx_date)) },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Box(Modifier.matchParentSize().clickable { showDatePicker = true })
+            // Date + time row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Box(modifier = Modifier.weight(1f)) {
+                    OutlinedTextField(
+                        value = uiState.date.format(dateFormatter),
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text(stringResource(R.string.tx_date)) },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Box(Modifier.matchParentSize().clickable { showDatePicker = true })
+                }
+                if (uiState.time != null) {
+                    FilterChip(
+                        selected = true,
+                        onClick = { showTimePicker = true },
+                        label = { Text(uiState.time) },
+                        trailingIcon = {
+                            IconButton(
+                                onClick = { onTimeChange(null) },
+                                modifier = Modifier.size(20.dp),
+                            ) {
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(14.dp),
+                                )
+                            }
+                        },
+                    )
+                } else {
+                    TextButton(onClick = { showTimePicker = true }) {
+                        Text(stringResource(R.string.tx_time_add))
+                    }
+                }
             }
 
             // Note
@@ -333,6 +372,13 @@ fun AddTransactionScreen(
             maxDate = java.time.LocalDate.now(),
         )
     }
+    if (showTimePicker) {
+        TimePickerDialog(
+            initialTime = uiState.time,
+            onConfirm = { onTimeChange(it); showTimePicker = false },
+            onDismiss = { showTimePicker = false },
+        )
+    }
     if (showRecurringSheet) {
         RecurringRuleSheet(
             rule = uiState.recurringRule,
@@ -341,6 +387,37 @@ fun AddTransactionScreen(
             onDismiss = { showRecurringSheet = false },
         )
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TimePickerDialog(
+    initialTime: String?,
+    onConfirm: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val now = LocalTime.now()
+    val (initHour, initMinute) = initialTime
+        ?.split(":")
+        ?.let { it[0].toIntOrNull() to it[1].toIntOrNull() }
+        ?.let { (h, m) -> (h ?: now.hour) to (m ?: now.minute) }
+        ?: (now.hour to now.minute)
+    val state = rememberTimePickerState(initialHour = initHour, initialMinute = initMinute, is24Hour = true)
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = { onConfirm("%02d:%02d".format(state.hour, state.minute)) }) {
+                Text(stringResource(R.string.dialog_ok))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.dialog_cancel))
+            }
+        },
+        title = { Text(stringResource(R.string.tx_time)) },
+        text = { TimeInput(state = state) },
+    )
 }
 
 private fun BigDecimal.formatTxAmount(): String {

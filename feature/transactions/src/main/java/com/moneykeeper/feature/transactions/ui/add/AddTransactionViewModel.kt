@@ -81,6 +81,8 @@ class AddTransactionViewModel @Inject constructor(
 
     fun onDateChange(date: LocalDate) = _uiState.update { it.copy(date = date) }
 
+    fun onTimeChange(time: String?) = _uiState.update { it.copy(time = time) }
+
     fun onNoteChange(note: String) = _uiState.update { it.copy(note = note) }
 
     fun onRecurringToggle(on: Boolean) =
@@ -131,6 +133,7 @@ class AddTransactionViewModel @Inject constructor(
                 type = s.type,
                 categoryId = s.selectedCategory?.id,
                 date = s.date,
+                time = s.time,
                 note = s.note,
                 createdAt = LocalDateTime.now(),
             ),

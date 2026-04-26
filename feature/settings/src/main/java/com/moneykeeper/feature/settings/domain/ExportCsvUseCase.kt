@@ -17,7 +17,7 @@ class ExportCsvUseCase @Inject constructor(
         context.contentResolver.openOutputStream(uri)?.bufferedWriter()?.use { writer ->
             writer.write("\uFEFF")
             writer.write(
-                listOf("Дата", "Тип", "Категория", "Счёт", "Счёт получатель", "Сумма", "Заметка")
+                listOf("Дата", "Время", "Тип", "Категория", "Счёт", "Счёт получатель", "Сумма", "Заметка")
                     .joinToString(";") { it.csvEscape() } + "\r\n"
             )
 
@@ -31,6 +31,7 @@ class ExportCsvUseCase @Inject constructor(
                 }
                 val row = listOf(
                     tx.date.toString(),
+                    tx.time ?: "",
                     type,
                     meta.categoryName,
                     meta.accountName,

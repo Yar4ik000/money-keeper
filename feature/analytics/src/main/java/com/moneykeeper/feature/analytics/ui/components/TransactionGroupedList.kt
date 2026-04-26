@@ -121,6 +121,7 @@ fun TransactionHistoryItem(
             val onSurface = MaterialTheme.colorScheme.onSurface
             val onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant
             val toAccountName = meta.toAccountName
+            val time = meta.transaction.time
             if (meta.transaction.type == TransactionType.TRANSFER && toAccountName != null) {
                 androidx.compose.foundation.layout.Column {
                     Row(
@@ -131,11 +132,24 @@ fun TransactionHistoryItem(
                         Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(12.dp), tint = onSurface)
                         Text(toAccountName, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium, color = onSurface)
                     }
-                    if (meta.transaction.note.isNotEmpty()) {
-                        Text(meta.transaction.note, style = MaterialTheme.typography.bodySmall, color = onSurfaceVariant)
+                    if (meta.transaction.note.isNotEmpty() || time != null) {
+                        Text(
+                            text = buildAnnotatedString {
+                                if (time != null) {
+                                    withStyle(SpanStyle(color = onSurfaceVariant)) { append(time) }
+                                }
+                                if (time != null && meta.transaction.note.isNotEmpty()) {
+                                    withStyle(SpanStyle(color = onSurfaceVariant)) { append(" · ") }
+                                }
+                                if (meta.transaction.note.isNotEmpty()) {
+                                    withStyle(SpanStyle(color = onSurfaceVariant)) { append(meta.transaction.note) }
+                                }
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                        )
                     }
                 }
-            } else if (meta.accountName.isNotEmpty() || meta.transaction.note.isNotEmpty()) {
+            } else if (meta.accountName.isNotEmpty() || meta.transaction.note.isNotEmpty() || time != null) {
                 Text(
                     text = buildAnnotatedString {
                         if (meta.accountName.isNotEmpty()) {
@@ -143,7 +157,13 @@ fun TransactionHistoryItem(
                                 append(meta.accountName)
                             }
                         }
-                        if (meta.accountName.isNotEmpty() && meta.transaction.note.isNotEmpty()) {
+                        if (meta.accountName.isNotEmpty() && (meta.transaction.note.isNotEmpty() || time != null)) {
+                            withStyle(SpanStyle(color = onSurfaceVariant)) { append(" · ") }
+                        }
+                        if (time != null) {
+                            withStyle(SpanStyle(color = onSurfaceVariant)) { append(time) }
+                        }
+                        if (time != null && meta.transaction.note.isNotEmpty()) {
                             withStyle(SpanStyle(color = onSurfaceVariant)) { append(" · ") }
                         }
                         if (meta.transaction.note.isNotEmpty()) {
