@@ -40,4 +40,5 @@ data class AnalyticsUiState(
     val topExpenseCategory: Category? = null,
     val averageDailyExpense: BigDecimal = BigDecimal.ZERO,
     val periodHasTransactions: Boolean = false,
+    val rollUpToParent: Boolean = false,
 )

@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -175,6 +176,53 @@ class AnalyticsQueryTest {
         ).first()
         assertEquals(1, expenses.size)
         assertEquals(foodCategoryId, expenses[0].categoryId)
+    }
+
+    @Test
+    fun observeByCategory_threeLevelHierarchyEachDepthHasOwnRow() = runTest {
+        // Транспорт (depth 0) → Авто (depth 1) → Бензин (depth 2)
+        val rootId = categoryDao.upsert(
+            CategoryEntity(name = "Транспорт2", type = CategoryType.EXPENSE,
+                colorHex = "#42A5F5", iconName = "DirectionsBus", sortOrder = 99)
+        )
+        val childId = categoryDao.upsert(
+            CategoryEntity(name = "Авто", type = CategoryType.EXPENSE,
+                colorHex = "#42A5F5", iconName = "DirectionsCar", sortOrder = 0,
+                parentCategoryId = rootId)
+        )
+        val grandchildId = categoryDao.upsert(
+            CategoryEntity(name = "Бензин", type = CategoryType.EXPENSE,
+                colorHex = "#FF7043", iconName = "LocalGasStation", sortOrder = 0,
+                parentCategoryId = childId)
+        )
+
+        // One transaction per level + an extra on the grandchild to verify count/sum
+        insertTx(amount = BigDecimal("100"), type = TransactionType.EXPENSE,
+            categoryId = rootId, date = LocalDate.of(2026, 4, 1))
+        insertTx(amount = BigDecimal("200"), type = TransactionType.EXPENSE,
+            categoryId = childId, date = LocalDate.of(2026, 4, 2))
+        insertTx(amount = BigDecimal("300"), type = TransactionType.EXPENSE,
+            categoryId = grandchildId, date = LocalDate.of(2026, 4, 3))
+        insertTx(amount = BigDecimal("50"), type = TransactionType.EXPENSE,
+            categoryId = grandchildId, date = LocalDate.of(2026, 4, 4))
+
+        val result = txDao.observeByCategory(
+            currency = "RUB", from = "2026-04-01", to = "2026-04-30", type = "EXPENSE",
+        ).first()
+
+        // Each depth gets its own row — no rollup into parent
+        val rootRow = result.find { it.categoryId == rootId }
+        val childRow = result.find { it.categoryId == childId }
+        val grandchildRow = result.find { it.categoryId == grandchildId }
+        assertNotNull(rootRow)
+        assertNotNull(childRow)
+        assertNotNull(grandchildRow)
+        assertAmount(BigDecimal("100"), rootRow!!.total)
+        assertEquals(1, rootRow.count)
+        assertAmount(BigDecimal("200"), childRow!!.total)
+        assertEquals(1, childRow.count)
+        assertAmount(BigDecimal("350"), grandchildRow!!.total)
+        assertEquals(2, grandchildRow.count)
     }
 
     // ─── observeByAccount ─────────────────────────────────────────────────────

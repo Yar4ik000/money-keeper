@@ -56,10 +56,10 @@ fun CategoryPicker(
     val categoryType = transactionType.toCategoryType()
     val filtered = categories.filter { it.type == categoryType }
     val roots = filtered.filter { it.parentCategoryId == null }
-    val childrenByParent = filtered
+    val byParent = filtered
         .filter { it.parentCategoryId != null }
-        .groupBy { it.parentCategoryId }
-    var expandedId by remember { mutableStateOf<Long?>(null) }
+        .groupBy { it.parentCategoryId!! }
+    var expandedIds by remember { mutableStateOf(emptySet<Long>()) }
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Row(
@@ -80,31 +80,49 @@ fun CategoryPicker(
         HorizontalDivider()
         LazyColumn {
             roots.forEach { root ->
-                val children = childrenByParent[root.id].orEmpty()
+                val children = byParent[root.id].orEmpty()
                 item(key = root.id) {
                     CategoryRow(
                         category = root,
                         isSelected = selectedId == root.id,
                         hasChildren = children.isNotEmpty(),
-                        isExpanded = expandedId == root.id,
-                        indented = false,
+                        isExpanded = root.id in expandedIds,
+                        indent = 0,
                         onClick = { onSelect(root); onDismiss() },
                         onToggle = {
-                            expandedId = if (expandedId == root.id) null else root.id
+                            expandedIds = if (root.id in expandedIds) expandedIds - root.id else expandedIds + root.id
                         },
                     )
                 }
-                if (expandedId == root.id) {
-                    items(children, key = { it.id }) { child ->
-                        CategoryRow(
-                            category = child,
-                            isSelected = selectedId == child.id,
-                            hasChildren = false,
-                            isExpanded = false,
-                            indented = true,
-                            onClick = { onSelect(child); onDismiss() },
-                            onToggle = {},
-                        )
+                if (root.id in expandedIds) {
+                    children.forEach { child ->
+                        val grandchildren = byParent[child.id].orEmpty()
+                        item(key = child.id) {
+                            CategoryRow(
+                                category = child,
+                                isSelected = selectedId == child.id,
+                                hasChildren = grandchildren.isNotEmpty(),
+                                isExpanded = child.id in expandedIds,
+                                indent = 1,
+                                onClick = { onSelect(child); onDismiss() },
+                                onToggle = {
+                                    expandedIds = if (child.id in expandedIds) expandedIds - child.id else expandedIds + child.id
+                                },
+                            )
+                        }
+                        if (child.id in expandedIds) {
+                            items(grandchildren, key = { it.id }) { grandchild ->
+                                CategoryRow(
+                                    category = grandchild,
+                                    isSelected = selectedId == grandchild.id,
+                                    hasChildren = false,
+                                    isExpanded = false,
+                                    indent = 2,
+                                    onClick = { onSelect(grandchild); onDismiss() },
+                                    onToggle = {},
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -118,7 +136,7 @@ private fun CategoryRow(
     isSelected: Boolean,
     hasChildren: Boolean,
     isExpanded: Boolean,
-    indented: Boolean,
+    indent: Int,
     onClick: () -> Unit,
     onToggle: () -> Unit,
 ) {
@@ -129,7 +147,7 @@ private fun CategoryRow(
             .background(bg)
             .clickable(onClick = onClick)
             .padding(
-                start = if (indented) 40.dp else 16.dp,
+                start = (16 + indent * 24).dp,
                 end = 8.dp,
                 top = 12.dp,
                 bottom = 12.dp,

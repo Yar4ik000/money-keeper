@@ -2,6 +2,7 @@ package com.moneykeeper.feature.analytics.ui.analytics
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.moneykeeper.core.domain.analytics.CategorySum
 import com.moneykeeper.core.domain.model.Category
 import com.moneykeeper.core.domain.model.CategoryType
 import com.moneykeeper.core.domain.model.TransactionType
@@ -31,6 +32,7 @@ class AnalyticsViewModel @Inject constructor(
 
     private val _period = MutableStateFlow(YearMonth.now())
     private val _selectedCurrency = MutableStateFlow<String?>(null)
+    private val _rollUpToParent = MutableStateFlow(false)
 
     val uiState: StateFlow<AnalyticsUiState> = combine(
         _period,
@@ -63,7 +65,10 @@ class AnalyticsViewModel @Inject constructor(
             transactionRepo.observeMonthlyTrend(effectiveCurrency, trendFrom, to),
             transactionRepo.observePeriodSummary(from, to),
             accFlow,
-        ) { (expSums, incSums, cats), trend, periodSummary, (expAccSums, incAccSums) ->
+            _rollUpToParent,
+        ) { catData, trend, periodSummary, accData, rollUp ->
+            val (expSums, incSums, cats) = catData
+            val (expAccSums, incAccSums) = accData
             val catMap = cats.associateBy { it.id }
             val expenseTotal = expSums.sumOf { it.total }
             val incomeTotal = incSums.sumOf { it.total }
@@ -72,10 +77,10 @@ class AnalyticsViewModel @Inject constructor(
                 (currencySummary.income > BigDecimal.ZERO || currencySummary.expense > BigDecimal.ZERO)
 
             fun buildCategoryItems(
-                sums: List<com.moneykeeper.core.domain.analytics.CategorySum>,
+                sums: List<CategorySum>,
                 total: BigDecimal,
                 fallbackType: CategoryType,
-            ) = sums.sortedByDescending { it.total }.mapNotNull { sum ->
+            ) = (if (rollUp) rollUpCategorySums(sums, cats) else sums).sortedByDescending { it.total }.mapNotNull { sum ->
                 val cat = catMap[sum.categoryId] ?: if (sum.categoryId == 0L)
                     Category(id = 0L, name = "Без категории", type = fallbackType,
                         colorHex = "#9E9E9E", iconName = "MoreHoriz")
@@ -122,10 +127,12 @@ class AnalyticsViewModel @Inject constructor(
                         expense = entry.expense,
                     )
                 },
-                topExpenseCategory = expSums.maxByOrNull { it.total }?.let { catMap[it.categoryId] },
+                topExpenseCategory = (if (rollUp) rollUpCategorySums(expSums, cats) else expSums)
+                    .maxByOrNull { it.total }?.let { catMap[it.categoryId] },
                 averageDailyExpense = if (expenseTotal > BigDecimal.ZERO)
                     expenseTotal / BigDecimal(to.dayOfMonth) else BigDecimal.ZERO,
                 periodHasTransactions = periodHasTransactions,
+                rollUpToParent = rollUp,
             )
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AnalyticsUiState())
@@ -134,4 +141,25 @@ class AnalyticsViewModel @Inject constructor(
     fun nextPeriod() = _period.update { it.plusMonths(1) }
     fun jumpToPeriod(ym: YearMonth) { _period.value = ym }
     fun selectCurrency(code: String) { _selectedCurrency.value = code }
+    fun toggleRollUp() = _rollUpToParent.update { !it }
+}
+
+internal fun rollUpCategorySums(
+    sums: List<CategorySum>,
+    categories: List<Category>,
+): List<CategorySum> {
+    val parentMap = categories.associate { it.id to it.parentCategoryId }
+    fun rootOf(id: Long): Long {
+        var current = id
+        while (true) current = parentMap[current] ?: return current
+    }
+    return sums
+        .groupBy { rootOf(it.categoryId) }
+        .map { (rootId, grouped) ->
+            CategorySum(
+                categoryId = rootId,
+                total = grouped.sumOf { it.total },
+                count = grouped.sumOf { it.count },
+            )
+        }
 }

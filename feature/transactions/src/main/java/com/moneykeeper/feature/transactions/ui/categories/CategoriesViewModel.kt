@@ -17,12 +17,14 @@ class CategoriesViewModel @Inject constructor(
     private val categoryRepo: CategoryRepository,
 ) : ViewModel() {
 
-    val categories: StateFlow<List<Category>> = categoryRepo.observeAll()
+    // Flat DFS list with depth: (Category, 0|1|2). Used by CategoriesScreen for indentation.
+    val categories: StateFlow<List<Pair<Category, Int>>> = categoryRepo.observeAll()
         .map { all ->
-            val byParent = all.filter { it.parentCategoryId != null }.groupBy { it.parentCategoryId!! }
-            all.filter { it.parentCategoryId == null }
-                .sortedBy { it.sortOrder }
-                .flatMap { root -> listOf(root) + byParent[root.id].orEmpty().sortedBy { it.sortOrder } }
+            val byParent = all.groupBy { it.parentCategoryId }
+            fun flatten(cat: Category, depth: Int): List<Pair<Category, Int>> =
+                listOf(cat to depth) +
+                    byParent[cat.id].orEmpty().sortedBy { it.sortOrder }.flatMap { flatten(it, depth + 1) }
+            byParent[null].orEmpty().sortedBy { it.sortOrder }.flatMap { flatten(it, 0) }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 

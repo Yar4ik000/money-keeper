@@ -65,11 +65,36 @@ class CategoriesViewModelTest {
         )
 
         val vm = CategoriesViewModel(repo(input))
-        val ordered = vm.categories.first { it.isNotEmpty() }.map { it.name }
+        val ordered = vm.categories.first { it.isNotEmpty() }.map { (cat, _) -> cat.name }
 
         assertEquals(
             listOf("Еда", "Яндекс Лавка", "Яндекс Еда", "Транспорт", "Здоровье", "ЖКХ"),
             ordered,
+        )
+    }
+
+    @Test
+    fun `three-level DFS returns correct depth values for each category`() = runTest {
+        val input = listOf(
+            cat(id = 1, name = "Транспорт", parentId = null, sortOrder = 1),
+            cat(id = 2, name = "Авто",      parentId = 1,    sortOrder = 1),
+            cat(id = 3, name = "Бензин",    parentId = 2,    sortOrder = 1),
+            cat(id = 4, name = "Парковка",  parentId = 2,    sortOrder = 2),
+            cat(id = 5, name = "Такси",     parentId = 1,    sortOrder = 2),
+        )
+
+        val vm = CategoriesViewModel(repo(input))
+        val result = vm.categories.first { it.isNotEmpty() }.map { (cat, depth) -> cat.name to depth }
+
+        assertEquals(
+            listOf(
+                "Транспорт" to 0,
+                "Авто"      to 1,
+                "Бензин"    to 2,
+                "Парковка"  to 2,
+                "Такси"     to 1,
+            ),
+            result,
         )
     }
 
@@ -86,7 +111,7 @@ class CategoriesViewModelTest {
         )
 
         val vm = CategoriesViewModel(repo(input))
-        val ordered = vm.categories.first { it.isNotEmpty() }.map { it.name }
+        val ordered = vm.categories.first { it.isNotEmpty() }.map { (cat, _) -> cat.name }
 
         assertEquals(listOf("Еда"), ordered)
     }

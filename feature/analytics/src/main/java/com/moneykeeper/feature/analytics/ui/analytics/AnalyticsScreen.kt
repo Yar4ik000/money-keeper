@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountTree
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
@@ -70,6 +72,7 @@ fun AnalyticsRoute(
         onCurrencySelect = viewModel::selectCurrency,
         onCategoryClick = onCategoryClick,
         onSeeAllTransactions = onSeeAllTransactions,
+        onToggleRollUp = viewModel::toggleRollUp,
     )
 }
 
@@ -83,6 +86,7 @@ fun AnalyticsScreen(
     onCurrencySelect: (String) -> Unit,
     onCategoryClick: (Long) -> Unit,
     onSeeAllTransactions: () -> Unit,
+    onToggleRollUp: () -> Unit = {},
 ) {
     if (uiState.isLoading) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -177,6 +181,22 @@ fun AnalyticsScreen(
         }
 
         if (breakdownMode == BreakdownMode.CATEGORIES) {
+            item {
+                FilterChip(
+                    selected = uiState.rollUpToParent,
+                    onClick = onToggleRollUp,
+                    label = { Text(stringResource(R.string.analytics_rollup_by_parent)) },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.AccountTree,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                        )
+                    },
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
+            }
+
             // Expenses by category
             if (uiState.categoryExpenses.isNotEmpty()) {
                 item {

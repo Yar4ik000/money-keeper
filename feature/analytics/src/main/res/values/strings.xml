@@ -48,6 +48,7 @@
     <string name="analytics_daily_avg">Среднесуточный расход: %s</string>
     <string name="analytics_group_by_category">По категориям</string>
     <string name="analytics_group_by_account">По счетам</string>
+    <string name="analytics_rollup_by_parent">Группировать по разделам</string>
     <string name="analytics_no_data">Нет данных за период</string>
     <string name="analytics_no_expenses">Расходов в этом периоде нет</string>
     <string name="analytics_legend_income">Доходы</string>
