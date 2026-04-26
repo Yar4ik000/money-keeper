@@ -69,6 +69,7 @@ import com.moneykeeper.core.domain.model.Deposit
 import com.moneykeeper.core.ui.util.ACCOUNT_ICON_OPTIONS
 import com.moneykeeper.core.ui.util.AmountTextField
 import com.moneykeeper.core.ui.util.accountIconVector
+import com.moneykeeper.core.ui.util.currencySymbol
 import com.moneykeeper.feature.accounts.R
 import com.moneykeeper.feature.accounts.ui.list.parseColor
 import java.math.BigDecimal
@@ -294,7 +295,7 @@ fun EditAccountScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CurrencyDropdown(selected: String, onSelect: (String) -> Unit) {
-    val currencies = listOf("RUB", "USD", "EUR", "GBP", "CNY")
+    val currencies = listOf("RUB", "USD", "EUR", "GBP", "CNY", "KZT")
     var expanded by remember { mutableStateOf(false) }
 
     ExposedDropdownMenuBox(
@@ -302,7 +303,7 @@ private fun CurrencyDropdown(selected: String, onSelect: (String) -> Unit) {
         onExpandedChange = { expanded = it },
     ) {
         OutlinedTextField(
-            value = selected,
+            value = "$selected  ${currencySymbol(selected)}",
             onValueChange = {},
             readOnly = true,
             label = { Text(stringResource(R.string.edit_account_currency)) },
@@ -317,7 +318,18 @@ private fun CurrencyDropdown(selected: String, onSelect: (String) -> Unit) {
         ) {
             currencies.forEach { currency ->
                 DropdownMenuItem(
-                    text = { Text(currency) },
+                    text = {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            Text(currency)
+                            Text(
+                                text = currencySymbol(currency),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    },
                     onClick = { onSelect(currency); expanded = false },
                 )
             }

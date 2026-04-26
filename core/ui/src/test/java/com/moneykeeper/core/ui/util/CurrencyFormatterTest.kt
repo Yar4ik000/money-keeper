@@ -35,4 +35,19 @@ class CurrencyFormatterTest {
         val result = BigDecimal("100").formatAsCurrency("CNY")
         assertTrue("Expected ¥ in '$result'", result.contains("¥"))
     }
+
+    @Test
+    fun `KZT uses tenge sign`() {
+        val result = BigDecimal("100").formatAsCurrency("KZT")
+        assertTrue("Expected ₸ in '$result'", result.contains("₸"))
+    }
+
+    @Test
+    fun `currencySymbol returns correct symbols`() {
+        assertTrue(currencySymbol("RUB").let { it.contains("₽") || it.contains("руб") })
+        assertTrue(currencySymbol("USD").contains("$"))
+        assertTrue(currencySymbol("EUR").contains("€"))
+        assertTrue(currencySymbol("GBP").contains("£"))
+        assertTrue(currencySymbol("KZT").contains("₸"))
+    }
 }
