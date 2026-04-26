@@ -1,5 +1,6 @@
 package com.moneykeeper.core.domain.repository
 
+import com.moneykeeper.core.domain.analytics.AccountCategorySum
 import com.moneykeeper.core.domain.analytics.AccountSum
 import com.moneykeeper.core.domain.analytics.CategorySum
 import com.moneykeeper.core.domain.analytics.MonthlyBarEntry
@@ -23,6 +24,7 @@ interface TransactionRepository {
     fun observePeriodSummary(from: LocalDate, to: LocalDate): Flow<List<PeriodSummaryByCurrency>>
     fun observeByCategory(currency: String, from: LocalDate, to: LocalDate, type: TransactionType): Flow<List<CategorySum>>
     fun observeByAccount(currency: String, from: LocalDate, to: LocalDate, type: TransactionType): Flow<List<AccountSum>>
+    fun observeByAccountAndCategory(currency: String, from: LocalDate, to: LocalDate, type: TransactionType): Flow<List<AccountCategorySum>>
     fun observeMonthlyTrend(currency: String, from: LocalDate, to: LocalDate): Flow<List<MonthlyBarEntry>>
 
     suspend fun getAll(): List<TransactionWithMeta>

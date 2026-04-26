@@ -1,6 +1,7 @@
 package com.moneykeeper.feature.accounts.ui.detail
 
 import androidx.lifecycle.SavedStateHandle
+import com.moneykeeper.core.domain.analytics.AccountCategorySum
 import com.moneykeeper.core.domain.analytics.AccountSum
 import com.moneykeeper.core.domain.analytics.CategorySum
 import com.moneykeeper.core.domain.analytics.MonthlyBarEntry
@@ -100,6 +101,7 @@ class AccountDetailViewModelTest {
         override fun observePeriodSummary(from: LocalDate, to: LocalDate): Flow<List<PeriodSummaryByCurrency>> = MutableStateFlow(emptyList())
         override fun observeByCategory(currency: String, from: LocalDate, to: LocalDate, type: TransactionType): Flow<List<CategorySum>> = MutableStateFlow(emptyList())
         override fun observeByAccount(currency: String, from: LocalDate, to: LocalDate, type: TransactionType): Flow<List<AccountSum>> = MutableStateFlow(emptyList())
+        override fun observeByAccountAndCategory(currency: String, from: LocalDate, to: LocalDate, type: TransactionType): Flow<List<AccountCategorySum>> = MutableStateFlow(emptyList())
         override fun observeMonthlyTrend(currency: String, from: LocalDate, to: LocalDate): Flow<List<MonthlyBarEntry>> = MutableStateFlow(emptyList())
         override suspend fun getAll(): List<TransactionWithMeta> = emptyList()
         override suspend fun getById(id: Long): Transaction? = null

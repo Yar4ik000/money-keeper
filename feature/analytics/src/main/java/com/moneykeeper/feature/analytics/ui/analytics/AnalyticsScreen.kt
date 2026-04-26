@@ -20,6 +20,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountTree
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
@@ -38,6 +40,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -96,6 +99,9 @@ fun AnalyticsScreen(
     }
 
     var breakdownMode by remember { mutableStateOf(BreakdownMode.CATEGORIES) }
+    var expandedExpenseIds by remember { mutableStateOf(emptySet<Long>()) }
+    var expandedIncomeIds by remember { mutableStateOf(emptySet<Long>()) }
+
     val expenseColor = MaterialTheme.colorScheme.error
 
     LazyColumn(modifier = Modifier.fillMaxSize()) {
@@ -160,7 +166,7 @@ fun AnalyticsScreen(
         // Grouping mode toggle
         if (uiState.periodHasTransactions) {
             item {
-                Row(
+                FlowRow(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp),
@@ -180,7 +186,7 @@ fun AnalyticsScreen(
             }
         }
 
-        if (breakdownMode == BreakdownMode.CATEGORIES) {
+        if (uiState.periodHasTransactions) {
             item {
                 FilterChip(
                     selected = uiState.rollUpToParent,
@@ -196,7 +202,9 @@ fun AnalyticsScreen(
                     modifier = Modifier.padding(horizontal = 16.dp),
                 )
             }
+        }
 
+        if (breakdownMode == BreakdownMode.CATEGORIES) {
             // Expenses by category
             if (uiState.categoryExpenses.isNotEmpty()) {
                 item {
@@ -269,40 +277,111 @@ fun AnalyticsScreen(
                 }
             }
         } else {
-            // Account breakdown — expenses
+            // Account breakdown with category detail
             if (uiState.expensesByAccount.isNotEmpty()) {
                 item {
                     Text(
-                        text = stringResource(R.string.analytics_top_expenses),
+                        text = stringResource(R.string.analytics_top_expenses_by_account),
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                     )
                 }
-                items(uiState.expensesByAccount) { breakdown ->
-                    AccountBreakdownItem(
-                        breakdown = breakdown,
-                        currency = uiState.selectedCurrency,
-                        barColor = expenseColor,
-                    )
+                uiState.expensesByAccount.forEach { breakdown ->
+                    val isExpanded = breakdown.accountId in expandedExpenseIds
+                    item(key = "exp_acc_${breakdown.accountId}") {
+                        AccountCategoryHeader(
+                            breakdown = breakdown,
+                            currency = uiState.selectedCurrency,
+                            barColor = expenseColor,
+                            isExpanded = isExpanded,
+                            onToggle = {
+                                expandedExpenseIds = if (isExpanded)
+                                    expandedExpenseIds - breakdown.accountId
+                                else
+                                    expandedExpenseIds + breakdown.accountId
+                            },
+                        )
+                    }
+                    if (isExpanded) {
+                        item(key = "exp_chart_${breakdown.accountId}") {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                ExpensesPieChart(
+                                    data = breakdown.categories,
+                                    modifier = Modifier.size(120.dp),
+                                )
+                            }
+                        }
+                        items(
+                            breakdown.categories,
+                            key = { "exp_cat_${breakdown.accountId}_${it.category.id}" },
+                        ) { catExp ->
+                            CategoryExpenseItem(
+                                expense = catExp,
+                                currency = uiState.selectedCurrency,
+                                onClick = { if (catExp.category.id != 0L) onCategoryClick(catExp.category.id) },
+                                modifier = Modifier.padding(start = 48.dp),
+                            )
+                        }
+                    }
                 }
                 item { HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp)) }
             }
 
-            // Account breakdown — income
             if (uiState.incomeByAccount.isNotEmpty()) {
                 item {
                     Text(
-                        text = stringResource(R.string.analytics_top_incomes),
+                        text = stringResource(R.string.analytics_top_incomes_by_account),
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                     )
                 }
-                items(uiState.incomeByAccount) { breakdown ->
-                    AccountBreakdownItem(
-                        breakdown = breakdown,
-                        currency = uiState.selectedCurrency,
-                        barColor = ChartIncomeColor,
-                    )
+                uiState.incomeByAccount.forEach { breakdown ->
+                    val isExpanded = breakdown.accountId in expandedIncomeIds
+                    item(key = "inc_acc_${breakdown.accountId}") {
+                        AccountCategoryHeader(
+                            breakdown = breakdown,
+                            currency = uiState.selectedCurrency,
+                            barColor = ChartIncomeColor,
+                            isExpanded = isExpanded,
+                            onToggle = {
+                                expandedIncomeIds = if (isExpanded)
+                                    expandedIncomeIds - breakdown.accountId
+                                else
+                                    expandedIncomeIds + breakdown.accountId
+                            },
+                        )
+                    }
+                    if (isExpanded) {
+                        item(key = "inc_chart_${breakdown.accountId}") {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                ExpensesPieChart(
+                                    data = breakdown.categories,
+                                    modifier = Modifier.size(120.dp),
+                                )
+                            }
+                        }
+                        items(
+                            breakdown.categories,
+                            key = { "inc_cat_${breakdown.accountId}_${it.category.id}" },
+                        ) { catExp ->
+                            CategoryExpenseItem(
+                                expense = catExp,
+                                currency = uiState.selectedCurrency,
+                                onClick = { if (catExp.category.id != 0L) onCategoryClick(catExp.category.id) },
+                                modifier = Modifier.padding(start = 48.dp),
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -332,15 +411,33 @@ fun AnalyticsScreen(
 }
 
 @Composable
-private fun AccountBreakdownItem(
-    breakdown: AccountBreakdown,
+private fun LegendItem(color: Color, label: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            modifier = Modifier
+                .size(10.dp)
+                .clip(CircleShape)
+                .background(color),
+        )
+        Spacer(Modifier.width(4.dp))
+        Text(label, style = MaterialTheme.typography.labelSmall)
+    }
+}
+
+@Composable
+private fun AccountCategoryHeader(
+    breakdown: AccountCategoryBreakdown,
     currency: String,
     barColor: Color,
+    isExpanded: Boolean,
+    onToggle: () -> Unit,
 ) {
     val accentColor = parseHexColor(breakdown.accountColorHex)
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .semantics(mergeDescendants = true) {}
+            .clickable(onClick = onToggle)
             .padding(horizontal = 16.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -397,20 +494,13 @@ private fun AccountBreakdownItem(
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun LegendItem(color: Color, label: String) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(
-            modifier = Modifier
-                .size(10.dp)
-                .clip(CircleShape)
-                .background(color),
-        )
         Spacer(Modifier.width(4.dp))
-        Text(label, style = MaterialTheme.typography.labelSmall)
+        Icon(
+            imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+            contentDescription = null,
+            modifier = Modifier.size(20.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
@@ -419,6 +509,7 @@ private fun CategoryExpenseItem(
     expense: CategoryExpense,
     currency: String,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val color = parseHexColor(expense.category.colorHex)
     ListItem(
@@ -447,6 +538,6 @@ private fun CategoryExpenseItem(
                 style = MaterialTheme.typography.bodyMedium,
             )
         },
-        modifier = Modifier.clickable(onClick = onClick),
+        modifier = modifier.clickable(onClick = onClick),
     )
 }

@@ -347,4 +347,66 @@ class AnalyticsQueryTest {
         val result = txDao.observePeriodSummary(from = "2026-04-01", to = "2026-04-30").first()
         assertTrue(result.isEmpty())
     }
+
+    // ─── observeByAccountAndCategory ─────────────────────────────────────────
+
+    @Test
+    fun observeByAccountAndCategory_groupsByAccountAndCategory() = runTest {
+        insertTx(accountId = rubAccountId, amount = BigDecimal("500"), type = TransactionType.EXPENSE,
+            categoryId = foodCategoryId, date = LocalDate.of(2026, 4, 5))
+        insertTx(accountId = rubAccountId, amount = BigDecimal("300"), type = TransactionType.EXPENSE,
+            categoryId = foodCategoryId, date = LocalDate.of(2026, 4, 10))
+        insertTx(accountId = rubAccountId, amount = BigDecimal("200"), type = TransactionType.EXPENSE,
+            categoryId = transportCategoryId, date = LocalDate.of(2026, 4, 7))
+
+        val result = txDao.observeByAccountAndCategory(
+            currency = "RUB", from = "2026-04-01", to = "2026-04-30", type = "EXPENSE",
+        ).first()
+
+        assertEquals(2, result.size)
+        val food = result.first { it.categoryId == foodCategoryId }
+        assertEquals(rubAccountId, food.accountId)
+        assertAmount(BigDecimal("800"), food.total)
+        assertEquals(2, food.count)
+        val transport = result.first { it.categoryId == transportCategoryId }
+        assertEquals(rubAccountId, transport.accountId)
+        assertAmount(BigDecimal("200"), transport.total)
+        assertEquals(1, transport.count)
+    }
+
+    @Test
+    fun observeByAccountAndCategory_separatesRowsByAccount() = runTest {
+        val rubAccount2Id = accountDao.upsert(
+            AccountEntity(name = "Cash RUB", type = AccountType.CASH, currency = "RUB",
+                colorHex = "#222", iconName = "Money",
+                balance = BigDecimal("5000"), createdAt = LocalDate.of(2026, 1, 1))
+        )
+        insertTx(accountId = rubAccountId, amount = BigDecimal("500"), type = TransactionType.EXPENSE,
+            categoryId = foodCategoryId, date = LocalDate.of(2026, 4, 5))
+        insertTx(accountId = rubAccount2Id, amount = BigDecimal("200"), type = TransactionType.EXPENSE,
+            categoryId = foodCategoryId, date = LocalDate.of(2026, 4, 6))
+
+        val result = txDao.observeByAccountAndCategory(
+            currency = "RUB", from = "2026-04-01", to = "2026-04-30", type = "EXPENSE",
+        ).first()
+
+        assertEquals(2, result.size)
+        assertAmount(BigDecimal("500"), result.first { it.accountId == rubAccountId }.total)
+        assertAmount(BigDecimal("200"), result.first { it.accountId == rubAccount2Id }.total)
+    }
+
+    @Test
+    fun observeByAccountAndCategory_excludesOtherCurrency() = runTest {
+        insertTx(accountId = rubAccountId, amount = BigDecimal("500"), type = TransactionType.EXPENSE,
+            categoryId = foodCategoryId, date = LocalDate.of(2026, 4, 5))
+        insertTx(accountId = usdAccountId, amount = BigDecimal("200"), type = TransactionType.EXPENSE,
+            categoryId = foodCategoryId, date = LocalDate.of(2026, 4, 6))
+
+        val result = txDao.observeByAccountAndCategory(
+            currency = "RUB", from = "2026-04-01", to = "2026-04-30", type = "EXPENSE",
+        ).first()
+
+        assertEquals(1, result.size)
+        assertEquals(rubAccountId, result[0].accountId)
+    }
 }

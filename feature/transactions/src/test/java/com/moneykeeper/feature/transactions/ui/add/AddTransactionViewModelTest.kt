@@ -19,6 +19,7 @@ import com.moneykeeper.core.domain.repository.DepositRepository
 import com.moneykeeper.core.domain.repository.RecurringRuleRepository
 import com.moneykeeper.core.domain.repository.TransactionRepository
 import com.moneykeeper.core.domain.repository.TransactionRunner
+import com.moneykeeper.core.domain.analytics.AccountCategorySum
 import com.moneykeeper.core.domain.analytics.AccountSum
 import com.moneykeeper.core.domain.analytics.CategorySum
 import com.moneykeeper.core.domain.analytics.MonthlyBarEntry
@@ -93,6 +94,7 @@ class AddTransactionViewModelTest {
         override fun observePeriodSummary(from: LocalDate, to: LocalDate): Flow<List<PeriodSummaryByCurrency>> = throw UnsupportedOperationException()
         override fun observeByCategory(currency: String, from: LocalDate, to: LocalDate, type: TransactionType): Flow<List<CategorySum>> = throw UnsupportedOperationException()
         override fun observeByAccount(currency: String, from: LocalDate, to: LocalDate, type: TransactionType): Flow<List<AccountSum>> = throw UnsupportedOperationException()
+        override fun observeByAccountAndCategory(currency: String, from: LocalDate, to: LocalDate, type: TransactionType): Flow<List<AccountCategorySum>> = throw UnsupportedOperationException()
         override fun observeMonthlyTrend(currency: String, from: LocalDate, to: LocalDate): Flow<List<MonthlyBarEntry>> = throw UnsupportedOperationException()
         override suspend fun getAll(): List<TransactionWithMeta> = emptyList()
         override suspend fun getById(id: Long): Transaction? = null

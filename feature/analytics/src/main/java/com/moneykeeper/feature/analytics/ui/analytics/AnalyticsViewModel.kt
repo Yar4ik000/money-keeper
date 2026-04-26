@@ -2,7 +2,9 @@ package com.moneykeeper.feature.analytics.ui.analytics
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.moneykeeper.core.domain.analytics.AccountCategorySum
 import com.moneykeeper.core.domain.analytics.CategorySum
+import com.moneykeeper.core.domain.model.Account
 import com.moneykeeper.core.domain.model.Category
 import com.moneykeeper.core.domain.model.CategoryType
 import com.moneykeeper.core.domain.model.TransactionType
@@ -56,9 +58,9 @@ class AnalyticsViewModel @Inject constructor(
         ) { expSums, incSums, cats -> Triple(expSums, incSums, cats) }
 
         val accFlow = combine(
-            transactionRepo.observeByAccount(effectiveCurrency, from, to, TransactionType.EXPENSE),
-            transactionRepo.observeByAccount(effectiveCurrency, from, to, TransactionType.INCOME),
-        ) { expAcc, incAcc -> Pair(expAcc, incAcc) }
+            transactionRepo.observeByAccountAndCategory(effectiveCurrency, from, to, TransactionType.EXPENSE),
+            transactionRepo.observeByAccountAndCategory(effectiveCurrency, from, to, TransactionType.INCOME),
+        ) { expAccCat, incAccCat -> Pair(expAccCat, incAccCat) }
 
         combine(
             catFlow,
@@ -68,7 +70,7 @@ class AnalyticsViewModel @Inject constructor(
             _rollUpToParent,
         ) { catData, trend, periodSummary, accData, rollUp ->
             val (expSums, incSums, cats) = catData
-            val (expAccSums, incAccSums) = accData
+            val (expAccCat, incAccCat) = accData
             val catMap = cats.associateBy { it.id }
             val expenseTotal = expSums.sumOf { it.total }
             val incomeTotal = incSums.sumOf { it.total }
@@ -94,23 +96,6 @@ class AnalyticsViewModel @Inject constructor(
                 )
             }
 
-            fun buildAccountItems(
-                sums: List<com.moneykeeper.core.domain.analytics.AccountSum>,
-                total: BigDecimal,
-            ) = sums.sortedByDescending { it.total }.mapNotNull { sum ->
-                val acc = accMap[sum.accountId] ?: return@mapNotNull null
-                AccountBreakdown(
-                    accountId = acc.id,
-                    accountName = acc.name,
-                    accountColorHex = acc.colorHex,
-                    accountIconName = acc.iconName,
-                    total = sum.total,
-                    percentage = if (total > BigDecimal.ZERO)
-                        (sum.total.toDouble() / total.toDouble() * 100.0).toFloat() else 0f,
-                    transactionCount = sum.count,
-                )
-            }
-
             AnalyticsUiState(
                 isLoading = false,
                 period = period,
@@ -118,8 +103,12 @@ class AnalyticsViewModel @Inject constructor(
                 selectedCurrency = effectiveCurrency,
                 categoryExpenses = buildCategoryItems(expSums, expenseTotal, CategoryType.EXPENSE),
                 incomeCategoryExpenses = buildCategoryItems(incSums, incomeTotal, CategoryType.INCOME),
-                expensesByAccount = buildAccountItems(expAccSums, expenseTotal),
-                incomeByAccount = buildAccountItems(incAccSums, incomeTotal),
+                expensesByAccount = buildCombinedBreakdown(
+                    expAccCat, cats, catMap, accMap, expenseTotal, CategoryType.EXPENSE, rollUp,
+                ),
+                incomeByAccount = buildCombinedBreakdown(
+                    incAccCat, cats, catMap, accMap, incomeTotal, CategoryType.INCOME, rollUp,
+                ),
                 monthlyTrend = trend.map { entry ->
                     MonthlyBarEntry(
                         month = YearMonth.parse(entry.yearMonth),
@@ -160,6 +149,52 @@ internal fun rollUpCategorySums(
                 categoryId = rootId,
                 total = grouped.sumOf { it.total },
                 count = grouped.sumOf { it.count },
+            )
+        }
+}
+
+internal fun buildCombinedBreakdown(
+    accCatSums: List<AccountCategorySum>,
+    categories: List<Category>,
+    catMap: Map<Long, Category>,
+    accMap: Map<Long, Account>,
+    allTotal: BigDecimal,
+    fallbackType: CategoryType,
+    rollUp: Boolean,
+): List<AccountCategoryBreakdown> {
+    if (accCatSums.isEmpty()) return emptyList()
+    val byAccount = accCatSums.groupBy { it.accountId }
+    return byAccount.entries
+        .sortedByDescending { (_, sums) -> sums.sumOf { it.total } }
+        .mapNotNull { (accId, sums) ->
+            val acc = accMap[accId] ?: return@mapNotNull null
+            val accTotal = sums.sumOf { it.total }
+            val accCount = sums.sumOf { it.count }
+            val catSums = sums.map { CategorySum(it.categoryId, it.total, it.count) }
+            val effectiveCatSums = if (rollUp) rollUpCategorySums(catSums, categories) else catSums
+            val catItems = effectiveCatSums.sortedByDescending { it.total }.mapNotNull { sum ->
+                val cat = catMap[sum.categoryId] ?: if (sum.categoryId == 0L)
+                    Category(id = 0L, name = "Без категории", type = fallbackType,
+                        colorHex = "#9E9E9E", iconName = "MoreHoriz")
+                else return@mapNotNull null
+                CategoryExpense(
+                    category = cat,
+                    total = sum.total,
+                    percentage = if (accTotal > BigDecimal.ZERO)
+                        (sum.total.toDouble() / accTotal.toDouble() * 100.0).toFloat() else 0f,
+                    transactionCount = sum.count,
+                )
+            }
+            AccountCategoryBreakdown(
+                accountId = acc.id,
+                accountName = acc.name,
+                accountColorHex = acc.colorHex,
+                accountIconName = acc.iconName,
+                total = accTotal,
+                percentage = if (allTotal > BigDecimal.ZERO)
+                    (accTotal.toDouble() / allTotal.toDouble() * 100.0).toFloat() else 0f,
+                transactionCount = accCount,
+                categories = catItems,
             )
         }
 }

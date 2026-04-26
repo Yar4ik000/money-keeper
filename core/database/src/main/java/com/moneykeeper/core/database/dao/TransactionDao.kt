@@ -72,6 +72,20 @@ interface TransactionDao {
     """)
     fun observeByAccount(currency: String, from: String, to: String, type: String): Flow<List<AccountSumRow>>
 
+    // Агрегация операций по счёту И категории — для режима "Счёт · категория" в аналитике
+    @Query("""
+        SELECT t.accountId AS accountId, COALESCE(t.categoryId, 0) AS categoryId,
+               SUM(t.amount) AS total, COUNT(*) AS count
+        FROM transactions t
+        INNER JOIN accounts a ON a.id = t.accountId
+        WHERE t.type = :type
+          AND a.currency = :currency
+          AND t.date BETWEEN :from AND :to
+        GROUP BY t.accountId, COALESCE(t.categoryId, 0)
+        ORDER BY t.accountId, total DESC
+    """)
+    fun observeByAccountAndCategory(currency: String, from: String, to: String, type: String): Flow<List<AccountCategorySumRow>>
+
     // Итоги доходов/расходов за период, раздельно по валютам
     @Query("""
         SELECT a.currency AS currency,
@@ -111,5 +125,6 @@ interface TransactionDao {
 // DAO-проекции — маппятся в domain-типы в репозитории
 data class CategorySumRow(val categoryId: Long, val total: BigDecimal, val count: Int)
 data class AccountSumRow(val accountId: Long, val total: BigDecimal, val count: Int)
+data class AccountCategorySumRow(val accountId: Long, val categoryId: Long, val total: BigDecimal, val count: Int)
 data class PeriodSummaryRow(val currency: String, val income: BigDecimal, val expense: BigDecimal)
 data class MonthlyTrendRow(val yearMonth: String, val income: BigDecimal, val expense: BigDecimal)

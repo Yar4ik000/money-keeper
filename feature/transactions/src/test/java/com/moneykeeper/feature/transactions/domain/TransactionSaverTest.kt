@@ -64,6 +64,8 @@ class TransactionSaverTest {
             throw UnsupportedOperationException()
         override fun observeByAccount(currency: String, from: LocalDate, to: LocalDate, type: TransactionType) =
             throw UnsupportedOperationException()
+        override fun observeByAccountAndCategory(currency: String, from: LocalDate, to: LocalDate, type: TransactionType) =
+            throw UnsupportedOperationException()
         override fun observeMonthlyTrend(currency: String, from: LocalDate, to: LocalDate) =
             throw UnsupportedOperationException()
         override suspend fun getById(id: Long): Transaction? =

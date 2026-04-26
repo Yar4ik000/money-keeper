@@ -4,6 +4,7 @@ import java.math.BigDecimal
 
 data class CategorySum(val categoryId: Long, val total: BigDecimal, val count: Int)
 data class AccountSum(val accountId: Long, val total: BigDecimal, val count: Int)
+data class AccountCategorySum(val accountId: Long, val categoryId: Long, val total: BigDecimal, val count: Int)
 
 data class PeriodSummaryByCurrency(
     val currency: String,

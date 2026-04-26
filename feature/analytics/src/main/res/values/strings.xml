@@ -44,10 +44,12 @@
     <!-- Analytics screen -->
     <string name="analytics_top_expenses">Расходы по категориям</string>
     <string name="analytics_top_incomes">Доходы по категориям</string>
+    <string name="analytics_top_expenses_by_account">Расходы по счетам</string>
+    <string name="analytics_top_incomes_by_account">Доходы по счетам</string>
     <string name="analytics_monthly_trend">Динамика доходов и расходов</string>
     <string name="analytics_daily_avg">Среднесуточный расход: %s</string>
     <string name="analytics_group_by_category">По категориям</string>
-    <string name="analytics_group_by_account">По счетам</string>
+<string name="analytics_group_by_account">По счетам</string>
     <string name="analytics_rollup_by_parent">Группировать по разделам</string>
     <string name="analytics_no_data">Нет данных за период</string>
     <string name="analytics_no_expenses">Расходов в этом периоде нет</string>
