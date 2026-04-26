@@ -23,7 +23,7 @@ val MIGRATION_6_7 = object : Migration(6, 7) {
                 FOREIGN KEY(`depositId`) REFERENCES `deposits`(`id`) ON DELETE CASCADE
             )
         """.trimIndent())
-        db.execSQL("CREATE INDEX IF NOT EXISTS `idx_deposit_events_depositId_date` ON `deposit_events` (`depositId`, `date`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_deposit_events_depositId_date` ON `deposit_events` (`depositId`, `date`)")
 
         val today = LocalDate.now()
         val cursor = db.query(
