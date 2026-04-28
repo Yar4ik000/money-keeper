@@ -18,7 +18,7 @@ interface TransactionDao {
           AND (:categoryId IS NULL OR categoryId = :categoryId)
           AND (:type IS NULL OR type = :type)
           AND date BETWEEN :from AND :to
-        ORDER BY date DESC, createdAt DESC
+        ORDER BY date DESC, time DESC, id DESC
     """)
     fun observe(
         accountId: Long?,
@@ -30,12 +30,12 @@ interface TransactionDao {
 
     @Query("""
         SELECT * FROM transactions
-        ORDER BY date DESC, createdAt DESC
+        ORDER BY date DESC, id DESC
         LIMIT :limit
     """)
     fun observeRecent(limit: Int): Flow<List<TransactionEntity>>
 
-    @Query("SELECT * FROM transactions ORDER BY date DESC, createdAt DESC")
+    @Query("SELECT * FROM transactions ORDER BY date DESC, time DESC, id DESC")
     suspend fun getAll(): List<TransactionEntity>
 
     @Query("SELECT * FROM transactions WHERE id = :id")
@@ -71,6 +71,20 @@ interface TransactionDao {
         GROUP BY t.accountId
     """)
     fun observeByAccount(currency: String, from: String, to: String, type: String): Flow<List<AccountSumRow>>
+
+    // Агрегация операций по счёту И категории — для режима "Счёт · категория" в аналитике
+    @Query("""
+        SELECT t.accountId AS accountId, COALESCE(t.categoryId, 0) AS categoryId,
+               SUM(t.amount) AS total, COUNT(*) AS count
+        FROM transactions t
+        INNER JOIN accounts a ON a.id = t.accountId
+        WHERE t.type = :type
+          AND a.currency = :currency
+          AND t.date BETWEEN :from AND :to
+        GROUP BY t.accountId, COALESCE(t.categoryId, 0)
+        ORDER BY t.accountId, total DESC
+    """)
+    fun observeByAccountAndCategory(currency: String, from: String, to: String, type: String): Flow<List<AccountCategorySumRow>>
 
     // Итоги доходов/расходов за период, раздельно по валютам
     @Query("""
@@ -111,5 +125,6 @@ interface TransactionDao {
 // DAO-проекции — маппятся в domain-типы в репозитории
 data class CategorySumRow(val categoryId: Long, val total: BigDecimal, val count: Int)
 data class AccountSumRow(val accountId: Long, val total: BigDecimal, val count: Int)
+data class AccountCategorySumRow(val accountId: Long, val categoryId: Long, val total: BigDecimal, val count: Int)
 data class PeriodSummaryRow(val currency: String, val income: BigDecimal, val expense: BigDecimal)
 data class MonthlyTrendRow(val yearMonth: String, val income: BigDecimal, val expense: BigDecimal)

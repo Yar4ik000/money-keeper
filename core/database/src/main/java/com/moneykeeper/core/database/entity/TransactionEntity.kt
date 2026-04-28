@@ -34,6 +34,7 @@ data class TransactionEntity(
     val type: TransactionType,
     val categoryId: Long?,
     val date: LocalDate,
+    val time: String? = null,
     val note: String = "",
     val recurringRuleId: Long? = null,
     val createdAt: LocalDateTime,
@@ -42,11 +43,11 @@ data class TransactionEntity(
 fun TransactionEntity.toDomain() = Transaction(
     id = id, accountId = accountId, toAccountId = toAccountId,
     amount = amount, type = type, categoryId = categoryId,
-    date = date, note = note, recurringRuleId = recurringRuleId, createdAt = createdAt,
+    date = date, time = time, note = note, recurringRuleId = recurringRuleId, createdAt = createdAt,
 )
 
 fun Transaction.toEntity() = TransactionEntity(
     id = id, accountId = accountId, toAccountId = toAccountId,
     amount = amount, type = type, categoryId = categoryId,
-    date = date, note = note, recurringRuleId = recurringRuleId, createdAt = createdAt,
+    date = date, time = time, note = note, recurringRuleId = recurringRuleId, createdAt = createdAt,
 )

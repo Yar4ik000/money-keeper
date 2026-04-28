@@ -23,7 +23,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material3.AlertDialog
+import com.moneykeeper.core.ui.components.DeleteConfirmDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -122,10 +122,10 @@ fun CategoriesScreen(
                     .fillMaxSize()
                     .padding(padding),
             ) {
-                items(categories, key = { it.id }) { category ->
+                items(categories, key = { (cat, _) -> cat.id }) { (category, depth) ->
                     CategoryItem(
                         category = category,
-                        isChild = category.parentCategoryId != null,
+                        depth = depth,
                         isSelectionMode = isSelectionMode,
                         isSelected = category.id in selectedIds,
                         onEdit = { onEditCategory(category.id) },
@@ -148,26 +148,13 @@ fun CategoriesScreen(
     }
 
     if (showDeleteConfirm) {
-        AlertDialog(
-            onDismissRequest = { showDeleteConfirm = false },
-            title = { Text(stringResource(R.string.categories_delete_selected_title)) },
-            text = { Text(stringResource(R.string.categories_delete_selected_message, selectedIds.size)) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.deleteCategories(selectedIds)
-                        selectedIds = emptySet()
-                        showDeleteConfirm = false
-                    },
-                ) {
-                    Text(stringResource(R.string.categories_delete_confirm))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteConfirm = false }) {
-                    Text(stringResource(R.string.dialog_cancel))
-                }
-            },
+        DeleteConfirmDialog(
+            title = stringResource(R.string.categories_delete_selected_title),
+            body = stringResource(R.string.categories_delete_selected_message, selectedIds.size),
+            confirmLabel = stringResource(R.string.categories_delete_confirm),
+            cancelLabel = stringResource(R.string.dialog_cancel),
+            onConfirm = { viewModel.deleteCategories(selectedIds); selectedIds = emptySet(); showDeleteConfirm = false },
+            onDismiss = { showDeleteConfirm = false },
         )
     }
 }
@@ -176,20 +163,29 @@ fun CategoriesScreen(
 @Composable
 private fun CategoryItem(
     category: Category,
-    isChild: Boolean,
+    depth: Int,
     isSelectionMode: Boolean,
     isSelected: Boolean,
     onEdit: () -> Unit,
     onClick: () -> Unit,
     onLongPress: () -> Unit,
 ) {
+    val iconCircleSize = when (depth) { 0 -> 36.dp; 1 -> 28.dp; else -> 22.dp }
+    val iconSize = when (depth) { 0 -> 20.dp; 1 -> 16.dp; else -> 12.dp }
+    val textStyle = when (depth) {
+        0 -> MaterialTheme.typography.bodyLarge
+        1 -> MaterialTheme.typography.bodyMedium
+        else -> MaterialTheme.typography.bodySmall
+    }
+    val textColor = if (depth == 0) MaterialTheme.colorScheme.onSurface
+                    else MaterialTheme.colorScheme.onSurfaceVariant
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .background(
                 when {
                     isSelected -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
-                    isChild    -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                    depth > 0  -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (depth == 1) 0.4f else 0.6f)
                     else       -> MaterialTheme.colorScheme.surface
                 }
             )
@@ -198,18 +194,18 @@ private fun CategoryItem(
                 onLongClick = onLongPress,
             )
             .padding(
-                start = if (isChild) 40.dp else 16.dp,
+                start = (16 + depth * 24).dp,
                 end = 16.dp,
                 top = 12.dp,
                 bottom = 12.dp,
             ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (isChild) {
+        if (depth > 0) {
             Box(
                 modifier = Modifier
                     .width(3.dp)
-                    .height(36.dp)
+                    .height(iconCircleSize)
                     .background(
                         MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
                         shape = androidx.compose.foundation.shape.RoundedCornerShape(2.dp),
@@ -219,7 +215,7 @@ private fun CategoryItem(
         }
         Box(
             modifier = Modifier
-                .size(if (isChild) 28.dp else 36.dp)
+                .size(iconCircleSize)
                 .clip(CircleShape)
                 .background(parseHexColor(category.colorHex)),
             contentAlignment = Alignment.Center,
@@ -228,17 +224,15 @@ private fun CategoryItem(
                 imageVector = categoryIconVector(category.iconName),
                 contentDescription = null,
                 tint = androidx.compose.ui.graphics.Color.White,
-                modifier = Modifier.size(if (isChild) 16.dp else 20.dp),
+                modifier = Modifier.size(iconSize),
             )
         }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(
                 text = category.name,
-                style = if (isChild) MaterialTheme.typography.bodyMedium
-                        else MaterialTheme.typography.bodyLarge,
-                color = if (isChild) MaterialTheme.colorScheme.onSurfaceVariant
-                        else MaterialTheme.colorScheme.onSurface,
+                style = textStyle,
+                color = textColor,
             )
         }
         if (isSelectionMode) {

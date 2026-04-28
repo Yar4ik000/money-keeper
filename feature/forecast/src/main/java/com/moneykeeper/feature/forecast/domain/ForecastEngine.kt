@@ -88,8 +88,10 @@ class ForecastEngine @Inject constructor() {
             val endDate = deposit.endDate
 
             if (endDate != null && !endDate.isAfter(targetDate)) {
+                // Remove the entire stored balance (principal + accrued interest), then credit maturity.
+                val currentBalance = accountMap[deposit.accountId]?.balance ?: deposit.initialAmount
                 val maturity = DepositCalculator.projectedBalance(deposit, endDate)
-                balances.merge(deposit.accountId, deposit.initialAmount.negate(), BigDecimal::add)
+                balances.merge(deposit.accountId, currentBalance.negate(), BigDecimal::add)
                 balances.merge(payoutId, maturity, BigDecimal::add)
                 events += TimelineEvent.DepositMaturity(
                     date = endDate,
@@ -102,8 +104,9 @@ class ForecastEngine @Inject constructor() {
                     description = "Окончание вклада: $depositAccountName",
                 )
             } else {
-                // Deposit does not mature by targetDate. Reflect accrued interest only when
-                // the user actually sees it in their available balance:
+                // Deposit does not mature by targetDate. Add only the ADDITIONAL interest
+                // that will accrue from today to targetDate (account.balance already contains
+                // all interest accrued up to today after the v1.4.0 migration).
                 //   - Open-ended account (no endDate, e.g. SAVINGS) — interest is credited ongoing
                 //   - Capitalized term deposit — interest is added to principal each period
                 // For a non-capitalized term deposit with a fixed endDate, interest accumulates
@@ -112,8 +115,11 @@ class ForecastEngine @Inject constructor() {
                 val showAccruedInterest = endDate == null || deposit.isCapitalized
                 if (showAccruedInterest) {
                     val interest =
-                        DepositCalculator.projectedBalance(deposit, targetDate) - deposit.initialAmount
-                    balances.merge(deposit.accountId, interest, BigDecimal::add)
+                        DepositCalculator.projectedBalance(deposit, targetDate) -
+                            DepositCalculator.projectedBalance(deposit, today)
+                    if (interest.signum() > 0) {
+                        balances.merge(deposit.accountId, interest, BigDecimal::add)
+                    }
                 }
             }
         }

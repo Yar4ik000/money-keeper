@@ -71,6 +71,7 @@ fun EditTransactionRoute(
         onToAccountSelect = viewModel::onToAccountSelect,
         onCategorySelect = viewModel::onCategorySelect,
         onDateChange = viewModel::onDateChange,
+        onTimeChange = viewModel::onTimeChange,
         onNoteChange = viewModel::onNoteChange,
         onRecurringToggle = viewModel::onRecurringToggle,
         onRecurringRuleChange = viewModel::onRecurringRuleChange,

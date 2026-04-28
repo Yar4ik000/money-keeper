@@ -19,7 +19,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -50,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.moneykeeper.core.domain.model.TransactionWithMeta
+import com.moneykeeper.core.ui.components.DeleteConfirmDialog
 import com.moneykeeper.core.ui.util.formatAsCurrency
 import com.moneykeeper.feature.analytics.R
 import com.moneykeeper.feature.analytics.ui.components.PeriodSelector
@@ -326,30 +326,13 @@ fun HistoryScreen(
     }
 
     if (showDeleteConfirm && success != null) {
-        AlertDialog(
-            onDismissRequest = { showDeleteConfirm = false },
-            title = { Text(stringResource(R.string.history_delete_confirm_title)) },
-            text = {
-                Text(stringResource(R.string.history_delete_confirm_message, success.selectedIds.size))
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showDeleteConfirm = false
-                        onDeleteSelected()
-                    },
-                ) {
-                    Text(
-                        stringResource(R.string.history_delete_selected),
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteConfirm = false }) {
-                    Text(stringResource(R.string.action_cancel))
-                }
-            },
+        DeleteConfirmDialog(
+            title = stringResource(R.string.history_delete_confirm_title),
+            body = stringResource(R.string.history_delete_confirm_message, success.selectedIds.size),
+            confirmLabel = stringResource(R.string.history_delete_selected),
+            cancelLabel = stringResource(R.string.action_cancel),
+            onConfirm = { showDeleteConfirm = false; onDeleteSelected() },
+            onDismiss = { showDeleteConfirm = false },
         )
     }
 

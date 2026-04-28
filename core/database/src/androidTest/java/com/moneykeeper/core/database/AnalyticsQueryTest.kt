@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -177,6 +178,53 @@ class AnalyticsQueryTest {
         assertEquals(foodCategoryId, expenses[0].categoryId)
     }
 
+    @Test
+    fun observeByCategory_threeLevelHierarchyEachDepthHasOwnRow() = runTest {
+        // Транспорт (depth 0) → Авто (depth 1) → Бензин (depth 2)
+        val rootId = categoryDao.upsert(
+            CategoryEntity(name = "Транспорт2", type = CategoryType.EXPENSE,
+                colorHex = "#42A5F5", iconName = "DirectionsBus", sortOrder = 99)
+        )
+        val childId = categoryDao.upsert(
+            CategoryEntity(name = "Авто", type = CategoryType.EXPENSE,
+                colorHex = "#42A5F5", iconName = "DirectionsCar", sortOrder = 0,
+                parentCategoryId = rootId)
+        )
+        val grandchildId = categoryDao.upsert(
+            CategoryEntity(name = "Бензин", type = CategoryType.EXPENSE,
+                colorHex = "#FF7043", iconName = "LocalGasStation", sortOrder = 0,
+                parentCategoryId = childId)
+        )
+
+        // One transaction per level + an extra on the grandchild to verify count/sum
+        insertTx(amount = BigDecimal("100"), type = TransactionType.EXPENSE,
+            categoryId = rootId, date = LocalDate.of(2026, 4, 1))
+        insertTx(amount = BigDecimal("200"), type = TransactionType.EXPENSE,
+            categoryId = childId, date = LocalDate.of(2026, 4, 2))
+        insertTx(amount = BigDecimal("300"), type = TransactionType.EXPENSE,
+            categoryId = grandchildId, date = LocalDate.of(2026, 4, 3))
+        insertTx(amount = BigDecimal("50"), type = TransactionType.EXPENSE,
+            categoryId = grandchildId, date = LocalDate.of(2026, 4, 4))
+
+        val result = txDao.observeByCategory(
+            currency = "RUB", from = "2026-04-01", to = "2026-04-30", type = "EXPENSE",
+        ).first()
+
+        // Each depth gets its own row — no rollup into parent
+        val rootRow = result.find { it.categoryId == rootId }
+        val childRow = result.find { it.categoryId == childId }
+        val grandchildRow = result.find { it.categoryId == grandchildId }
+        assertNotNull(rootRow)
+        assertNotNull(childRow)
+        assertNotNull(grandchildRow)
+        assertAmount(BigDecimal("100"), rootRow!!.total)
+        assertEquals(1, rootRow.count)
+        assertAmount(BigDecimal("200"), childRow!!.total)
+        assertEquals(1, childRow.count)
+        assertAmount(BigDecimal("350"), grandchildRow!!.total)
+        assertEquals(2, grandchildRow.count)
+    }
+
     // ─── observeByAccount ─────────────────────────────────────────────────────
 
     @Test
@@ -298,5 +346,67 @@ class AnalyticsQueryTest {
 
         val result = txDao.observePeriodSummary(from = "2026-04-01", to = "2026-04-30").first()
         assertTrue(result.isEmpty())
+    }
+
+    // ─── observeByAccountAndCategory ─────────────────────────────────────────
+
+    @Test
+    fun observeByAccountAndCategory_groupsByAccountAndCategory() = runTest {
+        insertTx(accountId = rubAccountId, amount = BigDecimal("500"), type = TransactionType.EXPENSE,
+            categoryId = foodCategoryId, date = LocalDate.of(2026, 4, 5))
+        insertTx(accountId = rubAccountId, amount = BigDecimal("300"), type = TransactionType.EXPENSE,
+            categoryId = foodCategoryId, date = LocalDate.of(2026, 4, 10))
+        insertTx(accountId = rubAccountId, amount = BigDecimal("200"), type = TransactionType.EXPENSE,
+            categoryId = transportCategoryId, date = LocalDate.of(2026, 4, 7))
+
+        val result = txDao.observeByAccountAndCategory(
+            currency = "RUB", from = "2026-04-01", to = "2026-04-30", type = "EXPENSE",
+        ).first()
+
+        assertEquals(2, result.size)
+        val food = result.first { it.categoryId == foodCategoryId }
+        assertEquals(rubAccountId, food.accountId)
+        assertAmount(BigDecimal("800"), food.total)
+        assertEquals(2, food.count)
+        val transport = result.first { it.categoryId == transportCategoryId }
+        assertEquals(rubAccountId, transport.accountId)
+        assertAmount(BigDecimal("200"), transport.total)
+        assertEquals(1, transport.count)
+    }
+
+    @Test
+    fun observeByAccountAndCategory_separatesRowsByAccount() = runTest {
+        val rubAccount2Id = accountDao.upsert(
+            AccountEntity(name = "Cash RUB", type = AccountType.CASH, currency = "RUB",
+                colorHex = "#222", iconName = "Money",
+                balance = BigDecimal("5000"), createdAt = LocalDate.of(2026, 1, 1))
+        )
+        insertTx(accountId = rubAccountId, amount = BigDecimal("500"), type = TransactionType.EXPENSE,
+            categoryId = foodCategoryId, date = LocalDate.of(2026, 4, 5))
+        insertTx(accountId = rubAccount2Id, amount = BigDecimal("200"), type = TransactionType.EXPENSE,
+            categoryId = foodCategoryId, date = LocalDate.of(2026, 4, 6))
+
+        val result = txDao.observeByAccountAndCategory(
+            currency = "RUB", from = "2026-04-01", to = "2026-04-30", type = "EXPENSE",
+        ).first()
+
+        assertEquals(2, result.size)
+        assertAmount(BigDecimal("500"), result.first { it.accountId == rubAccountId }.total)
+        assertAmount(BigDecimal("200"), result.first { it.accountId == rubAccount2Id }.total)
+    }
+
+    @Test
+    fun observeByAccountAndCategory_excludesOtherCurrency() = runTest {
+        insertTx(accountId = rubAccountId, amount = BigDecimal("500"), type = TransactionType.EXPENSE,
+            categoryId = foodCategoryId, date = LocalDate.of(2026, 4, 5))
+        insertTx(accountId = usdAccountId, amount = BigDecimal("200"), type = TransactionType.EXPENSE,
+            categoryId = foodCategoryId, date = LocalDate.of(2026, 4, 6))
+
+        val result = txDao.observeByAccountAndCategory(
+            currency = "RUB", from = "2026-04-01", to = "2026-04-30", type = "EXPENSE",
+        ).first()
+
+        assertEquals(1, result.size)
+        assertEquals(rubAccountId, result[0].accountId)
     }
 }

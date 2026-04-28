@@ -4,8 +4,11 @@ import androidx.lifecycle.SavedStateHandle
 import com.moneykeeper.core.domain.model.Account
 import com.moneykeeper.core.domain.model.AccountType
 import com.moneykeeper.core.domain.model.Deposit
+import com.moneykeeper.core.domain.model.DepositEvent
 import com.moneykeeper.core.domain.repository.AccountRepository
+import com.moneykeeper.core.domain.repository.DepositEventRepository
 import com.moneykeeper.core.domain.repository.DepositRepository
+import com.moneykeeper.core.domain.repository.TransactionRunner
 import com.moneykeeper.core.domain.money.MultiCurrencyTotal
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -18,6 +21,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -66,6 +70,18 @@ class EditAccountViewModelTest {
         }
     }
 
+    private val fakeDepositEventRepo = object : DepositEventRepository {
+        override fun observe(depositId: Long): Flow<List<DepositEvent>> = MutableStateFlow(emptyList())
+        override suspend fun getAll(depositId: Long): List<DepositEvent> = emptyList()
+        override suspend fun insert(event: DepositEvent): Long = 0L
+        override suspend fun delete(id: Long) = Unit
+        override suspend fun deleteAll(depositId: Long) = Unit
+    }
+
+    private val fakeTxRunner = object : TransactionRunner {
+        override suspend fun <T> run(block: suspend () -> T): T = block()
+    }
+
     private val fakeDepositRepo = object : DepositRepository {
         override fun observeAll(): Flow<List<Deposit>> = MutableStateFlow(emptyList())
         override fun observeExpiringSoon(daysThreshold: Int): Flow<List<Deposit>> = MutableStateFlow(emptyList())
@@ -81,6 +97,8 @@ class EditAccountViewModelTest {
     ) = EditAccountViewModel(
         accountRepo = accountRepo(existing),
         depositRepo = fakeDepositRepo,
+        depositEventRepo = fakeDepositEventRepo,
+        txRunner = fakeTxRunner,
         savedStateHandle = SavedStateHandle(mapOf("accountId" to (accountId ?: -1L))),
     )
 
@@ -136,5 +154,27 @@ class EditAccountViewModelTest {
         viewModel.onNameChange("Карта")
         viewModel.save().join()
         assertEquals(EditAccountError.NameTaken, viewModel.uiState.value.error)
+    }
+
+    // ── zero initialAmount allowed for DEPOSIT / SAVINGS ─────────────────────
+
+    @Test
+    fun `deposit with zero initialAmount saves successfully`() = runTest {
+        val viewModel = vm()
+        viewModel.onNameChange("Вклад")
+        viewModel.onTypeChange(com.moneykeeper.core.domain.model.AccountType.DEPOSIT)
+        viewModel.save().join()
+        assertTrue(viewModel.uiState.value.saved)
+        assertNull(viewModel.uiState.value.error)
+    }
+
+    @Test
+    fun `savings with zero initialAmount saves successfully`() = runTest {
+        val viewModel = vm()
+        viewModel.onNameChange("Накопления")
+        viewModel.onTypeChange(com.moneykeeper.core.domain.model.AccountType.SAVINGS)
+        viewModel.save().join()
+        assertTrue(viewModel.uiState.value.saved)
+        assertNull(viewModel.uiState.value.error)
     }
 }

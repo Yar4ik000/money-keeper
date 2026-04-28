@@ -4,6 +4,7 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import com.moneykeeper.core.domain.model.AccrualBasis
 import com.moneykeeper.core.domain.model.CapPeriod
 import com.moneykeeper.core.domain.model.Deposit
 import com.moneykeeper.core.domain.model.RateTier
@@ -47,6 +48,7 @@ data class DepositEntity(
     val payoutAccountId: Long?,
     val isActive: Boolean = true,
     val rateTiersJson: String? = null,
+    val accrualBasis: AccrualBasis = AccrualBasis.DAILY,
 )
 
 @kotlinx.serialization.Serializable
@@ -68,6 +70,7 @@ fun DepositEntity.toDomain() = Deposit(
     notifyDaysBefore = notifyDaysBefore, autoRenew = autoRenew,
     payoutAccountId = payoutAccountId, isActive = isActive,
     rateTiers = rateTiersJson?.let { runCatching { it.toRateTiers() }.getOrElse { emptyList() } } ?: emptyList(),
+    accrualBasis = accrualBasis,
 )
 
 fun Deposit.toEntity() = DepositEntity(
@@ -77,4 +80,5 @@ fun Deposit.toEntity() = DepositEntity(
     notifyDaysBefore = notifyDaysBefore, autoRenew = autoRenew,
     payoutAccountId = payoutAccountId, isActive = isActive,
     rateTiersJson = if (rateTiers.isEmpty()) null else rateTiers.toJson(),
+    accrualBasis = accrualBasis,
 )

@@ -11,8 +11,12 @@ import com.moneykeeper.core.domain.model.RecurringRuleWithTemplate
 import com.moneykeeper.core.domain.model.Transaction
 import com.moneykeeper.core.domain.model.TransactionType
 import com.moneykeeper.core.domain.model.TransactionWithMeta
+import com.moneykeeper.core.domain.model.Deposit
+import com.moneykeeper.core.domain.model.DepositEvent
 import com.moneykeeper.core.domain.repository.AccountRepository
 import com.moneykeeper.core.domain.repository.CategoryRepository
+import com.moneykeeper.core.domain.repository.DepositEventRepository
+import com.moneykeeper.core.domain.repository.DepositRepository
 import com.moneykeeper.core.domain.repository.RecurringRuleRepository
 import com.moneykeeper.core.domain.repository.TransactionRepository
 import com.moneykeeper.core.domain.repository.TransactionRunner
@@ -94,6 +98,8 @@ class EditTransactionViewModelTest {
             throw UnsupportedOperationException()
         override fun observeByAccount(currency: String, from: LocalDate, to: LocalDate, type: TransactionType) =
             throw UnsupportedOperationException()
+        override fun observeByAccountAndCategory(currency: String, from: LocalDate, to: LocalDate, type: TransactionType) =
+            throw UnsupportedOperationException()
         override fun observeMonthlyTrend(currency: String, from: LocalDate, to: LocalDate) =
             throw UnsupportedOperationException()
         override suspend fun getById(id: Long) = testTx.takeIf { it.id == id }
@@ -141,12 +147,29 @@ class EditTransactionViewModelTest {
         }
     }
 
+    private val fakeDepositRepo = object : DepositRepository {
+        override fun observeAll(): Flow<List<Deposit>> = MutableStateFlow(emptyList())
+        override fun observeExpiringSoon(daysThreshold: Int): Flow<List<Deposit>> = MutableStateFlow(emptyList())
+        override suspend fun getAllActive(): List<Deposit> = emptyList()
+        override suspend fun getByAccountId(accountId: Long): Deposit? = null
+        override suspend fun save(deposit: Deposit): Long = 0L
+        override suspend fun markClosed(id: Long) = Unit
+    }
+
+    private val fakeDepositEventRepo = object : DepositEventRepository {
+        override fun observe(depositId: Long): Flow<List<DepositEvent>> = MutableStateFlow(emptyList())
+        override suspend fun getAll(depositId: Long): List<DepositEvent> = emptyList()
+        override suspend fun insert(event: DepositEvent): Long = 0L
+        override suspend fun delete(id: Long) = Unit
+        override suspend fun deleteAll(depositId: Long) = Unit
+    }
+
     private fun createViewModel(): EditTransactionViewModel {
         val runner = object : TransactionRunner {
             override suspend fun <T> run(block: suspend () -> T) = block()
         }
         return EditTransactionViewModel(
-            transactionSaver = TransactionSaver(fakeTxRepo, fakeAccountRepo, fakeRuleRepo, runner),
+            transactionSaver = TransactionSaver(fakeTxRepo, fakeAccountRepo, fakeDepositRepo, fakeDepositEventRepo, fakeRuleRepo, runner),
             transactionRepo = fakeTxRepo,
             accountRepo = fakeAccountRepo,
             categoryRepo = fakeCategoryRepo,

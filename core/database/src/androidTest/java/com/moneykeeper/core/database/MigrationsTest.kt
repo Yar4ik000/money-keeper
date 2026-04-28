@@ -7,6 +7,9 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.moneykeeper.core.database.migration.MIGRATION_2_3
 import com.moneykeeper.core.database.migration.MIGRATION_4_5
 import com.moneykeeper.core.database.migration.MIGRATION_5_6
+import com.moneykeeper.core.database.migration.MIGRATION_6_7
+import com.moneykeeper.core.database.migration.MIGRATION_7_8
+import com.moneykeeper.core.database.migration.MIGRATION_8_9
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
@@ -348,6 +351,153 @@ class MigrationsTest {
         }
         db.query("SELECT COUNT(*) FROM accounts").use { c ->
             assertTrue(c.moveToFirst()); assertEquals(1, c.getInt(0))
+        }
+    }
+
+    // ── 6 → 7 (manual: deposit_events table + balance materialisation) ────────
+
+    @Test
+    fun migrate_6_to_7_createsDepositEventsTable() {
+        helper.createDatabase(TEST_DB, 6).apply { close() }
+
+        val db = helper.runMigrationsAndValidate(TEST_DB, 7, true, MIGRATION_6_7)
+
+        // deposit_events table must exist with the right columns
+        db.query("SELECT id, depositId, date, type, amount, note FROM deposit_events LIMIT 0").use { c ->
+            assertEquals(6, c.columnCount)
+        }
+    }
+
+    @Test
+    fun migrate_6_to_7_preservesExistingDeposit() {
+        helper.createDatabase(TEST_DB, 6).apply {
+            execSQL(INSERT_ACCOUNT)
+            execSQL("""
+                INSERT INTO deposits
+                    (accountId, initialAmount, interestRate, startDate, endDate,
+                     isCapitalized, capitalizationPeriod, notifyDaysBefore, autoRenew,
+                     payoutAccountId, isActive, rateTiersJson)
+                VALUES (1, '100000.00', '12.00', '2024-01-01', '2024-12-31',
+                        0, NULL, '7', 0, NULL, 1, NULL)
+            """.trimIndent())
+            close()
+        }
+
+        val db = helper.runMigrationsAndValidate(TEST_DB, 7, true, MIGRATION_6_7)
+
+        db.query("SELECT initialAmount FROM deposits").use { c ->
+            assertTrue(c.moveToFirst())
+            assertEquals("100000.00", c.getString(0))
+        }
+        // PRINCIPAL_ADD event must have been inserted for the migrated deposit
+        db.query("SELECT type FROM deposit_events WHERE type = 'PRINCIPAL_ADD'").use { c ->
+            assertTrue("PRINCIPAL_ADD event must be created", c.moveToFirst())
+        }
+    }
+
+    @Test
+    fun migrate_6_to_7_emptyDepositsTableIsOk() {
+        helper.createDatabase(TEST_DB, 6).apply { close() }
+
+        val db = helper.runMigrationsAndValidate(TEST_DB, 7, true, MIGRATION_6_7)
+
+        db.query("SELECT COUNT(*) FROM deposit_events").use { c ->
+            assertTrue(c.moveToFirst())
+            assertEquals(0, c.getInt(0))
+        }
+    }
+
+    // ── 7 → 8 (manual: add accrualBasis to deposits) ─────────────────────────
+
+    @Test
+    fun migrate_7_to_8_addsAccrualBasisColumn() {
+        helper.createDatabase(TEST_DB, 7).apply {
+            execSQL(INSERT_ACCOUNT)
+            execSQL("""
+                INSERT INTO deposits
+                    (accountId, initialAmount, interestRate, startDate, endDate,
+                     isCapitalized, capitalizationPeriod, notifyDaysBefore, autoRenew,
+                     payoutAccountId, isActive, rateTiersJson)
+                VALUES (1, '50000.00', '10.00', '2025-01-01', NULL,
+                        0, NULL, '7', 0, NULL, 1, NULL)
+            """.trimIndent())
+            close()
+        }
+
+        val db = helper.runMigrationsAndValidate(TEST_DB, 8, true, MIGRATION_7_8)
+
+        db.query("SELECT accrualBasis FROM deposits").use { c ->
+            assertTrue("Deposit row must survive migration 7→8", c.moveToFirst())
+            assertEquals("DAILY", c.getString(0))
+        }
+    }
+
+    // ── 8 → 9 (manual: add time column to transactions) ─────────────────────
+
+    @Test
+    fun migrate_8_to_9_addsTimeColumnToTransactions() {
+        helper.createDatabase(TEST_DB, 8).apply {
+            execSQL(INSERT_ACCOUNT)
+            execSQL(INSERT_CATEGORY)
+            execSQL("""
+                INSERT INTO transactions
+                    (accountId, toAccountId, amount, type, categoryId, date, note, recurringRuleId, createdAt)
+                VALUES (1, NULL, '1000.00', 'EXPENSE', 1, '2026-01-01', '', NULL, '2026-01-01T10:00:00')
+            """.trimIndent())
+            close()
+        }
+
+        val db = helper.runMigrationsAndValidate(TEST_DB, 9, true, MIGRATION_8_9)
+
+        db.query("SELECT time FROM transactions").use { c ->
+            assertTrue("Transaction must survive migration 8→9", c.moveToFirst())
+            assertNull("time must default to NULL for existing rows", c.getString(0))
+        }
+    }
+
+    // ── Full 6 → 9 chain (v1.3.3 → current) ─────────────────────────────────
+
+    @Test
+    fun migrate_6_to_9_fullChain_schemaIsValid() {
+        helper.createDatabase(TEST_DB, 6).apply {
+            execSQL(INSERT_ACCOUNT)
+            execSQL("""
+                INSERT INTO deposits
+                    (accountId, initialAmount, interestRate, startDate, endDate,
+                     isCapitalized, capitalizationPeriod, notifyDaysBefore, autoRenew,
+                     payoutAccountId, isActive, rateTiersJson)
+                VALUES (1, '200000.00', '15.00', '2024-01-01', '2024-12-31',
+                        0, NULL, '7', 0, NULL, 1, NULL)
+            """.trimIndent())
+            execSQL(INSERT_CATEGORY)
+            execSQL("""
+                INSERT INTO transactions
+                    (accountId, toAccountId, amount, type, categoryId, date, note, recurringRuleId, createdAt)
+                VALUES (1, NULL, '500.00', 'EXPENSE', 1, '2024-06-01', '', NULL, '2024-06-01T12:00:00')
+            """.trimIndent())
+            close()
+        }
+
+        val db = helper.runMigrationsAndValidate(
+            TEST_DB, 9, true, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9,
+        )
+
+        // deposits: original row preserved, accrualBasis column added
+        db.query("SELECT initialAmount, accrualBasis FROM deposits").use { c ->
+            assertTrue("Deposit must survive full 6→9 migration", c.moveToFirst())
+            assertEquals("200000.00", c.getString(0))
+            assertEquals("DAILY", c.getString(1))
+        }
+        // transactions: original row preserved, time column added as NULL
+        db.query("SELECT amount, time FROM transactions").use { c ->
+            assertTrue("Transaction must survive full 6→9 migration", c.moveToFirst())
+            assertEquals("500.00", c.getString(0))
+            assertNull("time must be NULL for existing rows", c.getString(1))
+        }
+        // deposit_events created for the migrated deposit
+        db.query("SELECT COUNT(*) FROM deposit_events WHERE type = 'PRINCIPAL_ADD'").use { c ->
+            assertTrue(c.moveToFirst())
+            assertTrue("At least one PRINCIPAL_ADD event expected", c.getInt(0) >= 1)
         }
     }
 

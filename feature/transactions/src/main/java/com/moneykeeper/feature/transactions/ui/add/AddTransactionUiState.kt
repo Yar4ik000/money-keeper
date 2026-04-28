@@ -14,6 +14,7 @@ data class AddTransactionUiState(
     val selectedToAccount: Account? = null,
     val selectedCategory: Category? = null,
     val date: LocalDate = LocalDate.now(),
+    val time: String? = null,
     val note: String = "",
     val recurringRule: RecurringRule? = null,
     val isRecurring: Boolean = false,

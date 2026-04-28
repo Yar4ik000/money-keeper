@@ -74,6 +74,7 @@ class EditTransactionViewModel @Inject constructor(
                             categories.find { it.id == id }
                         },
                         date = tx.date,
+                        time = tx.time,
                         note = tx.note,
                         isRecurring = rule != null,
                         recurringRule = rule,
@@ -102,6 +103,8 @@ class EditTransactionViewModel @Inject constructor(
         _uiState.update { it.copy(selectedCategory = category, error = null) }
 
     fun onDateChange(date: LocalDate) = _uiState.update { it.copy(date = date) }
+
+    fun onTimeChange(time: String?) = _uiState.update { it.copy(time = time) }
 
     fun onNoteChange(note: String) = _uiState.update { it.copy(note = note) }
 
@@ -175,6 +178,7 @@ class EditTransactionViewModel @Inject constructor(
             type = s.type,
             categoryId = s.selectedCategory?.id,
             date = s.date,
+            time = s.time,
             note = s.note,
             createdAt = old.createdAt,
         )

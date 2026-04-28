@@ -2,10 +2,12 @@ package com.moneykeeper.core.database
 
 import android.content.Context
 import android.net.Uri
+import android.util.Base64
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.moneykeeper.core.database.entity.AccountEntity
 import com.moneykeeper.core.database.repository.BackupRepositoryImpl
+import com.moneykeeper.core.database.repository.importPlainIntoEncrypted
 import com.moneykeeper.core.database.security.DatabaseKeyStorage
 import com.moneykeeper.core.domain.model.AccountType
 import com.moneykeeper.core.domain.repository.BackupResult
@@ -23,6 +25,8 @@ import org.junit.runner.RunWith
 import java.io.File
 import java.math.BigDecimal
 import java.time.LocalDate
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 import javax.crypto.Cipher
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.SecretKeySpec
@@ -200,7 +204,165 @@ class BackupRestoreFlowTest {
         assertFalse(".restore-pending must be cleaned up", pending.exists())
     }
 
+    /**
+     * Regression test: restoring a backup created with an older DB version must trigger
+     * Room migrations (onUpgrade), not onCreate().
+     *
+     * Root cause of the original bug: importPlainIntoEncrypted replayed DDL but left
+     * user_version = 0. Room saw 0, assumed a brand-new database, called onCreate() instead
+     * of onUpgrade(), and crashed with "table already exists" (or schema mismatch).
+     *
+     * This test builds a fake v6 backup (exact schema from the exported schema JSON),
+     * restores it via the full BackupRepository flow, simulates restartProcess(), and
+     * re-opens with DatabaseProvider. A crash inside initialize() is the failure signal;
+     * successful migration is verified by checking columns/tables added in migrations 6→9.
+     */
+    @Test
+    fun restoreFromLegacyBackup_v6_roomRunsMigrationsNotOnCreate() = runTest {
+        val v6Plain = File(context.cacheDir, "rrt_v6_src.db")
+        val fakeZip = File(context.cacheDir, "rrt_v6_backup.mkbak")
+        try {
+            buildV6PlainDb(v6Plain, accountName = "Gamma")
+
+            buildFakeBackupZip(plainDb = v6Plain, output = fakeZip, dbVersion = 6)
+            v6Plain.delete()
+
+            // ── Restore ───────────────────────────────────────────────────────
+            val result = backupRepo.restoreBackup(Uri.fromFile(fakeZip), "ignored".toCharArray())
+            assertTrue("restoreBackup must succeed, got: $result", result is RestoreResult.Success)
+
+            // ── Simulate restartProcess() ─────────────────────────────────────
+            databaseProvider.close()
+            val dbFile = context.getDatabasePath(AppDatabase.DB_NAME)
+            val pending = File(dbFile.parentFile!!, "${dbFile.name}.restore-pending")
+            assertTrue(".restore-pending must exist after restore", pending.exists())
+            File(dbFile.parentFile!!, "${dbFile.name}-wal").delete()
+            File(dbFile.parentFile!!, "${dbFile.name}-shm").delete()
+            java.nio.file.Files.move(
+                pending.toPath(), dbFile.toPath(),
+                java.nio.file.StandardCopyOption.ATOMIC_MOVE,
+                java.nio.file.StandardCopyOption.REPLACE_EXISTING,
+            )
+
+            // ── Re-open: Room must call onUpgrade(6→9), not onCreate() ────────
+            // If user_version was left at 0, Room calls onCreate() and crashes with
+            // "table already exists". Success here proves the fix is working.
+            databaseProvider.initialize(dbKey.copyOf())
+
+            // ── Assert migrations ran and data survived ────────────────────────
+            val db = databaseProvider.require()
+            val accounts = db.accountDao().observeActive().first()
+            assertTrue("Gamma account must survive v6→v9 migration",
+                accounts.any { it.name == "Gamma" })
+
+            val sdb = db.openHelper.writableDatabase
+            // deposit_events table — created by migration 6→7
+            sdb.query("SELECT id FROM deposit_events LIMIT 0").close()
+            // accrualBasis column — added by migration 7→8
+            sdb.query("SELECT accrualBasis FROM deposits LIMIT 0").close()
+            // time column — added by migration 8→9
+            sdb.query("SELECT time FROM transactions LIMIT 0").close()
+        } finally {
+            v6Plain.delete()
+            fakeZip.delete()
+        }
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
+
+    /**
+     * Creates an unencrypted SQLite file with the exact v6 schema (from exported schema JSON).
+     * Uses SQLCipher with ByteArray(0) key so the output is a standard SQLite file that
+     * importPlainIntoEncrypted can ATTACH with KEY ''.
+     * journal_mode = DELETE ensures no WAL artefacts — all writes are in the main file.
+     */
+    private fun buildV6PlainDb(target: File, accountName: String) {
+        target.delete()
+        net.zetetic.database.sqlcipher.SQLiteDatabase.openDatabase(
+            target.absolutePath, ByteArray(0), null,
+            net.zetetic.database.sqlcipher.SQLiteDatabase.OPEN_READWRITE or
+            net.zetetic.database.sqlcipher.SQLiteDatabase.CREATE_IF_NECESSARY,
+            null, null,
+        ).use { db ->
+            db.rawQuery("PRAGMA journal_mode = DELETE", null).close()
+            db.execSQL("PRAGMA foreign_keys = OFF")
+            // Tables ordered so that FK references are satisfied (recurring_rules before transactions).
+            db.execSQL("""CREATE TABLE IF NOT EXISTS recurring_rules (
+                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                frequency TEXT NOT NULL, `interval` INTEGER NOT NULL,
+                startDate TEXT NOT NULL, endDate TEXT, lastGeneratedDate TEXT)""")
+            db.execSQL("""CREATE TABLE IF NOT EXISTS accounts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                name TEXT NOT NULL, type TEXT NOT NULL, currency TEXT NOT NULL,
+                colorHex TEXT NOT NULL, iconName TEXT NOT NULL, balance TEXT NOT NULL,
+                isArchived INTEGER NOT NULL, createdAt TEXT NOT NULL, sortOrder INTEGER NOT NULL)""")
+            db.execSQL("""CREATE TABLE IF NOT EXISTS deposits (
+                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                accountId INTEGER NOT NULL, initialAmount TEXT NOT NULL,
+                interestRate TEXT NOT NULL, startDate TEXT NOT NULL, endDate TEXT,
+                isCapitalized INTEGER NOT NULL, capitalizationPeriod TEXT,
+                notifyDaysBefore TEXT NOT NULL, autoRenew INTEGER NOT NULL,
+                payoutAccountId INTEGER, isActive INTEGER NOT NULL, rateTiersJson TEXT,
+                FOREIGN KEY(accountId) REFERENCES accounts(id) ON UPDATE NO ACTION ON DELETE CASCADE,
+                FOREIGN KEY(payoutAccountId) REFERENCES accounts(id) ON UPDATE NO ACTION ON DELETE SET NULL)""")
+            db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_deposits_accountId ON deposits (accountId)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_deposits_payoutAccountId ON deposits (payoutAccountId)")
+            db.execSQL("""CREATE TABLE IF NOT EXISTS categories (
+                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                name TEXT NOT NULL, type TEXT NOT NULL, colorHex TEXT NOT NULL,
+                iconName TEXT NOT NULL, parentCategoryId INTEGER,
+                isDefault INTEGER NOT NULL, sortOrder INTEGER NOT NULL,
+                FOREIGN KEY(parentCategoryId) REFERENCES categories(id) ON UPDATE NO ACTION ON DELETE SET NULL)""")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_categories_parentCategoryId ON categories (parentCategoryId)")
+            db.execSQL("""CREATE TABLE IF NOT EXISTS transactions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                accountId INTEGER NOT NULL, toAccountId INTEGER,
+                amount TEXT NOT NULL, type TEXT NOT NULL, categoryId INTEGER,
+                date TEXT NOT NULL, note TEXT NOT NULL, recurringRuleId INTEGER,
+                createdAt TEXT NOT NULL,
+                FOREIGN KEY(accountId) REFERENCES accounts(id) ON UPDATE NO ACTION ON DELETE CASCADE,
+                FOREIGN KEY(toAccountId) REFERENCES accounts(id) ON UPDATE NO ACTION ON DELETE SET NULL,
+                FOREIGN KEY(categoryId) REFERENCES categories(id) ON UPDATE NO ACTION ON DELETE SET NULL,
+                FOREIGN KEY(recurringRuleId) REFERENCES recurring_rules(id) ON UPDATE NO ACTION ON DELETE SET NULL)""")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_transactions_accountId ON transactions (accountId)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_transactions_toAccountId ON transactions (toAccountId)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_transactions_categoryId ON transactions (categoryId)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_transactions_date ON transactions (date)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_transactions_recurringRuleId ON transactions (recurringRuleId)")
+            db.execSQL("""CREATE TABLE IF NOT EXISTS budgets (
+                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, categoryIds TEXT,
+                amount TEXT NOT NULL, period TEXT NOT NULL, currency TEXT NOT NULL,
+                accountIds TEXT, warningThreshold INTEGER, criticalThreshold INTEGER)""")
+
+            db.execSQL("""INSERT INTO accounts
+                (name, type, currency, colorHex, iconName, balance, isArchived, createdAt, sortOrder)
+                VALUES ('$accountName', 'CARD', 'RUB', '#00FF00', 'CreditCard', '5000.00', 0, '2024-01-01', 0)""")
+
+            db.execSQL("PRAGMA foreign_keys = ON")
+        }
+    }
+
+    /**
+     * Wraps [plainDb] bytes into a .mkbak ZIP identical in format to BackupRepositoryImpl.createBackup().
+     * Uses [masterKey] as the backup encryption key — matches the stub KeyDerivation in setUp().
+     */
+    private fun buildFakeBackupZip(plainDb: File, output: File, dbVersion: Int) {
+        val iv = ByteArray(12) { 99.toByte() }
+        val encDb = aesGcmEncrypt(plainDb.readBytes(), masterKey, iv)
+        val kdfSalt = Base64.encodeToString(ByteArray(16) { 1 }, Base64.NO_WRAP)
+        val ivB64 = Base64.encodeToString(iv, Base64.NO_WRAP)
+        val manifest = """{"appVersionCode":106,"databaseVersion":$dbVersion,"createdAt":"2024-01-01T00:00:00Z","kdf":{"salt":"$kdfSalt","iterations":1,"memoryKb":64,"parallelism":1},"dbEncIv":"$ivB64","backupVersion":2}"""
+
+        output.delete()
+        ZipOutputStream(output.outputStream()).use { zip ->
+            zip.putNextEntry(ZipEntry("manifest.json"))
+            zip.write(manifest.toByteArray(Charsets.UTF_8))
+            zip.closeEntry()
+            zip.putNextEntry(ZipEntry("database.enc"))
+            zip.write(encDb)
+            zip.closeEntry()
+        }
+    }
 
     private fun testAccount(name: String, colorHex: String) = AccountEntity(
         name = name,

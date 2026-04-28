@@ -24,8 +24,8 @@ android {
         applicationId = "com.moneykeeper.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 106
-        versionName = "1.3.3"
+        versionCode = 107
+        versionName = "1.4.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

@@ -6,6 +6,7 @@ import com.moneykeeper.core.database.dao.AccountDao
 import com.moneykeeper.core.database.dao.BudgetDao
 import com.moneykeeper.core.database.dao.CategoryDao
 import com.moneykeeper.core.database.dao.DepositDao
+import com.moneykeeper.core.database.dao.DepositEventDao
 import com.moneykeeper.core.database.dao.RecurringRuleDao
 import com.moneykeeper.core.database.dao.TransactionDao
 import androidx.room.withTransaction
@@ -29,6 +30,7 @@ object DatabaseModule {
 
     @Provides fun provideAccountDao(db: AppDatabase): AccountDao = db.accountDao()
     @Provides fun provideDepositDao(db: AppDatabase): DepositDao = db.depositDao()
+    @Provides fun provideDepositEventDao(db: AppDatabase): DepositEventDao = db.depositEventDao()
     @Provides fun provideCategoryDao(db: AppDatabase): CategoryDao = db.categoryDao()
     @Provides fun provideTransactionDao(db: AppDatabase): TransactionDao = db.transactionDao()
     @Provides fun provideRecurringRuleDao(db: AppDatabase): RecurringRuleDao = db.recurringRuleDao()

@@ -4,8 +4,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -42,13 +40,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.moneykeeper.core.domain.calculator.DepositCalculator
+import com.moneykeeper.core.domain.model.AccrualBasis
 import com.moneykeeper.core.domain.model.CapPeriod
 import com.moneykeeper.core.domain.model.Deposit
 import com.moneykeeper.core.domain.model.RateTier
@@ -63,9 +61,7 @@ import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
-private val NOTIFY_OPTIONS = listOf(1, 3, 7, 14, 30)
-
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DepositSection(
     deposit: Deposit,
@@ -245,28 +241,31 @@ fun DepositSection(
             }
         }
 
-        if (!isSavings) {
-            Text(
-                text = stringResource(R.string.deposit_notify_days_label),
-                style = MaterialTheme.typography.labelLarge,
-            )
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                NOTIFY_OPTIONS.forEach { days ->
-                    val selected = days in deposit.notifyDaysBefore
-                    FilterChip(
-                        selected = selected,
-                        onClick = {
-                            val updated = if (selected)
-                                deposit.notifyDaysBefore - days
-                            else
-                                (deposit.notifyDaysBefore + days).sorted()
-                            onChange(deposit.copy(notifyDaysBefore = updated))
-                        },
-                        label = { Text(pluralStringResource(R.plurals.notify_days, days, days)) },
-                    )
+        // Accrual basis
+        Text(stringResource(R.string.deposit_accrual_basis_label), style = MaterialTheme.typography.labelLarge)
+        Column(Modifier.selectableGroup()) {
+            AccrualBasis.entries.forEach { basis ->
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .selectable(
+                            selected = deposit.accrualBasis == basis,
+                            onClick = { onChange(deposit.copy(accrualBasis = basis)) },
+                            role = Role.RadioButton,
+                        )
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    RadioButton(selected = deposit.accrualBasis == basis, onClick = null)
+                    Column(Modifier.padding(start = 8.dp)) {
+                        Text(stringResource(accrualBasisLabelRes(basis)), style = MaterialTheme.typography.bodyMedium)
+                        Text(stringResource(accrualBasisDescRes(basis)), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
             }
         }
+
+        // TODO(v1.7): restore notifyDaysBefore UI here (NEW-37) when AlarmManager-based notifications land
 
         if (!isSavings) {
             HorizontalDivider()
@@ -493,4 +492,14 @@ private fun capPeriodRes(period: CapPeriod): Int = when (period) {
     CapPeriod.MONTHLY   -> R.string.deposit_cap_monthly
     CapPeriod.QUARTERLY -> R.string.deposit_cap_quarterly
     CapPeriod.YEARLY    -> R.string.deposit_cap_yearly
+}
+
+private fun accrualBasisLabelRes(basis: AccrualBasis): Int = when (basis) {
+    AccrualBasis.DAILY        -> R.string.deposit_accrual_basis_daily
+    AccrualBasis.PERIOD_START -> R.string.deposit_accrual_basis_period_start
+}
+
+private fun accrualBasisDescRes(basis: AccrualBasis): Int = when (basis) {
+    AccrualBasis.DAILY        -> R.string.deposit_accrual_basis_daily_desc
+    AccrualBasis.PERIOD_START -> R.string.deposit_accrual_basis_period_start_desc
 }

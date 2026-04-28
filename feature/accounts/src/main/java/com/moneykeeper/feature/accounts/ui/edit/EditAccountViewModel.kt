@@ -3,11 +3,17 @@ package com.moneykeeper.feature.accounts.ui.edit
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.moneykeeper.core.domain.calculator.DepositCalculator
 import com.moneykeeper.core.domain.model.Account
 import com.moneykeeper.core.domain.model.AccountType
+import com.moneykeeper.core.domain.model.CapPeriod
 import com.moneykeeper.core.domain.model.Deposit
+import com.moneykeeper.core.domain.model.DepositEvent
+import com.moneykeeper.core.domain.model.DepositEventType
 import com.moneykeeper.core.domain.repository.AccountRepository
+import com.moneykeeper.core.domain.repository.DepositEventRepository
 import com.moneykeeper.core.domain.repository.DepositRepository
+import com.moneykeeper.core.domain.repository.TransactionRunner
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -23,6 +29,8 @@ import javax.inject.Inject
 class EditAccountViewModel @Inject constructor(
     private val accountRepo: AccountRepository,
     private val depositRepo: DepositRepository,
+    private val depositEventRepo: DepositEventRepository,
+    private val txRunner: TransactionRunner,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
@@ -85,6 +93,41 @@ class EditAccountViewModel @Inject constructor(
 
     fun onDepositChange(deposit: Deposit) = _uiState.update { it.copy(deposit = deposit, error = null) }
 
+    private suspend fun initializeDepositEvents(depositId: Long, deposit: Deposit, accountId: Long) {
+        val today = LocalDate.now()
+        val effectiveEnd = minOf<LocalDate>(deposit.endDate ?: today, today)
+        val step = deposit.capitalizationPeriod ?: CapPeriod.MONTHLY
+        val eventType = if (deposit.isCapitalized) DepositEventType.CAPITALIZATION else DepositEventType.INTEREST_ACCRUAL
+
+        txRunner.run {
+            if (deposit.initialAmount > BigDecimal.ZERO) {
+                depositEventRepo.insert(
+                    DepositEvent(depositId = depositId, date = deposit.startDate, type = DepositEventType.PRINCIPAL_ADD, amount = deposit.initialAmount)
+                )
+            }
+
+            var from = deposit.startDate
+            var principal = deposit.initialAmount
+            var totalInterest = BigDecimal.ZERO
+
+            while (true) {
+                val periodEnd = DepositCalculator.nextPeriodEnd(from, step)
+                if (periodEnd.isAfter(effectiveEnd)) break
+
+                val slices = DepositCalculator.accrueByPeriod(principal, deposit.copy(id = depositId), from, periodEnd)
+                for ((date, amount) in slices) {
+                    depositEventRepo.insert(DepositEvent(depositId = depositId, date = date, type = eventType, amount = amount))
+                }
+                val periodInterest = slices.fold(BigDecimal.ZERO) { acc, (_, v) -> acc + v }
+                totalInterest += periodInterest
+                if (deposit.isCapitalized) principal += periodInterest
+                from = periodEnd
+            }
+
+            if (totalInterest.signum() > 0) accountRepo.adjustBalance(accountId, totalInterest)
+        }
+    }
+
     fun save() = viewModelScope.launch {
         val s = _uiState.value
         if (s.name.isBlank()) {
@@ -107,11 +150,6 @@ class EditAccountViewModel @Inject constructor(
             isDepositType || isSavingsType -> {
                 val deposit = s.deposit ?: run {
                     _uiState.update { it.copy(error = EditAccountError.DepositParamsMissing) }
-                    return@launch
-                }
-                // TODO(v1.7): allow initialAmount = 0 once deposit_events model lands (PRINCIPAL_ADD handles first deposit)
-                if (deposit.initialAmount <= BigDecimal.ZERO) {
-                    _uiState.update { it.copy(error = EditAccountError.DepositAmountInvalid) }
                     return@launch
                 }
                 if (deposit.interestRate <= BigDecimal.ZERO) {
@@ -153,7 +191,16 @@ class EditAccountViewModel @Inject constructor(
         val id = if (accountId != null) accountId else savedId
 
         if ((isDepositType || isSavingsType) && s.deposit != null) {
-            depositRepo.save(s.deposit.copy(accountId = id))
+            val depositToSave = s.deposit.copy(accountId = id)
+            val depositId = depositRepo.save(depositToSave)
+
+            if (accountId == null) {
+                initializeDepositEvents(depositId = depositId, deposit = depositToSave, accountId = id)
+            } else {
+                // Edit: wipe all existing events and recompute from scratch with new params
+                depositEventRepo.deleteAll(depositId)
+                initializeDepositEvents(depositId = depositId, deposit = depositToSave, accountId = id)
+            }
         }
 
         _uiState.update { it.copy(saved = true, savedAccountId = id) }

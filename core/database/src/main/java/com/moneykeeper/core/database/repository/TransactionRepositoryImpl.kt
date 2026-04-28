@@ -5,6 +5,7 @@ import com.moneykeeper.core.database.dao.CategoryDao
 import com.moneykeeper.core.database.dao.TransactionDao
 import com.moneykeeper.core.database.entity.toDomain
 import com.moneykeeper.core.database.entity.toEntity
+import com.moneykeeper.core.domain.analytics.AccountCategorySum
 import com.moneykeeper.core.domain.analytics.AccountSum
 import com.moneykeeper.core.domain.analytics.CategorySum
 import com.moneykeeper.core.domain.analytics.MonthlyBarEntry
@@ -104,6 +105,16 @@ class TransactionRepositoryImpl(
     ): Flow<List<AccountSum>> =
         txDao.observeByAccount(currency, from.toString(), to.toString(), type.name).map { rows ->
             rows.map { AccountSum(it.accountId, it.total, it.count) }
+        }
+
+    override fun observeByAccountAndCategory(
+        currency: String,
+        from: LocalDate,
+        to: LocalDate,
+        type: TransactionType,
+    ): Flow<List<AccountCategorySum>> =
+        txDao.observeByAccountAndCategory(currency, from.toString(), to.toString(), type.name).map { rows ->
+            rows.map { AccountCategorySum(it.accountId, it.categoryId, it.total, it.count) }
         }
 
     override fun observeMonthlyTrend(currency: String, from: LocalDate, to: LocalDate): Flow<List<MonthlyBarEntry>> =

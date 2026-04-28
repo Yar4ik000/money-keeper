@@ -48,7 +48,10 @@ class EditCategoryViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         availableParents = allCategories.filter { c ->
-                            c.type == currentType && c.parentCategoryId == null && c.id != categoryId
+                            c.type == currentType
+                                && categoryDepth(c, allCategories) < 2
+                                && c.id != categoryId
+                                && (categoryId == null || c.parentCategoryId != categoryId)
                         },
                     )
                 }
@@ -70,6 +73,16 @@ class EditCategoryViewModel @Inject constructor(
 
     fun onParentChange(parentId: Long?) =
         _uiState.update { it.copy(parentCategoryId = parentId) }
+
+    private fun categoryDepth(category: Category, all: List<Category>): Int {
+        var depth = 0
+        var parentId = category.parentCategoryId
+        while (parentId != null) {
+            depth++
+            parentId = all.find { it.id == parentId }?.parentCategoryId
+        }
+        return depth
+    }
 
     fun onSave() = viewModelScope.launch {
         val s = _uiState.value

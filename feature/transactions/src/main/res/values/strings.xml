@@ -12,6 +12,8 @@
     <string name="tx_to_account">Счёт назначения</string>
     <string name="tx_category">Категория</string>
     <string name="tx_date">Дата</string>
+    <string name="tx_time">Время</string>
+    <string name="tx_time_add">+ Время</string>
     <string name="tx_note">Заметка</string>
     <string name="tx_recurring">Повторяющаяся операция</string>
     <string name="tx_save">Сохранить</string>

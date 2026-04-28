@@ -10,11 +10,16 @@ import com.moneykeeper.core.domain.model.Transaction
 import com.moneykeeper.core.domain.model.TransactionType
 import com.moneykeeper.core.domain.model.TransactionWithMeta
 import com.moneykeeper.core.domain.money.MultiCurrencyTotal
+import com.moneykeeper.core.domain.model.Deposit
+import com.moneykeeper.core.domain.model.DepositEvent
 import com.moneykeeper.core.domain.repository.AccountRepository
 import com.moneykeeper.core.domain.repository.CategoryRepository
+import com.moneykeeper.core.domain.repository.DepositEventRepository
+import com.moneykeeper.core.domain.repository.DepositRepository
 import com.moneykeeper.core.domain.repository.RecurringRuleRepository
 import com.moneykeeper.core.domain.repository.TransactionRepository
 import com.moneykeeper.core.domain.repository.TransactionRunner
+import com.moneykeeper.core.domain.analytics.AccountCategorySum
 import com.moneykeeper.core.domain.analytics.AccountSum
 import com.moneykeeper.core.domain.analytics.CategorySum
 import com.moneykeeper.core.domain.analytics.MonthlyBarEntry
@@ -33,6 +38,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -88,6 +94,7 @@ class AddTransactionViewModelTest {
         override fun observePeriodSummary(from: LocalDate, to: LocalDate): Flow<List<PeriodSummaryByCurrency>> = throw UnsupportedOperationException()
         override fun observeByCategory(currency: String, from: LocalDate, to: LocalDate, type: TransactionType): Flow<List<CategorySum>> = throw UnsupportedOperationException()
         override fun observeByAccount(currency: String, from: LocalDate, to: LocalDate, type: TransactionType): Flow<List<AccountSum>> = throw UnsupportedOperationException()
+        override fun observeByAccountAndCategory(currency: String, from: LocalDate, to: LocalDate, type: TransactionType): Flow<List<AccountCategorySum>> = throw UnsupportedOperationException()
         override fun observeMonthlyTrend(currency: String, from: LocalDate, to: LocalDate): Flow<List<MonthlyBarEntry>> = throw UnsupportedOperationException()
         override suspend fun getAll(): List<TransactionWithMeta> = emptyList()
         override suspend fun getById(id: Long): Transaction? = null
@@ -109,14 +116,63 @@ class AddTransactionViewModelTest {
         override suspend fun pruneOrphaned() = 0
     }
 
+    private val fakeDepositRepo = object : DepositRepository {
+        override fun observeAll(): Flow<List<Deposit>> = MutableStateFlow(emptyList())
+        override fun observeExpiringSoon(daysThreshold: Int): Flow<List<Deposit>> = MutableStateFlow(emptyList())
+        override suspend fun getAllActive(): List<Deposit> = emptyList()
+        override suspend fun getByAccountId(accountId: Long): Deposit? = null
+        override suspend fun save(deposit: Deposit): Long = 0L
+        override suspend fun markClosed(id: Long) = Unit
+    }
+
+    private val fakeDepositEventRepo = object : DepositEventRepository {
+        override fun observe(depositId: Long): Flow<List<DepositEvent>> = MutableStateFlow(emptyList())
+        override suspend fun getAll(depositId: Long): List<DepositEvent> = emptyList()
+        override suspend fun insert(event: DepositEvent): Long = 0L
+        override suspend fun delete(id: Long) = Unit
+        override suspend fun deleteAll(depositId: Long) = Unit
+    }
+
     private fun vm(vararg accounts: Account): AddTransactionViewModel {
         val runner = object : TransactionRunner { override suspend fun <T> run(block: suspend () -> T) = block() }
         return AddTransactionViewModel(
-            transactionSaver = TransactionSaver(fakeTxRepo, accountRepo(*accounts), fakeRuleRepo, runner),
+            transactionSaver = TransactionSaver(fakeTxRepo, accountRepo(*accounts), fakeDepositRepo, fakeDepositEventRepo, fakeRuleRepo, runner),
             accountRepo = accountRepo(*accounts),
             categoryRepo = fakeCategoryRepo,
             savedStateHandle = SavedStateHandle(),
         )
+    }
+
+    // ── time field ───────────────────────────────────────────────────────────
+
+    @Test
+    fun `onTimeChange updates uiState time`() {
+        val viewModel = vm(account(1L, "RUB"))
+        viewModel.onTimeChange("14:30")
+        assertEquals("14:30", viewModel.uiState.value.time)
+        viewModel.onTimeChange(null)
+        assertNull(viewModel.uiState.value.time)
+    }
+
+    @Test
+    fun `save propagates time to saved transaction`() = runTest {
+        val acc = account(1L, "RUB")
+        val viewModel = vm(acc)
+        viewModel.onAccountSelect(acc)
+        viewModel.onAmountInputChange("100")
+        viewModel.onTimeChange("09:15")
+        viewModel.onSave().join()
+        assertEquals("09:15", fakeTxRepo.saved.first().time)
+    }
+
+    @Test
+    fun `save with no time saves null time`() = runTest {
+        val acc = account(1L, "RUB")
+        val viewModel = vm(acc)
+        viewModel.onAccountSelect(acc)
+        viewModel.onAmountInputChange("100")
+        viewModel.onSave().join()
+        assertNull(fakeTxRepo.saved.first().time)
     }
 
     // ── currency mismatch for TRANSFER ───────────────────────────────────────

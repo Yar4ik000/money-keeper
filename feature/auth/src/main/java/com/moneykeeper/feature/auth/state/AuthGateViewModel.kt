@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.moneykeeper.core.database.DatabaseProvider
 import com.moneykeeper.core.database.security.DatabaseKeyStorage
+import com.moneykeeper.core.database.usecase.AccrueDepositInterestUseCase
 import com.moneykeeper.feature.auth.domain.MasterKeyHolder
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -11,6 +12,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
@@ -18,6 +20,7 @@ class AuthGateViewModel @Inject constructor(
     private val keyStorage: DatabaseKeyStorage,
     private val masterKeyHolder: MasterKeyHolder,
     private val databaseProvider: DatabaseProvider,
+    private val accrueDepositInterest: AccrueDepositInterestUseCase,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<AuthState>(computeInitialState())
@@ -43,9 +46,13 @@ class AuthGateViewModel @Inject constructor(
         else                         -> AuthState.Uninitialized
     }
 
-    fun onPasswordSet()     { _state.value = AuthState.Unlocked }
-    fun onMigrated()        { _state.value = AuthState.Unlocked }
-    fun onUnlocked()        { _state.value = AuthState.Unlocked }
+    fun onPasswordSet()     { _state.value = AuthState.Unlocked; launchAccrual() }
+    fun onMigrated()        { _state.value = AuthState.Unlocked; launchAccrual() }
+    fun onUnlocked()        { _state.value = AuthState.Unlocked; launchAccrual() }
+
+    private fun launchAccrual() {
+        viewModelScope.launch { accrueDepositInterest.run() }
+    }
     fun onPasswordChanged() { /* остаёмся Unlocked */ }
     fun onCorrupted(message: String) { _state.value = AuthState.DataCorrupted(message) }
     fun onWiped()           { _state.value = AuthState.Uninitialized }

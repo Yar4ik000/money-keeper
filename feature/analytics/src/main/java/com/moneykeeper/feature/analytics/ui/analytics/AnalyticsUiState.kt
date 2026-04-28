@@ -11,7 +11,7 @@ data class CategoryExpense(
     val transactionCount: Int,
 )
 
-data class AccountBreakdown(
+data class AccountCategoryBreakdown(
     val accountId: Long,
     val accountName: String,
     val accountColorHex: String,
@@ -19,6 +19,7 @@ data class AccountBreakdown(
     val total: BigDecimal,
     val percentage: Float,
     val transactionCount: Int,
+    val categories: List<CategoryExpense>,
 )
 
 data class MonthlyBarEntry(
@@ -34,10 +35,11 @@ data class AnalyticsUiState(
     val selectedCurrency: String = "RUB",
     val categoryExpenses: List<CategoryExpense> = emptyList(),
     val incomeCategoryExpenses: List<CategoryExpense> = emptyList(),
-    val expensesByAccount: List<AccountBreakdown> = emptyList(),
-    val incomeByAccount: List<AccountBreakdown> = emptyList(),
+    val expensesByAccount: List<AccountCategoryBreakdown> = emptyList(),
+    val incomeByAccount: List<AccountCategoryBreakdown> = emptyList(),
     val monthlyTrend: List<MonthlyBarEntry> = emptyList(),
     val topExpenseCategory: Category? = null,
     val averageDailyExpense: BigDecimal = BigDecimal.ZERO,
     val periodHasTransactions: Boolean = false,
+    val rollUpToParent: Boolean = false,
 )
