@@ -30,7 +30,7 @@ interface TransactionDao {
 
     @Query("""
         SELECT * FROM transactions
-        ORDER BY date DESC, time DESC, id DESC
+        ORDER BY date DESC, id DESC
         LIMIT :limit
     """)
     fun observeRecent(limit: Int): Flow<List<TransactionEntity>>

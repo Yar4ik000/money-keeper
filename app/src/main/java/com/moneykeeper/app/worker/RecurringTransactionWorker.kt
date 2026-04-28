@@ -5,6 +5,7 @@ import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.moneykeeper.core.database.DatabaseProvider
+import com.moneykeeper.core.database.usecase.AccrueDepositInterestUseCase
 import com.moneykeeper.core.domain.usecase.GenerateRecurringTransactionsUseCase
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -15,10 +16,12 @@ class RecurringTransactionWorker @AssistedInject constructor(
     @Assisted params: WorkerParameters,
     private val databaseProvider: DatabaseProvider,
     private val generateUseCase: GenerateRecurringTransactionsUseCase,
+    private val accrueDepositInterest: AccrueDepositInterestUseCase,
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
         if (databaseProvider.state.value !is DatabaseProvider.State.Initialized) return Result.retry()
+        accrueDepositInterest.run()
         generateUseCase()
         return Result.success()
     }

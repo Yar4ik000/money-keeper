@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
@@ -118,12 +119,22 @@ fun TransactionListItem(meta: TransactionWithMeta, onClick: () -> Unit) {
             }
         },
         trailingContent = {
-            Text(
-                text = "$amountSign${meta.transaction.amount.formatAsCurrency(meta.accountCurrency)}",
-                color = amountColor,
-                fontWeight = FontWeight.Medium,
-                style = MaterialTheme.typography.bodyMedium,
-            )
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    text = "$amountSign${meta.transaction.amount.formatAsCurrency(meta.accountCurrency)}",
+                    color = amountColor,
+                    fontWeight = FontWeight.Medium,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                val time = meta.transaction.time
+                if (time != null) {
+                    Text(
+                        text = time,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
         },
         modifier = Modifier.clickable(onClick = onClick),
     )
