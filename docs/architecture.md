@@ -99,9 +99,10 @@ UI (Composable)
 | Таблица | Ключевая особенность |
 |---------|----------------------|
 | `accounts` | `type: AccountType` — CARD/CASH/DEPOSIT/SAVINGS/INVESTMENT/OTHER; `iconName: String` — ключ иконки |
-| `transactions` | `toAccountId` nullable — заполняется только для TRANSFER |
-| `categories` | `parentId` nullable — двухуровневое дерево (Income/Expense/Transfer); `iconName: String` — ключ иконки |
+| `transactions` | `toAccountId` nullable — заполняется только для TRANSFER; `time: String?` — необязательное время в формате HH:mm |
+| `categories` | `parentId` nullable — трёхуровневое дерево раздел → категория → подкатегория (Income/Expense/Transfer); `iconName: String` — ключ иконки |
 | `deposits` | FK на `accounts`, `UNIQUE(accountId)` — один депозит на счёт |
+| `deposit_events` | FK на `deposits`; хранит историю начислений процентов (дата, сумма, нарастающий итог); создаётся при каждой капитализации/начислении |
 | `budgets` | `categoryIds TEXT` nullable (null=все, "1,2,3"=конкретные); `accountIds TEXT` nullable (null=все); без FK |
 
 ### TypeConverters — как Room хранит нестандартные типы
@@ -579,6 +580,15 @@ feature/analytics/src/main/java/com/moneykeeper/feature/analytics/
 
 `HistoryFilter` содержит: `from`/`to` (LocalDate), `accountIds`, `categoryIds`, `types` (Set), `query` (String), `minAmount`/`maxAmount` (BigDecimal?). DB-запрос фильтрует только по дате; остальное — `applyHistoryFilter()` в памяти (один месяц ≈ 50–300 строк для личных финансов, пагинация не нужна).
 
+**Столбчатый график — недельные бары с выбором диапазона.**
+График в `AnalyticsScreen` отображает недельные столбики (не месячные). Пользователь выбирает диапазон кнопками 4 нед / 8 нед / 6 мес / 12 мес. Над каждым столбиком рендерится количество операций. Логика агрегации по неделям и диапазону — в `AnalyticsViewModel`.
+
+**Разбивка по счетам с детализацией категорий.**
+В режиме «По счетам» каждый счёт раскрывается нажатием: показывается вложенный список категорий этого счёта с суммами. `AnalyticsViewModel` строит `Map<Account, List<CategoryExpense>>` через `observeByAccountAndCategory`.
+
+**Трёхуровневые категории — rollup в аналитике.**
+`CategoryExpense.children: List<CategoryExpense>` — подкатегории вложены в родителя. Сумма родителя = rollup всех детей + прямые транзакции. `CategoryAnalyticsScreen` рендерит дерево с раскрытием.
+
 **MonthlyBarEntry — два уровня.**
 В `core:domain/analytics` существует `MonthlyBarEntry(yearMonth: String, ...)` — DAO-ориентированная форма (ISO "2026-04"). В `analytics/ui/analytics` создан UI-уровневый `MonthlyBarEntry(month: YearMonth, ...)`. Маппинг `YearMonth.parse(entry.yearMonth)` происходит в `AnalyticsViewModel`.
 
@@ -648,6 +658,14 @@ feature/forecast/src/main/java/com/moneykeeper/feature/forecast/
    - Иначе (активный/накопительный) → начисляем накопленные проценты к `targetDate`
 
 `TimelineEvent.description` берётся из `templateTransaction.note` (если не пустая), иначе из `categoryName`.
+
+### Cash Flow бар-чарт
+
+`ForecastScreen` включает столбчатый график cash flow по неделям (зелёные — доходы, красные — расходы) на горизонте прогноза. Используется общий `CashFlowBarChart` composable из `core:ui`.
+
+### Сценарии и запланированные повторяющиеся события
+
+Панель сценариев (`ScenariosPanel`) позволяет добавлять **эфемерные** события — разовые и повторяющиеся — без записи в БД. Они хранятся в `ForecastViewModel` как `List<PlannedEvent>` в памяти и передаются в `ForecastEngine.calculate()` вместе со стандартными `recurringRules`. При удалении повторяющегося запланированного события — диалог выбора области (только это / это и будущие / вся серия), аналогично `RecurringRuleDeleteScope` для обычных транзакций.
 
 ### Инварианты
 
