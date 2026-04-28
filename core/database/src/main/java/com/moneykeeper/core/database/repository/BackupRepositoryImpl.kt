@@ -196,7 +196,7 @@ class BackupRepositoryImpl @Inject constructor(
 
             val currentDbKey = getCurrentDbKey()
             try {
-                importPlainIntoEncrypted(tempPlain, pending, currentDbKey)
+                importPlainIntoEncrypted(tempPlain, pending, currentDbKey, manifest.databaseVersion)
             } catch (e: Exception) {
                 pending.delete()
                 return@withContext RestoreResult.Error("Ошибка импорта: ${e.message.orEmpty()}")
@@ -311,57 +311,6 @@ class BackupRepositoryImpl @Inject constructor(
             }
         } finally {
             dbKey.fill(0)
-        }
-    }
-
-    private fun importPlainIntoEncrypted(plainDb: File, target: File, dbKey: ByteArray) {
-        // Open the encrypted target as MAIN using the SAME key path as Room:
-        //   openDatabase(path, ByteArray) → nativeKey(rawBytes) → sqlite3_key_v2 → PBKDF2
-        // ATTACH … KEY "x'hex'" bypasses PBKDF2 (raw key) — that is a DIFFERENT derived key
-        // than what sqlite3_key_v2 with raw bytes produces, causing HMAC mismatch on open.
-        // Keeping the encrypted side as MAIN avoids ATTACH KEY entirely.
-        val db = net.zetetic.database.sqlcipher.SQLiteDatabase.openDatabase(
-            target.absolutePath, dbKey, null,
-            net.zetetic.database.sqlcipher.SQLiteDatabase.OPEN_READWRITE or
-            net.zetetic.database.sqlcipher.SQLiteDatabase.CREATE_IF_NECESSARY,
-            null, null,
-        )
-        try {
-            val safePlainPath = plainDb.absolutePath.replace("'", "''")
-            db.execSQL("ATTACH DATABASE '$safePlainPath' AS src KEY ''")
-            db.execSQL("PRAGMA foreign_keys = OFF")
-
-            // Replay DDL from src (rowid order ensures deps are created before dependents).
-            // Exclude sqlite_* objects — SQLite owns those internally and rejects explicit CREATE.
-            db.rawQuery(
-                "SELECT sql FROM src.sqlite_schema WHERE sql NOT NULL AND name NOT LIKE 'sqlite_%' ORDER BY rowid",
-                null,
-            ).use { c ->
-                while (c.moveToNext()) db.execSQL(c.getString(0))
-            }
-
-            // Copy table data — validate names to guard against future schema regressions
-            val tableNameRegex = Regex("^[a-zA-Z_][a-zA-Z0-9_]*$")
-            db.rawQuery(
-                "SELECT name FROM src.sqlite_schema WHERE type = 'table' AND name NOT LIKE 'sqlite_%'",
-                null,
-            ).use { c ->
-                while (c.moveToNext()) {
-                    val t = c.getString(0)
-                    require(t.matches(tableNameRegex)) { "Unexpected table name in backup: $t" }
-                    db.execSQL("INSERT INTO \"$t\" SELECT * FROM src.\"$t\"")
-                }
-            }
-
-            // sqlite_sequence tracks AUTOINCREMENT counters — copy if present
-            runCatching {
-                db.execSQL("INSERT INTO sqlite_sequence SELECT * FROM src.sqlite_sequence")
-            }
-
-            db.execSQL("PRAGMA foreign_keys = ON")
-            db.execSQL("DETACH DATABASE src")
-        } finally {
-            db.close()
         }
     }
 
