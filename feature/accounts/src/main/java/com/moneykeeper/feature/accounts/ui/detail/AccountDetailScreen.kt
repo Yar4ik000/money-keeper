@@ -218,7 +218,7 @@ fun AccountDetailScreen(
                         item {
                             DepositEventsSectionHeader(stringResource(R.string.deposit_movements_title))
                         }
-                        items(principalEvents, key = { it.id }) { event ->
+                        items(principalEvents, key = { "pe_${it.id}" }) { event ->
                             DepositEventRow(
                                 event = event,
                                 currency = acc.currency,
@@ -235,7 +235,7 @@ fun AccountDetailScreen(
                         item {
                             DepositEventsSectionHeader(stringResource(R.string.deposit_accruals_title))
                         }
-                        items(interestEvents, key = { it.id }) { event ->
+                        items(interestEvents, key = { "ie_${it.id}" }) { event ->
                             DepositEventRow(
                                 event = event,
                                 currency = acc.currency,
@@ -267,7 +267,7 @@ fun AccountDetailScreen(
                     }
                 }
             } else {
-                items(transactions, key = { it.transaction.id }) { txMeta ->
+                items(transactions, key = { "tx_${it.transaction.id}" }) { txMeta ->
                     TransactionRow(txMeta = txMeta, currency = acc.currency)
                     HorizontalDivider(Modifier.padding(horizontal = 16.dp))
                 }
